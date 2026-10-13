@@ -5,6 +5,7 @@ import { Ja } from "@/components/Ja";
 import { useActiveChapter } from "@/components/motion/ActiveChapter";
 import { chapterForKey, shouldHandleChapterKey, type Chapter } from "@/lib/chapters";
 import { scrollToId } from "@/lib/motion/navigate";
+import { playTap } from "@/lib/sound";
 import styles from "./SealRail.module.css";
 
 export function SealRail({ chapters }: { chapters: Chapter[] }) {
@@ -26,7 +27,7 @@ export function SealRail({ chapters }: { chapters: Chapter[] }) {
       if (!chapter) return;
       e.preventDefault();
       scrollToId(chapter.id);
-      // Task 20 adds playTap() here.
+      playTap();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

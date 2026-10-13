@@ -1,0 +1,2 @@
+.toggle { border: 1px solid currentColor; border-radius: 999px; padding: 0.3rem 0.9rem; background: none; color: inherit; font: inherit; font-size: 0.85rem; cursor: pointer; }
+.toggle[aria-pressed="true"] { background: var(--seal); border-color: var(--seal); color: #fff; }
