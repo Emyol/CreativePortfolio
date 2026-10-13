@@ -4,17 +4,18 @@ Amiel Josiah "Miel" Acuña's **creative / personal portfolio**: the person, not 
 It is a separate site from the professional portfolio at `../portfolioV2`
 (live at project-miel.vercel.app).
 
-## Status: Spec approved, implementation plan in review
+## Status: Public site built, waiting for content
 
-The theme/World and site shape are decided: **Kakejiku**, a hanging scroll read top to
-bottom (spec: `docs/superpowers/specs/2026-10-13-kakejiku-world-design.md`, approved by
-the owner 2026-10-13). The implementation plan is
-`docs/superpowers/plans/2026-10-13-kakejiku-public-site.md` (23 tasks, four milestone PRs).
-Nothing is scaffolded and no dependencies are installed yet.
+The Kakejiku public site is implemented (spec: `docs/superpowers/specs/2026-10-13-kakejiku-world-design.md`,
+plan: `docs/superpowers/plans/2026-10-13-kakejiku-public-site.md`), as four stacked PRs.
+`lib/content/seed.json` is empty until the owner supplies material through `content-inbox/`;
+empty chapters stay hidden everywhere. `npm run dev:fixtures` shows the site with clearly
+fake fixtures (production builds refuse them).
 
-- Do not scaffold the app or install packages until the owner approves the plan.
-- Next step after plan approval: execute it (`superpowers:subagent-driven-development`
-  or `superpowers:executing-plans`), milestone by milestone.
+- Commands: `npm run dev`, `npm run dev:fixtures`, `npm run typecheck`, `npm test`
+  (Vitest), `npm run test:e2e` (Playwright, against a fixtures dev server on port 3100),
+  `npm run build`, `npm run kanji:fetch`, `npm run texture:paper`.
+- Next: the content-model spec (Supabase, photo hosting), then the admin port.
 - Brainstorm -> spec (`docs/superpowers/specs/`) -> plan (`docs/superpowers/plans/`)
   -> execute.
 
@@ -26,7 +27,7 @@ Nothing is scaffolded and no dependencies are installed yet.
 | Content | Personality, events **attended**, music, hobbies and things made, people and communities |
 | Capability layer | Light: languages and frameworks as a supporting "toolbox", never the headline |
 | Updating content | **Reuse the Supabase admin editor** from portfolioV2 (owner chose this over files-only) |
-| Tech base (assumed, confirm) | Next.js 16, because the admin is Next route handlers + `proxy.ts` |
+| Tech base | Next.js 16.4, React 19.3, TypeScript 5, CSS Modules, GSAP + Lenis, Zod; Vitest + Playwright |
 | Decomposition | 1) content model + public site, 2) admin port. Separate spec, plan and build for each |
 | World and site shape | **Kakejiku** hanging scroll: Sumi menu hero that becomes a seal rail, six seasonal chapters, smooth vertical scroll, a page per event, plain 目録 index. See the spec |
 | Motion | Kanji written in real stroke order (KanjiVG, credit required), ink bleed, brush dividers, seal stamps, one signature move per component, live reduced motion |
@@ -34,7 +35,6 @@ Nothing is scaffolded and no dependencies are installed yet.
 
 ## Still open
 
-- View Transitions support in Next.js 16 for the event-page morph (verify in planning).
 - **Photo hosting.** Supabase free projects pause when inactive and uploaded media needs
   Supabase up. Recommended: launch photos live in `public/` under Git, uploads only for
   new ones. Decide in the spec.
