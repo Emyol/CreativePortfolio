@@ -179,6 +179,6 @@ don't work in this environment.
 
 ## Repo state
 
-Default branch: **`main`**. There is no GitHub remote yet (as of 2026-10-13). Creating it
-is the owner's call, so ask before running `gh repo create`. Hosting is undecided, so
-once it exists, note here what merging to `main` deploys.
+Default branch: **`main`**. Remote: `origin` = https://github.com/Emyol/CreativePortfolio
+(public, created by the owner on 2026-10-13). Repo settings stay the owner's call. Hosting
+is undecided, so once it is chosen, note here what merging to `main` deploys.
