@@ -46,3 +46,12 @@ html[data-tier="none"] *::after {
   -webkit-mask-image: radial-gradient(circle at var(--x) var(--y), #000 var(--r), transparent calc(var(--r) + 12%));
   mask-image: radial-gradient(circle at var(--x) var(--y), #000 var(--r), transparent calc(var(--r) + 12%));
 }
+
+.skip-link {
+  position: absolute; left: 1rem; top: -4rem; z-index: 100;
+  padding: 0.6rem 1rem; border-radius: 4px;
+  background: var(--paper); color: var(--ink); font-weight: 700;
+}
+.skip-link:focus { top: 1rem; }
+main:focus { outline: none; }
+main:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }

@@ -28,6 +28,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </noscript>
       </head>
       <body>
+        <a className="skip-link" href="#main">Skip to content</a>
+        <a className="skip-link" href="/mokuroku">Skip to the plain index</a>
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>
