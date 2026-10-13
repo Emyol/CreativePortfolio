@@ -15,7 +15,7 @@ export function SealStamp({ children, decorative = false, lang, size = "md", cla
     () => {
       if (tier === "none" || !ref.current) return;
       gsap.from(ref.current, {
-        scale: 1.8, rotate: -10, autoAlpha: 0, duration: 0.45, ease: "back.out(2.2)",
+        scale: 1.8, rotate: -10, opacity: 0, duration: 0.45, ease: "back.out(2.2)",
         scrollTrigger: { trigger: ref.current, start: "top 90%", once: true },
       });
     },

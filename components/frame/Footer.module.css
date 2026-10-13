@@ -3,4 +3,5 @@
 .owari { display: block; width: clamp(5rem, 12vw, 8rem); }
 .meta { font-size: 0.875rem; color: var(--muted); text-align: center; }
 .meta p { margin: 0.25rem 0; }
+.toggles { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
 .bottom { margin: 2rem calc(-1 * clamp(1rem, 6vw, 6rem)) 0; }

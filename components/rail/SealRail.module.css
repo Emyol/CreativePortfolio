@@ -2,11 +2,14 @@
   position: fixed; z-index: 30; right: clamp(0.5rem, 1.5vw, 1.5rem); top: 50%;
   translate: 0 -50%;
   display: grid; gap: 0.75rem; justify-items: end;
+  /* Its own wall-coloured backing: the rail stays readable when it overlaps the paper. */
+  padding: 0.6rem; border-radius: 8px;
+  background: color-mix(in srgb, var(--wall) 92%, black); box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
   opacity: 0; transition: opacity 0.3s ease;
 }
 .rail[data-shown="true"] { opacity: 1; }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
-.item { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #f1e8d6; border-radius: 4px; }
+.item { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; text-decoration: none; color: #f1e8d6; border-radius: 4px; }
 .seal {
   display: grid; place-items: center; width: 2.6rem; height: 2.6rem; order: 2;
   font-family: var(--font-brush), serif; font-size: 1.4rem;
@@ -25,5 +28,7 @@
 @media (max-width: 767px) {
   .rail { top: auto; bottom: 0.5rem; right: 50%; translate: 50% 0; justify-items: center; }
   .list { grid-auto-flow: column; }
-  .label, .key { display: none; }
+  /* Labels stay in the accessibility tree (the seal kanji is aria-hidden). */
+  .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .key { display: none; }
 }
