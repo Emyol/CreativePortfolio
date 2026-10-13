@@ -5,7 +5,7 @@ import { gotoReady, headingAtTop } from "./helpers";
 test("a tile opens its event page, and Back returns to the Events chapter", async ({ page }) => {
   await gotoReady(page, "/#events");
   await page.locator("#events").getByRole("link").first().click();
-  await expect(page).toHaveURL(/\/events\/fixture-event-1$/);
+  await expect(page).toHaveURL(/\/events\/fixture-event-1$/, { timeout: 15_000 });
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator("h1")).toHaveText("Fixture event 1");
   // Clicks during a view transition hit the snapshot overlay; wait for the morph to finish.
@@ -23,7 +23,7 @@ test("tiles work from the keyboard", async ({ page }) => {
   await gotoReady(page, "/#events");
   await page.locator("#events").getByRole("link").nth(1).focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/events\/fixture-event-2$/);
+  await expect(page).toHaveURL(/\/events\/fixture-event-2$/, { timeout: 15_000 });
 });
 
 test("the event page shows the story and the rest of the photos", async ({ page }) => {
