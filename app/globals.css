@@ -55,3 +55,6 @@ html[data-tier="none"] *::after {
 .skip-link:focus { top: 1rem; }
 main:focus { outline: none; }
 main:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+
+/* CSS smooth scrolling fights Lenis. */
+html.lenis { scroll-behavior: auto !important; }

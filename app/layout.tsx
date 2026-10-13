@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import { Klee_One, Shippori_Mincho_B1, Yuji_Syuku, Zen_Kaku_Gothic_New } from "next/font/google";
+import "lenis/dist/lenis.css";
+import { HashLinks } from "@/components/motion/HashLinks";
+import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { MotionProvider } from "@/lib/motion/MotionProvider";
 import { BROCADE, GOLD, SEAL_RED, seasonVars } from "@/lib/seasons";
 import "./globals.css";
@@ -30,7 +33,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <a className="skip-link" href="#main">Skip to content</a>
         <a className="skip-link" href="/mokuroku">Skip to the plain index</a>
-        <MotionProvider>{children}</MotionProvider>
+        <MotionProvider>
+          <SmoothScroll />
+          <HashLinks />
+          {children}
+        </MotionProvider>
       </body>
     </html>
   );
