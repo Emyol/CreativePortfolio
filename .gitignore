@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+*.tsbuildinfo
+
+# Environment (never commit; keep .env.example)
+.env
+.env*.local
+
+# Testing and scratch
+coverage/
+test-results/
+playwright-report/
+artifacts/
+.superpowers/
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# Raw material stays local until you choose to publish it
+content-inbox/*/*
+!content-inbox/*/.gitkeep
+
+# Private originals: raw photos you do not want in Git go here
+private/
