@@ -3,6 +3,7 @@ import { About } from "./About";
 import { Events } from "./Events";
 import { Hobbies } from "./Hobbies";
 import { Music } from "./Music";
+import { People } from "./People";
 import { Shelf } from "./Shelf";
 import type { SiteContent } from "@/lib/content/schema";
 
@@ -19,6 +20,6 @@ export function ChapterBody({ id, content }: { id: ChapterId; content: SiteConte
     case "shelf":
       return <Shelf items={content.shelf} />;
     case "people":
-      return null; // Task 19
+      return <People people={content.people} />;
   }
 }
