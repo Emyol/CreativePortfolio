@@ -28,6 +28,10 @@ describe("content rules", () => {
       expect(g.meaning.trim(), g.term).not.toBe("");
     }
   });
+  test("no SVG filter textures in CSS (they re-rasterise on every scroll paint; use a PNG tile)", () => {
+    const css = sources.filter((f) => f.endsWith(".css"));
+    expect(css.filter((f) => /feTurbulence/.test(readFileSync(f, "utf8")))).toEqual([]);
+  });
   test("no phone numbers anywhere", () => {
     const phone = /tel:|\+63|\b09\d{2}[\s-]?\d{3}[\s-]?\d{4}\b/;
     expect(sources.filter((f) => phone.test(readFileSync(f, "utf8")))).toEqual([]);

@@ -1,4 +1,4 @@
-.footer { padding: 4rem clamp(1rem, 6vw, 6rem) 0; display: grid; gap: 2rem; }
+.footer { padding: 4rem clamp(1rem, 6vw, 6rem) 0; display: grid; gap: 2rem; background-image: url("/textures/paper-grain.png"); }
 .end { display: grid; place-items: center; }
 .owari { display: block; width: clamp(5rem, 12vw, 8rem); }
 .meta { font-size: 0.875rem; color: var(--muted); text-align: center; }

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "kanji:fetch": "node scripts/fetch-kanjivg.mjs"
+    "kanji:fetch": "node scripts/fetch-kanjivg.mjs",
+    "texture:paper": "node scripts/make-paper-noise.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
