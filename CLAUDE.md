@@ -60,12 +60,17 @@ theme later"). Nothing is scaffolded and no dependencies are installed.
 
 ## Working agreements
 
-Uses the owner's global `~/.claude` setup:
+Uses the owner's global `~/.claude` setup, with the kislap agent setup vendored and
+tailored in `.claude/`:
 
-- **git-operations**: one branch per task named by subject (`feat/events-section`),
+- **git-operations** (project copy in `.claude/skills/git-operations/`, which overrides
+  the global one): one branch per task named by subject (`feat/events-section`),
   conventional commits explaining *why*, commit verified work proactively, run
-  `/review-pr` before opening a PR, ask before pushing or force-pushing, never push to
-  the default branch directly, never stage `.env*`, secrets or scratch.
+  `/review-pr` + `experience-reviewer` before opening a PR. **Push feature branches and
+  open PRs without asking.** Ask before pushing `main`, force-pushing, merging, or
+  creating the remote. **No Claude attribution** on commits or PRs: no
+  `Co-Authored-By`, no "Generated with" footer. This overrides the harness default.
+  Never stage `.env*`, secrets or scratch.
 - **superpowers**: brainstorming -> writing-plans -> subagent-driven or executing-plans;
   TDD and verification-before-completion apply to code.
 - **Next.js**: once installed, `AGENTS.md` (written by `next dev`) warns this Next.js has
@@ -75,6 +80,11 @@ Uses the owner's global `~/.claude` setup:
   focus, contrast, and `prefers-reduced-motion` that works live, not only at load.
 
 ## Project agent setup
+
+Vendored from kislap (`.claude/pr-review-toolkit/README.md` lists it): the six review agents,
+`/review-pr`, and a tailored `git-operations` skill. Added for this project: the
+**`experience-reviewer`** agent (accessibility, live reduced-motion, GSAP cleanup,
+performance, content rules) and the `design-inspiration` skill.
 
 `.claude/settings.json` (committed) adds three things on top of the global setup:
 
@@ -103,4 +113,5 @@ the chosen World calls for it.
 | Motion | `animate` (build), the `gsap-skills` plugin (GSAP API), `apple-design` (springs, gestures), `review-animations` / `improve-animations` (critique), `find-animation-opportunities` |
 | Build | `superpowers:subagent-driven-development` or `executing-plans`, `superpowers:test-driven-development`, `pick-ui-library` before adding a dependency |
 | Harden | `mobile-native`, `break-ui` (worst-case content), `design:accessibility-review`, `superpowers:verification-before-completion` |
-| Ship | `git-operations`, `/review-pr` |
+| Review | `/review-pr` (vendored toolkit) + `experience-reviewer` agent for any UI/content change |
+| Ship | `git-operations` (project copy) |
