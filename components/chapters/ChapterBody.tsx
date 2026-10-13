@@ -1,11 +1,11 @@
 import type { ChapterId } from "@/lib/chapters";
+import { About } from "./About";
 import type { SiteContent } from "@/lib/content/schema";
 
 export function ChapterBody({ id, content }: { id: ChapterId; content: SiteContent }) {
-  void content; // used once the chapter components land (Tasks 13-19)
   switch (id) {
     case "about":
-      return null; // Task 13
+      return <About about={content.about} />;
     case "events":
       return null; // Task 14
     case "music":
