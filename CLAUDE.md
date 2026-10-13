@@ -4,17 +4,19 @@ Amiel Josiah "Miel" Acuña's **creative / personal portfolio**: the person, not 
 It is a separate site from the professional portfolio at `../portfolioV2`
 (live at project-miel.vercel.app).
 
-## Status: World chosen, spec in review
+## Status: Spec approved, implementation plan in review
 
 The theme/World and site shape are decided: **Kakejiku**, a hanging scroll read top to
-bottom (spec: `docs/superpowers/specs/2026-10-13-kakejiku-world-design.md`). Nothing is
-scaffolded and no dependencies are installed yet.
+bottom (spec: `docs/superpowers/specs/2026-10-13-kakejiku-world-design.md`, approved by
+the owner 2026-10-13). The implementation plan is
+`docs/superpowers/plans/2026-10-13-kakejiku-public-site.md` (23 tasks, four milestone PRs).
+Nothing is scaffolded and no dependencies are installed yet.
 
-- Do not scaffold the app or install packages until the owner approves the spec and
-  the implementation plan.
-- Next step after spec approval: `superpowers:writing-plans`.
+- Do not scaffold the app or install packages until the owner approves the plan.
+- Next step after plan approval: execute it (`superpowers:subagent-driven-development`
+  or `superpowers:executing-plans`), milestone by milestone.
 - Brainstorm -> spec (`docs/superpowers/specs/`) -> plan (`docs/superpowers/plans/`)
-  -> execute. No implementation before the spec is approved.
+  -> execute.
 
 ## Decisions made
 
