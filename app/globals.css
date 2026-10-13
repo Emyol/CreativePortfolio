@@ -39,3 +39,10 @@ html[data-tier="none"] *::after {
   animation-iteration-count: 1 !important;
   transition-duration: 0s !important;
 }
+
+/* Ink bleed: a radial reveal driven by --r. The final state (150%) is the default. */
+.ink-mask {
+  --x: 50%; --y: 50%; --r: 150%;
+  -webkit-mask-image: radial-gradient(circle at var(--x) var(--y), #000 var(--r), transparent calc(var(--r) + 12%));
+  mask-image: radial-gradient(circle at var(--x) var(--y), #000 var(--r), transparent calc(var(--r) + 12%));
+}
