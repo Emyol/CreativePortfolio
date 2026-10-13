@@ -4,7 +4,9 @@ import { ChapterSection } from "@/components/chapters/ChapterSection";
 import { Footer } from "@/components/frame/Footer";
 import { ScrollFrame } from "@/components/frame/ScrollFrame";
 import { Hero } from "@/components/hero/Hero";
+import { ActiveChapterProvider } from "@/components/motion/ActiveChapter";
 import { BrushDivider } from "@/components/motion/BrushDivider";
+import { SealRail } from "@/components/rail/SealRail";
 import { visibleChapters } from "@/lib/chapters";
 import { getContent } from "@/lib/content/load";
 
@@ -13,8 +15,10 @@ export default async function Home() {
   const chapters = visibleChapters(content);
 
   return (
+    <ActiveChapterProvider ids={chapters.map((c) => c.id)}>
     <ScrollFrame>
       <Hero chapters={chapters} />
+      <SealRail chapters={chapters} />
       <main id="main" tabIndex={-1}>
         {chapters.map((chapter, i) => (
           <Fragment key={chapter.id}>
@@ -27,5 +31,6 @@ export default async function Home() {
       </main>
       <Footer />
     </ScrollFrame>
+    </ActiveChapterProvider>
   );
 }

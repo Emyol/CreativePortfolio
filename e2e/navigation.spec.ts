@@ -1,11 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-import { gotoReady } from "./helpers";
-
-async function headingAtTop(page: Page, id: string) {
-  const top = () => page.locator(`#${id}-title`).evaluate((el) => el.getBoundingClientRect().top);
-  await expect.poll(top).toBeLessThan(200);
-  await expect.poll(top).toBeGreaterThanOrEqual(0);
-}
+import { expect, test } from "@playwright/test";
+import { gotoReady, headingAtTop } from "./helpers";
 
 for (const reducedMotion of ["no-preference", "reduce"] as const) {
   test.describe(`motion: ${reducedMotion}`, () => {
@@ -25,8 +19,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
       await expect(page).toHaveURL(/#hobbies$/);
     });
 
-    // Uses key 6 from Task 10: written as test.fixme now; the fixme is removed in Task 10.
-    test.fixme("back returns to the previous chapter", async ({ page }) => {
+    test("back returns to the previous chapter", async ({ page }) => {
       await gotoReady(page, "/#about");
       await page.keyboard.press("6");
       await headingAtTop(page, "people");
