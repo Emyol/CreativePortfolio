@@ -11,8 +11,9 @@ function subscribe(onChange: () => void) {
   return () => queries.forEach((q) => q.removeEventListener("change", onChange));
 }
 const snapshot = (): MotionTier => computeTier(window.matchMedia(REDUCE_QUERY).matches, window.matchMedia(NARROW_QUERY).matches);
-// Server renders "full" markup; CSS shows final states for reduced-motion visitors before
-// hydration, so they never see hidden content.
+// Server renders "full" markup. Kanji hide their strokes for writing only once
+// html[data-tier] is set (after hydration), and GSAP from-states are applied on mount, so
+// content is shown fully drawn until the app is live (the entrance clip has its own failsafe).
 const serverSnapshot = (): MotionTier => "full";
 
 export function MotionProvider({ children }: { children: ReactNode }) {
