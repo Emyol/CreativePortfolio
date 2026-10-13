@@ -1,0 +1,13 @@
+.page { background: var(--paper); color: var(--ink); padding: clamp(1.5rem, 5vw, 4rem) clamp(1rem, 6vw, 6rem) 4rem; }
+.header { display: grid; gap: 0.5rem; margin-bottom: 2.5rem; }
+.cover { border-radius: 6px; overflow: hidden; box-shadow: inset 0 0 0 8px #e9dfc8; padding: 8px; background: #0b1020; }
+.coverImg { width: 100%; height: auto; max-height: 70vh; object-fit: cover; }
+.kicker { margin: 1.5rem 0 0; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.title { margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); overflow-wrap: anywhere; }
+.meta { margin: 0; color: var(--muted); }
+.story { max-width: 42rem; font-size: 1.075rem; }
+.summary { font-size: 1.25rem; }
+.gallery { list-style: none; margin: 3rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
+.galleryImg { width: 100%; height: auto; border-radius: 4px; }
+.nav { display: flex; gap: 1.5rem; margin-top: 3rem; }
+.nav a:focus-visible { outline-color: var(--focus); }

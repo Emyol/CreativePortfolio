@@ -29,3 +29,10 @@ Paths below are relative to `node_modules/next/dist/docs/01-app/`.
   `next dev` instances on one project (so stop a manual dev server before `npm run test:e2e`
   unless Playwright reuses it).
 - **`middleware` renamed `proxy`** (relevant to the later admin port).
+
+## Event morph (decided in Task 15)
+
+Path A: React 19.3's `ViewTransition` (imported from `react`, no `next.config` flag needed)
+wraps the event cover photo on both the bento tile and the event page with
+`name="event-photo-<slug>" share="morph" default="none"`. Reduced motion zeroes the
+`::view-transition-*` animations, both via the media query and live via `html[data-tier="none"]`.

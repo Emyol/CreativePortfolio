@@ -70,3 +70,12 @@ html[data-entrance] [data-hero-menu] li { visibility: hidden; }
 html[data-entrance="pending"] [data-hero-menu] li { animation: entrance-failsafe-show 0s linear 4s forwards; }
 @keyframes entrance-failsafe { to { clip-path: inset(0 0 0 0); } }
 @keyframes entrance-failsafe-show { to { visibility: visible; } }
+
+/* Event tile -> event page morph (React ViewTransition). Reduced motion swaps instantly. */
+::view-transition-group(.morph) { animation-duration: 450ms; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 0s !important; animation-delay: 0s !important; }
+}
+html[data-tier="none"]::view-transition-group(*),
+html[data-tier="none"]::view-transition-old(*),
+html[data-tier="none"]::view-transition-new(*) { animation-duration: 0s !important; animation-delay: 0s !important; }
