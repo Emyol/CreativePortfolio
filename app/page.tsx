@@ -7,6 +7,7 @@ import { EntranceProvider } from "@/components/hero/Entrance";
 import { Hero } from "@/components/hero/Hero";
 import { ActiveChapterProvider } from "@/components/motion/ActiveChapter";
 import { BrushDivider } from "@/components/motion/BrushDivider";
+import { SeasonController } from "@/components/motion/SeasonController";
 import { SealRail } from "@/components/rail/SealRail";
 import { visibleChapters } from "@/lib/chapters";
 import { getContent } from "@/lib/content/load";
@@ -34,6 +35,7 @@ export default async function Home() {
       </main>
       <Footer />
     </ScrollFrame>
+    <SeasonController chapters={chapters} />
     </ActiveChapterProvider>
   );
 }
