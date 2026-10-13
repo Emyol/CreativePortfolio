@@ -42,7 +42,13 @@ export function StrokeKanji({ char, mode, label, onDone, className }: Props) {
     const anims: Animation[] = [];
     plan.forEach(({ delay, duration }, i) => {
       for (const el of [pens[i], masks[i]]) {
-        anims.push(el.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { delay, duration, easing: EASE, fill: "both" }));
+        // Hidden until its turn: round caps on a zero-length dash would otherwise show as dots.
+        anims.push(
+          el.animate(
+            [{ strokeDashoffset: 1, opacity: 0 }, { strokeDashoffset: 1, opacity: 1, offset: 0.001 }, { strokeDashoffset: 0, opacity: 1 }],
+            { delay, duration, easing: EASE, fill: "both" },
+          ),
+        );
       }
     });
     for (const m of masks) anims.push(m.animate([{ strokeWidth: 15 }, { strokeWidth: 40 }], { delay: end, duration: MASK_WIDEN_MS, fill: "forwards" }));

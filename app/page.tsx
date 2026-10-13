@@ -3,6 +3,7 @@ import { ChapterBody } from "@/components/chapters/ChapterBody";
 import { ChapterSection } from "@/components/chapters/ChapterSection";
 import { Footer } from "@/components/frame/Footer";
 import { ScrollFrame } from "@/components/frame/ScrollFrame";
+import { EntranceProvider } from "@/components/hero/Entrance";
 import { Hero } from "@/components/hero/Hero";
 import { ActiveChapterProvider } from "@/components/motion/ActiveChapter";
 import { BrushDivider } from "@/components/motion/BrushDivider";
@@ -17,7 +18,9 @@ export default async function Home() {
   return (
     <ActiveChapterProvider ids={chapters.map((c) => c.id)}>
     <ScrollFrame>
-      <Hero chapters={chapters} />
+      <EntranceProvider>
+        <Hero chapters={chapters} />
+      </EntranceProvider>
       <SealRail chapters={chapters} />
       <main id="main" tabIndex={-1}>
         {chapters.map((chapter, i) => (

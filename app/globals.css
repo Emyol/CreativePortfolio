@@ -58,3 +58,15 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
 
 /* CSS smooth scrolling fights Lenis. */
 html.lenis { scroll-behavior: auto !important; }
+
+/* Entrance: hero starts rolled up and the menu waits for its stagger. "pending" is set
+   before paint; JS switches it to "playing", then removes it. If JS never takes over,
+   the failsafe unrolls the hero and shows the menu after 4s. */
+html[data-entrance="pending"] [data-hero] {
+  clip-path: inset(0 0 100% 0);
+  animation: entrance-failsafe 0s linear 4s forwards;
+}
+html[data-entrance] [data-hero-menu] li { visibility: hidden; }
+html[data-entrance="pending"] [data-hero-menu] li { animation: entrance-failsafe-show 0s linear 4s forwards; }
+@keyframes entrance-failsafe { to { clip-path: inset(0 0 0 0); } }
+@keyframes entrance-failsafe-show { to { visibility: visible; } }

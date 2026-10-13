@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import { Klee_One, Shippori_Mincho_B1, Yuji_Syuku, Zen_Kaku_Gothic_New } from "next/font/google";
 import "lenis/dist/lenis.css";
+import { InlineScript } from "@/components/InlineScript";
 import { HashLinks } from "@/components/motion/HashLinks";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { MotionProvider } from "@/lib/motion/MotionProvider";
+import { ENTRANCE_PREPAINT } from "@/lib/motion/tier";
 import { BROCADE, GOLD, SEAL_RED, seasonVars } from "@/lib/seasons";
 import "./globals.css";
 
@@ -24,10 +26,11 @@ const rootVars = { ...seasonVars("top"), "--seal": SEAL_RED, "--brocade": BROCAD
 export default function RootLayout({ children }: { children: ReactNode }) {
   const fonts = [brush, heading, hand, body].map((f) => f.variable).join(" ");
   return (
-    <html lang="en" className={fonts} style={rootVars}>
+    <html lang="en" className={fonts} style={rootVars} suppressHydrationWarning>
       <head>
+        <InlineScript html={ENTRANCE_PREPAINT} />
         <noscript>
-          <style>{`[data-mask]{stroke-dashoffset:0!important;stroke-width:40px!important}[data-pen-group]{opacity:0!important}`}</style>
+          <style>{`[data-mask]{stroke-dashoffset:0!important;stroke-width:40px!important;opacity:1!important}[data-pen-group]{opacity:0!important}`}</style>
         </noscript>
       </head>
       <body>
