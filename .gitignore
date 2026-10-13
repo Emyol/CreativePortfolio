@@ -39,5 +39,8 @@ Thumbs.db
 content-inbox/*/*
 !content-inbox/*/.gitkeep
 
+# Inspiration screenshots are other people's work: keep local
+docs/inspiration/shots/
+
 # Private originals: raw photos you do not want in Git go here
 private/

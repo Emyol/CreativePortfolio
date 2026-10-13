@@ -12,6 +12,8 @@ theme later"). Nothing is scaffolded and no dependencies are installed.
 - Do not pick a theme, scaffold the app, or install packages unless asked.
 - The superpowers brainstorming flow is paused at the **site shape** question
   (scrapbook scroll / album / explorable room). Resume there when the owner is ready.
+- Agent setup is done (see **Project agent setup** and **Skill map** below). Reference
+  gathering via `design-inspiration` can start any time without deciding the theme.
 - Brainstorm -> spec (`docs/superpowers/specs/`) -> plan (`docs/superpowers/plans/`)
   -> execute. No implementation before the spec is approved.
 
@@ -71,3 +73,34 @@ Uses the owner's global `~/.claude` setup:
   writing Next code.
 - Carry over from portfolioV2: skip link, real headings, keyboard navigation, visible
   focus, contrast, and `prefers-reduced-motion` that works live, not only at load.
+
+## Project agent setup
+
+`.claude/settings.json` (committed) adds three things on top of the global setup:
+
+- the **Impeccable** design-detector hook (checks after each Edit/Write, deep pass on
+  Stop; it no-ops if the global skill is missing),
+- the official **`gsap-skills`** plugin (GreenSock: core, timeline, ScrollTrigger,
+  plugins, React, performance),
+- read-only `WebFetch` access to the inspiration sites in
+  `.claude/skills/design-inspiration/sources.md`.
+
+## Skill map
+
+Which skill at which phase. Process skills set the approach and craft skills carry it out.
+Several global taste skills overlap. Use the ones listed here, and don't stack
+competing style presets (e.g. `industrial-brutalist-ui` *and* `minimalist-ui`) unless
+the chosen World calls for it.
+
+| Phase | Skills |
+|---|---|
+| Sharpen an idea or decision | `/grill-me` (mattpocock `grilling`) to stress-test before committing to it |
+| Shape and theme/World | `superpowers:brainstorming` (resume at site shape), fed by `design-inspiration` boards in `docs/inspiration/` |
+| Gather references and components | `design-inspiration` (project skill), `animation-vocabulary` to name effects |
+| Spec, then plan | `superpowers:brainstorming` writes the spec, then `superpowers:writing-plans` |
+| Answer a design question by building | `mattpocock-skills:prototype` (throwaway, not the real app) |
+| Visual design and taste | `emil-design-eng` (polish and the invisible details), `impeccable` (critique/audit/polish), `design-taste-frontend` (anti-template guardrails) |
+| Motion | `animate` (build), the `gsap-skills` plugin (GSAP API), `apple-design` (springs, gestures), `review-animations` / `improve-animations` (critique), `find-animation-opportunities` |
+| Build | `superpowers:subagent-driven-development` or `executing-plans`, `superpowers:test-driven-development`, `pick-ui-library` before adding a dependency |
+| Harden | `mobile-native`, `break-ui` (worst-case content), `design:accessibility-review`, `superpowers:verification-before-completion` |
+| Ship | `git-operations`, `/review-pr` |
