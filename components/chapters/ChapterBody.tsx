@@ -1,6 +1,7 @@
 import type { ChapterId } from "@/lib/chapters";
 import { About } from "./About";
 import { Events } from "./Events";
+import { Music } from "./Music";
 import type { SiteContent } from "@/lib/content/schema";
 
 export function ChapterBody({ id, content }: { id: ChapterId; content: SiteContent }) {
@@ -10,7 +11,7 @@ export function ChapterBody({ id, content }: { id: ChapterId; content: SiteConte
     case "events":
       return <Events events={content.events} />;
     case "music":
-      return null; // Task 16
+      return <Music tracks={content.music} />;
     case "hobbies":
       return null; // Task 17
     case "shelf":
