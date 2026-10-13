@@ -51,3 +51,37 @@ test.describe("reduced motion", () => {
     expect(results.violations).toEqual([]);
   });
 });
+
+test("the cover is the morph's landing spot: no second ink-bleed entrance, loaded eagerly", async ({ page }) => {
+  await gotoReady(page, "/events/fixture-event-1");
+  await expect(page.locator("main header [data-ink-bleed]")).toHaveCount(0);
+  await expect(page.locator("main header img")).toHaveAttribute("loading", "eager");
+});
+
+test("tiles already on screen don't bleed in again after Back to Events", async ({ page }) => {
+  await gotoReady(page, "/events/fixture-event-1");
+  await page.getByRole("link", { name: "Back to Events" }).click();
+  await expect(page).toHaveURL(/\/#events$/, { timeout: 15_000 });
+  await page.waitForTimeout(300);
+  const restarted = await page.locator("#events [data-ink-bleed]").evaluateAll((els) =>
+    els.filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.top < innerHeight && r.bottom > 0 && (el as HTMLElement).style.getPropertyValue("--r") === "0%";
+    }).length,
+  );
+  expect(restarted).toBe(0);
+});
+
+test("browser Back from an event page returns to where you were, not to an old #hash", async ({ page }) => {
+  await gotoReady(page, "/#about");
+  const tile = page.locator("#events li").nth(4);
+  await tile.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
+  const before = await page.evaluate(() => Math.round(scrollY));
+  await tile.getByRole("link").click();
+  await expect(page).toHaveURL(/\/events\/fixture-event-5$/, { timeout: 15_000 });
+  await page.waitForFunction(() => !document.documentElement.matches(":active-view-transition"));
+  await page.goBack();
+  await expect.poll(() => page.evaluate(() => Math.round(scrollY)), { timeout: 15_000 }).toBeGreaterThan(before - 150);
+  expect(await page.evaluate(() => Math.round(scrollY))).toBeLessThan(before + 150);
+});
