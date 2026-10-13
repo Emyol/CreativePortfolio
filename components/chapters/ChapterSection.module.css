@@ -6,5 +6,7 @@
 .head { display: flex; align-items: center; gap: clamp(1rem, 3vw, 2.5rem); margin-bottom: clamp(2rem, 5vw, 3.5rem); }
 .kanji { display: block; width: clamp(5.5rem, 12vw, 9rem); flex: none; }
 .title { display: inline-flex; align-items: center; gap: 0.9rem; margin: 0; font-size: clamp(2rem, 4.5vw, 3.25rem); }
-.title:focus-visible { outline-offset: 8px; }
+/* Focus lands here after a jump so keyboard and screen-reader users keep their place; the
+   heading isn't interactive, so it gets no ring. */
+.title:focus, .title:focus-visible { outline: none; }
 .body { max-width: 68rem; }

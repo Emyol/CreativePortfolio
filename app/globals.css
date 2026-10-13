@@ -53,8 +53,8 @@ html[data-tier="none"] *::after {
   background: var(--paper); color: var(--ink); font-weight: 700;
 }
 .skip-link:focus { top: 1rem; }
-main:focus { outline: none; }
-main:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+/* main only receives focus from the skip link; it isn't interactive, so no ring. */
+main:focus, main:focus-visible { outline: none; }
 
 /* CSS smooth scrolling fights Lenis. */
 html.lenis { scroll-behavior: auto !important; }
