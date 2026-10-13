@@ -11,7 +11,10 @@ export function getLenis(): Lenis | null {
 }
 
 function focusTarget(el: HTMLElement) {
-  const target = el.querySelector<HTMLElement>("[data-chapter-heading]") ?? el;
+  // Chapters hand focus to their heading; anything else (e.g. #main, which contains
+  // every chapter) takes focus itself.
+  const heading = el.hasAttribute("data-chapter") ? el.querySelector<HTMLElement>("[data-chapter-heading]") : null;
+  const target = heading ?? el;
   if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
   target.focus({ preventScroll: true });
 }

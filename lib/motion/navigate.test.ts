@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 function chapter() {
-  document.body.innerHTML = `<section id="music"><h2 data-chapter-heading tabindex="-1">Music</h2></section><main id="main" tabindex="-1"></main>`;
+  document.body.innerHTML = `<main id="main" tabindex="-1"><section id="music" data-chapter="music"><h2 data-chapter-heading tabindex="-1">Music</h2></section></main>`;
   Element.prototype.scrollIntoView = vi.fn();
 }
 
@@ -19,7 +19,7 @@ test("focuses the chapter heading and updates the hash", () => {
   expect(location.hash).toBe("#music");
 });
 
-test("targets without a heading get focus themselves", () => {
+test("non-chapter targets get focus themselves, even when they contain chapters (skip link to main)", () => {
   chapter();
   scrollToId("main");
   expect(document.activeElement?.id).toBe("main");
