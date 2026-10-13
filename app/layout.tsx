@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import { Klee_One, Shippori_Mincho_B1, Yuji_Syuku, Zen_Kaku_Gothic_New } from "next/font/google";
+import { MotionProvider } from "@/lib/motion/MotionProvider";
 import { BROCADE, GOLD, SEAL_RED, seasonVars } from "@/lib/seasons";
 import "./globals.css";
 
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const fonts = [brush, heading, hand, body].map((f) => f.variable).join(" ");
   return (
     <html lang="en" className={fonts} style={rootVars}>
-      <body>{children}</body>
+      <body>
+        <MotionProvider>{children}</MotionProvider>
+      </body>
     </html>
   );
 }
