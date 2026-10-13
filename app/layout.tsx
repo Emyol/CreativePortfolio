@@ -22,6 +22,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const fonts = [brush, heading, hand, body].map((f) => f.variable).join(" ");
   return (
     <html lang="en" className={fonts} style={rootVars}>
+      <head>
+        <noscript>
+          <style>{`[data-mask]{stroke-dashoffset:0!important;stroke-width:40px!important}[data-pen-group]{opacity:0!important}`}</style>
+        </noscript>
+      </head>
       <body>
         <MotionProvider>{children}</MotionProvider>
       </body>
