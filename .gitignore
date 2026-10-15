@@ -44,3 +44,6 @@ docs/inspiration/shots/
 
 # Private originals: raw photos you do not want in Git go here
 private/
+
+# Playwright MCP scratch (snapshots, console logs)
+.playwright-mcp/
