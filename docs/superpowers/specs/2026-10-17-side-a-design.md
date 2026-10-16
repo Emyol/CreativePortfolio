@@ -330,6 +330,20 @@ them, unmodified. The KanjiVG credit is removed with the kanji.
 - Writing any content. The site launches with whatever the owner has supplied; empty
   tracks stay hidden.
 
+## Section style: Screen (decided by the owner after the prototype, 2026-10-17)
+
+The [Side A Prototype](https://claude.ai/artifact/UYDs7e7NN7qoa6BUYJxu9x) (branch
+`prototype/side-a`, throwaway) compared three treatments for track content; the owner
+chose **B, Screen**. Each track's content sits in a dark panel that reads as an
+extension of the device's OLED: `--oled` background with an inset 3 px border in a
+lighter graphite, rounded 14 px. The track title sits just above the panel in **Doto**
+at display size in `--oled-text` with a soft glow (`text-shadow` of the same colour);
+its track number stays Space Mono in `--ink-muted`. Inside the panel, body text is light
+grey (about `#E9E9E9`, muted text about `#9A9EA6`), photos sit on the dark ground, and
+dividers are a dark graphite. The table (`--table`) stays the page background between
+panels, so the page alternates table and screen. Contrast inside panels must still meet
+WCAG AA.
+
 ## Decided by the owner after the builder check (2026-10-17)
 
 - Hero shot **straight down** (not the concept's 3/4 angle) so reels rotate as flat
