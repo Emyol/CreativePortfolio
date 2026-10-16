@@ -47,3 +47,7 @@ private/
 
 # Playwright MCP scratch (snapshots, console logs)
 .playwright-mcp/
+
+# Python bytecode and Blender autosave backups from the render scripts
+__pycache__/
+*.blend1
