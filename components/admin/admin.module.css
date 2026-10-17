@@ -126,6 +126,10 @@
   color: var(--ink);
   font-size: 16px;
 }
+/* Only the picker's calendar button shows; the date itself is the text field beside it. */
+.calendar::-webkit-datetime-edit { display: none; }
+.calendar { color: transparent; padding: 0 0.6rem; }
+.calendar::-webkit-calendar-picker-indicator { margin: 0 auto; cursor: pointer; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .chip { position: relative; }
@@ -203,7 +207,8 @@
 .tool,
 .secondary { background: none; color: inherit; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); }
 .danger { background: none; color: #B42318; border: 1px solid color-mix(in srgb, #B42318 45%, transparent); margin-left: auto; }
-.primary { background: var(--signal); color: #fff; border: 0; }
+/* Near-black on --signal: white would be 3.7:1, under AA for text this size. */
+.primary { background: var(--signal); color: var(--oled); border: 0; }
 .primary:disabled,
 .tool:disabled { opacity: 0.45; cursor: not-allowed; }
 .link { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
