@@ -1,0 +1,55 @@
+/* Sized in container units of the device, so the text scales with the render. */
+.screen {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35em;
+  overflow: hidden;
+  font-family: var(--font-dot), monospace;
+  color: var(--oled-text);
+  font-size: var(--screen-size, 2.1cqw);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 0.35em rgb(255 90 31 / 0.55), 0 0 0.08em rgb(255 120 60 / 0.9);
+  pointer-events: none;
+  user-select: none;
+}
+
+.primary,
+.secondary {
+  margin: 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.primary { font-weight: 900; font-size: 1.45em; letter-spacing: 0.06em; }
+.secondary { font-weight: 700; color: #F1E7E2; text-shadow: 0 0 0.3em rgb(255 255 255 / 0.25); }
+
+/* The playhead, in --signal, the line the reels answer to. */
+.playhead {
+  position: absolute;
+  left: 0.2em;
+  right: 0.2em;
+  bottom: 0.45em;
+  height: max(2px, 0.12em);
+  background: rgb(255 255 255 / 0.12);
+  overflow: hidden;
+}
+.playhead span {
+  position: absolute;
+  inset: 0;
+  background: var(--signal);
+  box-shadow: 0 0 0.4em rgb(255 46 0 / 0.8);
+  transform-origin: left;
+  transition: transform 500ms linear;
+}
+
+/* A change of text: the panel drops out and relights in steps, like a dot-matrix refresh. */
+.screen[data-flicker] p { animation: flicker 120ms steps(3, jump-none); }
+@keyframes flicker {
+  0% { opacity: 0.15; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}

@@ -1,42 +1,51 @@
 import { expect, test, type Page } from "@playwright/test";
-import { gotoReady } from "./helpers";
+import { gotoReady, headingAtTop } from "./helpers";
 
-/** The invariant: nothing in the page is left hidden, clipped, half-drawn or moving. */
+const reelTransforms = (page: Page) => page.locator("[data-reel]").evaluateAll((els) => els.map((el) => (el as HTMLElement).style.transform));
+const packScales = (page: Page) => page.locator("[data-pack]").evaluateAll((els) => els.map((el) => (el as HTMLElement).style.scale));
+
+/** The invariant: nothing on the page is left hidden, half-drawn or moving. */
 async function expectSettled(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("data-tier", "none");
   await expect(page.locator("html")).not.toHaveClass(/lenis/);
   await expect(page.locator("canvas")).toHaveCount(0);
-  await expect(page.locator("[data-entrance-phase]")).toHaveAttribute("data-entrance-phase", "done");
-  const report = await page.evaluate(() => ({
-    clipped: getComputedStyle(document.querySelector("[data-hero]")!).clipPath.includes("100%"),
-    unwritten: [...document.querySelectorAll("svg[data-phase]")].filter((s) => s.getAttribute("data-phase") !== "done").length,
-    bleeding: [...document.querySelectorAll<HTMLElement>("[data-ink-bleed]")].filter((el) => el.style.getPropertyValue("--r") !== "").length,
-    hidden: [...document.querySelectorAll<HTMLElement>("[style]")].filter((el) => el.style.opacity === "0" || el.style.visibility === "hidden").map((el) => el.outerHTML.slice(0, 120)),
-    tilted: [...document.querySelectorAll<HTMLElement>("[data-tilt]")].filter((el) => el.style.transform !== "").length,
-    clippedLines: [...document.querySelectorAll<HTMLElement>("[data-letter-line]")].filter((el) => el.style.clipPath !== "").length,
-  }));
-  expect(report).toEqual({ clipped: false, unwritten: 0, bleeding: 0, hidden: [], tilted: 0, clippedLines: 0 });
+  const hidden = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>("[style]")].filter((el) => el.style.opacity === "0" || el.style.visibility === "hidden").map((el) => el.outerHTML.slice(0, 120)),
+  );
+  expect(hidden).toEqual([]);
+  const reels = await reelTransforms(page);
+  await page.waitForTimeout(300);
+  expect(await reelTransforms(page)).toEqual(reels);
+  const packs = await packScales(page);
+  await page.mouse.wheel(0, 900);
+  await page.waitForTimeout(300);
+  expect(await packScales(page)).toEqual(packs);
 }
 
-test("switching on reduced motion mid-entrance settles everything", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForSelector("html[data-tier]", { state: "attached" });
-  await page.waitForTimeout(400); // mid-unroll
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expectSettled(page);
+test("scrolling turns the reels and moves tape from the left pack to the right", async ({ page }) => {
+  await gotoReady(page, "/#top");
+  const before = { reels: await reelTransforms(page), packs: await packScales(page) };
+  await page.mouse.wheel(0, 1600);
+  await page.waitForTimeout(200);
+  expect(await reelTransforms(page)).not.toEqual(before.reels);
+  await headingAtTop(page, "events").catch(() => {});
+  await page.waitForTimeout(400);
+  const [left, right] = (await packScales(page)).map(Number);
+  expect(left).toBeLessThan(Number(before.packs[0]));
+  expect(right).toBeGreaterThan(Number(before.packs[1]));
 });
 
-test("switching on reduced motion mid-scroll settles everything", async ({ page }) => {
+test("switching on reduced motion mid-scroll freezes the reels and packs where they are", async ({ page }) => {
   await gotoReady(page, "/#about");
-  await page.keyboard.press("2"); // Events: prints bleeding, gust blowing
-  await page.mouse.move(700, 500); // a tile may be tilting
-  await page.waitForTimeout(250);
+  await page.keyboard.press("2");
+  await page.mouse.wheel(0, 600); // reels spinning
+  await page.waitForTimeout(120);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expectSettled(page);
 });
 
 test("turning it back off restores smooth scroll without a reload", async ({ page }) => {
-  await gotoReady(page, "/#music");
+  await gotoReady(page, "/#mixtape");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator("html")).not.toHaveClass(/lenis/);
   await page.emulateMedia({ reducedMotion: "no-preference" });

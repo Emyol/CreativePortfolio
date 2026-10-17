@@ -9,7 +9,7 @@ import { setLenis } from "@/lib/motion/navigate";
 export function SmoothScroll() {
   const tier = useMotionTier();
   const pathname = usePathname();
-  const enabled = tier === "full" && pathname !== "/mokuroku";
+  const enabled = tier === "full" && pathname !== "/tracklist";
 
   useEffect(() => {
     if (!enabled) return;

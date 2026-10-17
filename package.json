@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "kanji:fetch": "node scripts/fetch-kanjivg.mjs",
-    "texture:paper": "node scripts/make-paper-noise.mjs"
+    "texture:paper": "node scripts/make-paper-noise.mjs",
+    "device:render": "\"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe\" -b --factory-startup -P art/blender/side-a/device.py",
+    "device:encode": "node scripts/encode-device.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -35,6 +37,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "cross-env": "^10.1.0",
     "jsdom": "^30.1.2",
+    "sharp": "^0.35.5",
     "typescript": "^5.9.3",
     "vitest": "^5.0.4"
   }

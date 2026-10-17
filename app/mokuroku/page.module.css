@@ -1,5 +1,0 @@
-.page { max-width: 44rem; margin: 0 auto; padding: 3rem 1.25rem 5rem; background: var(--paper); color: var(--ink); min-height: 100vh; }
-.page h2 { margin-top: 2.5rem; }
-.ja { font-family: var(--font-brush), serif; color: var(--muted); margin-left: 0.4rem; }
-.glossary { width: 100%; border-collapse: collapse; }
-.glossary th, .glossary td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); vertical-align: top; }

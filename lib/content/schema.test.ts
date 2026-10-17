@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { contentSchema } from "./schema";
+import { contentSchema, musicSongSchema } from "./schema";
 import { FIXTURES } from "./fixtures";
 
 const empty = { about: { letter: [], toolbox: [] }, events: [], music: [], hobbies: [], shelf: [], people: [] };
@@ -25,10 +25,6 @@ describe("contentSchema", () => {
   test("rejects non-kebab slugs", () => {
     expect(() => contentSchema.parse({ ...empty, events: [{ ...event, slug: "Night Market" }] })).toThrow(/slug/);
   });
-  test("rejects a sixth song: the setlist only has five numerals", () => {
-    const track = { title: "Song" };
-    expect(() => contentSchema.parse({ ...empty, music: Array(6).fill(track) })).toThrow(/five/);
-  });
   test("rejects a toolbox item the professional site does not support", () => {
     expect(() => contentSchema.parse({ ...empty, about: { letter: [], toolbox: ["Rust"] } })).toThrow();
   });
@@ -37,5 +33,26 @@ describe("contentSchema", () => {
   });
   test("rejects malformed dates", () => {
     expect(() => contentSchema.parse({ ...empty, events: [{ ...event, date: "Oct 2025" }] })).toThrow(/date/);
+  });
+});
+
+const song = { title: "A", artist: "NIKI", spotify: "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC" };
+
+describe("the mixtape and links", () => {
+  test("a song needs title, artist and an open.spotify.com track URL", () => {
+    expect(musicSongSchema.safeParse(song).success).toBe(true);
+    expect(musicSongSchema.safeParse({ ...song, spotify: "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=abc" }).success).toBe(true);
+    for (const bad of ["https://open.spotify.com/album/4uLU6hMCjMI75M1A2tKUQC", "https://example.com/track/x", "spotify:track:4uLU6hMCjMI75M1A2tKUQC"])
+      expect(musicSongSchema.safeParse({ ...song, spotify: bad }).success, bad).toBe(false);
+    expect(musicSongSchema.safeParse({ title: "A", spotify: song.spotify }).success).toBe(false);
+  });
+  test("the mixtape holds at most 12 songs", () => {
+    const base = { ...FIXTURES, music: Array(13).fill(song) };
+    expect(contentSchema.safeParse(base).error?.issues[0].message).toMatch(/12/);
+  });
+  test("links are https, at most four, and default to none", () => {
+    expect(contentSchema.parse({ ...FIXTURES, links: undefined }).links).toEqual([]);
+    expect(contentSchema.safeParse({ ...FIXTURES, links: [{ label: "x", url: "http://a.b" }] }).success).toBe(false);
+    expect(contentSchema.safeParse({ ...FIXTURES, links: Array(5).fill({ label: "x", url: "https://a.b" }) }).success).toBe(false);
   });
 });

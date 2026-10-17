@@ -7,7 +7,7 @@ export function SoundToggle() {
   const on = useSyncExternalStore(subscribeSound, soundEnabled, () => false);
   return (
     <button type="button" className={styles.toggle} aria-pressed={on} onClick={() => setSoundEnabled(!on)}>
-      Sound<span aria-hidden="true">: {on ? "on" : "off"}</span>
+      Sound<span aria-hidden="true">{on ? "on" : "off"}</span>
     </button>
   );
 }

@@ -11,15 +11,15 @@ export function getLenis(): Lenis | null {
 }
 
 function focusTarget(el: HTMLElement) {
-  // Chapters hand focus to their heading; anything else (e.g. #main, which contains
-  // every chapter) takes focus itself.
-  const heading = el.hasAttribute("data-chapter") ? el.querySelector<HTMLElement>("[data-chapter-heading]") : null;
+  // Tracks hand focus to their heading; anything else (e.g. #main, which contains
+  // every track) takes focus itself.
+  const heading = el.hasAttribute("data-track") ? el.querySelector<HTMLElement>("[data-track-heading]") : null;
   const target = heading ?? el;
   if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
   target.focus({ preventScroll: true });
 }
 
-/** One path for every in-page jump: menu, rail, keys, skip link, deep links. */
+/** One path for every in-page jump: tape keys, dock, shortcuts, skip link, deep links. */
 export function scrollToId(id: string, { push = true, immediate = false } = {}): boolean {
   const el = document.getElementById(id);
   if (!el) return false;

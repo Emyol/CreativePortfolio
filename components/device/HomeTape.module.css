@@ -1,0 +1,15 @@
+/* The device alone on the table, as large as the viewport allows without cropping. */
+.hero {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vh, 3rem) var(--gutter);
+}
+.device {
+  width: min(100%, 1180px, (100dvh - 2 * clamp(1rem, 4vh, 3rem)) * 2400 / 1674);
+}
+
+/* Phones: the device is landscape, so the hero hugs it instead of filling the screen. */
+@media (max-width: 767px) {
+  .hero { min-height: 0; padding-block: 3.5rem 1rem; }
+}

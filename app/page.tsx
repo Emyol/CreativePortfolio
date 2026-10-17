@@ -1,41 +1,23 @@
-import { Fragment } from "react";
-import { ChapterBody } from "@/components/chapters/ChapterBody";
-import { ChapterSection } from "@/components/chapters/ChapterSection";
-import { Footer } from "@/components/frame/Footer";
-import { ScrollFrame } from "@/components/frame/ScrollFrame";
-import { EntranceProvider } from "@/components/hero/Entrance";
-import { Hero } from "@/components/hero/Hero";
-import { ActiveChapterProvider } from "@/components/motion/ActiveChapter";
-import { BrushDivider } from "@/components/motion/BrushDivider";
-import { SeasonController } from "@/components/motion/SeasonController";
-import { SealRail } from "@/components/rail/SealRail";
-import { visibleChapters } from "@/lib/chapters";
+import { Flip } from "@/components/device/Flip";
+import { HomeTape } from "@/components/device/HomeTape";
+import { Underside } from "@/components/frame/Underside";
+import { ActiveTrackProvider } from "@/components/motion/ActiveTrack";
+import { TapeBody } from "@/components/tracks/TapeBody";
 import { getContent } from "@/lib/content/load";
+import { visibleTracks } from "@/lib/tape";
 
 export default async function Home() {
   const content = await getContent();
-  const chapters = visibleChapters(content);
+  const tracks = visibleTracks(content);
 
   return (
-    <ActiveChapterProvider ids={chapters.map((c) => c.id)}>
-    <ScrollFrame>
-      <EntranceProvider>
-        <Hero chapters={chapters} />
-      </EntranceProvider>
-      <SealRail chapters={chapters} />
-      <main id="main" tabIndex={-1}>
-        {chapters.map((chapter, i) => (
-          <Fragment key={chapter.id}>
-            <BrushDivider from={i === 0 ? "top" : chapters[i - 1].season} to={chapter.season} seal={chapter.seal} />
-            <ChapterSection chapter={chapter}>
-              <ChapterBody id={chapter.id} content={content} />
-            </ChapterSection>
-          </Fragment>
-        ))}
-      </main>
-      <Footer />
-    </ScrollFrame>
-    <SeasonController chapters={chapters} />
-    </ActiveChapterProvider>
+    <ActiveTrackProvider ids={tracks.map((t) => t.id)}>
+      <HomeTape tracks={tracks} songs={content.music.map(({ title, artist }) => ({ title, artist }))}>
+        <main id="main" tabIndex={-1}>
+          <TapeBody tracks={tracks} content={content} flip={<Flip />} />
+        </main>
+        <Underside toolbox={content.about.toolbox} links={content.links} />
+      </HomeTape>
+    </ActiveTrackProvider>
   );
 }

@@ -1,47 +1,40 @@
 import type { Metadata } from "next";
-import type { CSSProperties, ReactNode } from "react";
-import { Klee_One, Shippori_Mincho_B1, Yuji_Syuku, Zen_Kaku_Gothic_New } from "next/font/google";
+import type { ReactNode } from "react";
+import { Archivo, Doto, Space_Mono } from "next/font/google";
 import "lenis/dist/lenis.css";
-import { Konami } from "@/components/game/Konami";
 import { InlineScript } from "@/components/InlineScript";
 import { HashLinks } from "@/components/motion/HashLinks";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { MotionProvider } from "@/lib/motion/MotionProvider";
-import { ENTRANCE_PREPAINT } from "@/lib/motion/tier";
-import { BROCADE, GOLD, SEAL_RED, seasonVars } from "@/lib/seasons";
+import { POWER_PREPAINT } from "@/lib/powerOn";
 import "./globals.css";
 
-// CJK fonts are large; preload: false lets the browser fetch only the unicode-range slices it uses.
-const brush = Yuji_Syuku({ weight: "400", subsets: ["latin"], variable: "--font-brush", display: "swap", preload: false });
-const heading = Shippori_Mincho_B1({ weight: ["500", "700"], subsets: ["latin"], variable: "--font-heading", display: "swap", preload: false });
-const hand = Klee_One({ weight: ["400", "600"], subsets: ["latin"], variable: "--font-hand", display: "swap", preload: false });
-const body = Zen_Kaku_Gothic_New({ weight: ["400", "500", "700"], subsets: ["latin"], variable: "--font-body", display: "swap", preload: false });
+// One job each: Archivo (width axis) for display and body, Space Mono for what is printed
+// on the device, Doto only for text lit on its screen.
+const sans = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-sans", display: "swap" });
+const mono = Space_Mono({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-mono", display: "swap" });
+const dot = Doto({ subsets: ["latin"], variable: "--font-dot", display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "Miel",
-  description: "Miel's hanging scroll: events, music, hobbies, the shelf and the people around him.",
+  description: "Miel's tape: the events he went to, the songs he loves and the people around him.",
+  openGraph: { images: ["/device/beauty.jpg"] },
 };
 
-const rootVars = { ...seasonVars("top"), "--seal": SEAL_RED, "--brocade": BROCADE, "--gold": GOLD } as CSSProperties;
-
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const fonts = [brush, heading, hand, body].map((f) => f.variable).join(" ");
   return (
-    <html lang="en" className={fonts} style={rootVars} suppressHydrationWarning>
+    <html lang="en" className={[sans.variable, mono.variable, dot.variable].join(" ")} suppressHydrationWarning>
       <head>
-        <InlineScript html={ENTRANCE_PREPAINT} />
-        <noscript>
-          <style>{`[data-mask]{stroke-dashoffset:0!important;stroke-width:40px!important;opacity:1!important}[data-pen-group]{opacity:0!important}`}</style>
-        </noscript>
+        <InlineScript html={POWER_PREPAINT} />
       </head>
       <body>
         <a className="skip-link" href="#main">Skip to content</a>
-        <a className="skip-link" href="/mokuroku">Skip to the plain index</a>
+        <a className="skip-link" href="/tracklist">Skip to the track list</a>
         <MotionProvider>
           <SmoothScroll />
           <HashLinks />
           {children}
-          <Konami />
         </MotionProvider>
       </body>
     </html>

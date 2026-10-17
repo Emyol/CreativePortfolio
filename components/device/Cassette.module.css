@@ -1,0 +1,7 @@
+.cassette {
+  position: relative;
+  aspect-ratio: 1077 / 714;
+}
+.part { position: absolute; will-change: transform; }
+.fill { width: 100%; height: 100%; max-width: none; }
+.shell { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; }

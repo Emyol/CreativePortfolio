@@ -1,10 +1,9 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { GLOSSARY } from "./glossary";
 
 const ROOTS = ["app", "components", "lib"];
-const SKIP = [/\.test\.tsx?$/, /fixtures\.ts$/, /strokes\.json$/, /glossary\.ts$/];
+const SKIP = [/\.test\.tsx?$/, /fixtures\.ts$/];
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -14,19 +13,11 @@ function files(dir: string): string[] {
   });
 }
 const sources = ROOTS.flatMap(files).concat("lib/content/seed.json");
-const CJK = /[\u3040-\u30ff\u3400-\u9fff]/g;
+const CJK = /[\u3040-\u30ff\u3400-\u9fff]/;
 
 describe("content rules", () => {
-  test("every Japanese character in source and content is in the glossary", () => {
-    const known = new Set(GLOSSARY.flatMap((g) => [...g.term]));
-    const missing = sources.flatMap((f) => [...new Set(readFileSync(f, "utf8").match(CJK) ?? [])].filter((ch) => !known.has(ch)).map((ch) => `${ch} in ${f}`));
-    expect(missing).toEqual([]);
-  });
-  test("every glossary entry has a reading and an English meaning", () => {
-    for (const g of GLOSSARY) {
-      expect(g.reading.trim(), g.term).not.toBe("");
-      expect(g.meaning.trim(), g.term).not.toBe("");
-    }
+  test("no Japanese layer is left from Kakejiku", () => {
+    expect(sources.filter((f) => CJK.test(readFileSync(f, "utf8")))).toEqual([]);
   });
   test("no SVG filter textures in CSS (they re-rasterise on every scroll paint; use a PNG tile)", () => {
     const css = sources.filter((f) => f.endsWith(".css"));

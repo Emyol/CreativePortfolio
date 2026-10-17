@@ -1,0 +1,72 @@
+/* Every layer is placed in percentages of the plate and every printed or lit text is sized
+   in container units, so the whole device scales as one object. */
+.device {
+  position: relative;
+  container-type: inline-size;
+  width: 100%;
+  aspect-ratio: 2400 / 1674;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.full,
+.layer,
+.knob,
+.screen,
+.name,
+.led,
+.detent {
+  position: absolute;
+}
+.full { inset: 0; width: 100%; height: 100%; max-width: none; }
+/* The rendered shadow is true to the light; on the page it reads a touch heavy. */
+.shadow { opacity: 0.82; }
+.layer { max-width: none; }
+.fill { width: 100%; height: 100%; max-width: none; }
+
+.knob {
+  transition: rotate 280ms var(--ease-in-out);
+}
+
+/* Printed detents round the knob; the current one is lit. */
+.detent {
+  width: 0.62cqw;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: rgb(20 21 24 / 0.28);
+  box-shadow: inset 0 0.05cqw 0.08cqw rgb(0 0 0 / 0.35);
+  transition: background-color 280ms var(--ease-in-out), box-shadow 280ms var(--ease-in-out);
+}
+.detent[data-lit] {
+  background: var(--signal);
+  box-shadow: 0 0 0.7cqw rgb(255 46 0 / 0.75);
+}
+
+.screen { --screen-size: max(2.85cqw, 9.5px); padding-inline: 0.2cqw; }
+
+/* Off, the LED is the dark lens in the render; lit, it glows. */
+.led {
+  width: 1.2cqw;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle at 40% 35%, #FFD2C2 0 12%, var(--signal) 45%, rgb(255 46 0 / 0) 72%);
+  box-shadow: 0 0 1.2cqw 0.2cqw rgb(255 46 0 / 0.55);
+  transition: opacity 240ms var(--ease-out);
+}
+.led[data-on] { opacity: 1; }
+
+/* The maker's mark, printed on the plate. */
+.name {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono), monospace;
+  font-weight: 700;
+  font-size: max(2.55cqw, 10px);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--device-ink);
+}

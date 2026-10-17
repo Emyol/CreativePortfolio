@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EventPhoto } from "@/components/chapters/EventPhoto";
-import { Footer } from "@/components/frame/Footer";
-import { ScrollFrame } from "@/components/frame/ScrollFrame";
-import { InkBleed } from "@/components/motion/InkBleed";
+import { Dock } from "@/components/device/Dock";
+import { EventPhoto } from "@/components/tracks/EventPhoto";
+import { Underside } from "@/components/frame/Underside";
 import { Photo } from "@/components/Photo";
 import { getContent } from "@/lib/content/load";
 import { formatDate } from "@/lib/dates";
-import { seasonVars } from "@/lib/seasons";
+import { visibleTracks } from "@/lib/tape";
 import styles from "./page.module.css";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -31,26 +30,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function EventPage({ params }: Props) {
-  const event = await findEvent((await params).slug);
+  const { slug } = await params;
+  const content = await getContent();
+  const event = content.events.find((e) => e.slug === slug);
   if (!event) notFound();
   const rest = event.photos.slice(1);
 
+  const tracks = visibleTracks(content);
+  const when = formatDate(event.date);
+
   return (
-    <ScrollFrame>
-      <main id="main" tabIndex={-1} className={styles.page} style={seasonVars("summer-night")}>
-        <article>
+    <>
+      <main id="main" tabIndex={-1} className={styles.page}>
+        <article className={styles.recording}>
           <header className={styles.header}>
-            {/* The tile-to-page morph is the cover's entrance; it gets no ink bleed of its own. */}
-            <div className={styles.cover}>
-              <EventPhoto event={event} sizes="(min-width: 1180px) 1100px, 100vw" className={styles.coverImg} priority />
-            </div>
-            <p className={styles.kicker}>Event attended</p>
             <h1 className={styles.title}>{event.name}</h1>
             <p className={styles.meta}>
-              <time dateTime={event.date}>{formatDate(event.date)}</time>
-              {event.place && <> · {event.place}</>}
+              <time dateTime={event.date}>{when}</time>
+              {event.place && <span>{event.place}</span>}
             </p>
           </header>
+          {/* The card-to-page morph lands here; the cover loads eagerly as the page's main image. */}
+          <div className={styles.cover}>
+            <EventPhoto event={event} sizes="(min-width: 1180px) 1100px, 100vw" className={styles.coverImg} priority />
+          </div>
           <div className={styles.story}>
             <p className={styles.summary}>{event.summary}</p>
             {event.story.map((p, i) => (
@@ -61,20 +64,19 @@ export default async function EventPage({ params }: Props) {
             <ul className={styles.gallery}>
               {rest.map((photo, i) => (
                 <li key={`${photo.src}-${i}`}>
-                  <InkBleed origin="random">
-                    <Photo photo={photo} sizes="(min-width: 768px) 50vw, 100vw" className={styles.galleryImg} />
-                  </InkBleed>
+                  <Photo photo={photo} sizes="(min-width: 900px) 820px, 100vw" className={styles.galleryImg} />
                 </li>
               ))}
             </ul>
           )}
         </article>
         <nav aria-label="Event" className={styles.nav}>
-          <Link href="/#events">Back to Events</Link>
-          <Link href="/mokuroku">Plain index</Link>
+          <Link href="/#events">Back to events</Link>
+          <Link href="/tracklist">Track list</Link>
         </nav>
       </main>
-      <Footer />
-    </ScrollFrame>
+      <Underside toolbox={content.about.toolbox} links={content.links} />
+      <Dock tracks={tracks} side="a" current={null} visible screen={["LIVE", event.place ? `${event.place}  ${when}` : when]} hrefBase="/" />
+    </>
   );
 }

@@ -1,8 +1,21 @@
 {
-  "about": { "letter": [], "toolbox": [] },
+  "about": {
+    "letter": [],
+    "toolbox": []
+  },
   "events": [],
   "music": [],
   "hobbies": [],
   "shelf": [],
-  "people": []
+  "people": [],
+  "links": [
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Emyol"
+    },
+    {
+      "label": "Professional site",
+      "url": "https://project-miel.vercel.app"
+    }
+  ]
 }
