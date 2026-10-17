@@ -26,7 +26,12 @@ export const FIXTURES: SiteContent = {
     story: [`Fixture story paragraph for event ${i + 1}.`, "A second fixture paragraph."],
     photos: [photo(i + 1), photo(i + 11)],
   })),
-  music: Array.from({ length: 5 }, (_, i) => ({ title: `Fixture song ${i + 1}`, note: i === 0 ? "Fixture note." : undefined, link: i === 1 ? "https://example.com/fixture" : undefined })),
+  music: Array.from({ length: 6 }, (_, i) => ({
+    title: i === 3 ? "FixtureSongWithAnUnbrokenTitleThatMustTruncate" : `Fixture song ${i + 1}`,
+    artist: "Fixture artist",
+    spotify: `https://open.spotify.com/track/FixtureTrackId${String(i + 1).padStart(8, "0")}`,
+    note: i === 0 || i === 2 ? `Fixture note for song ${i + 1}.` : undefined,
+  })),
   hobbies: [
     { name: "Fixture hobby one", note: "Fixture note.", photo: photo(30) },
     { name: "Fixture hobby two", note: "Fixture note that runs a little longer than the first.", link: "https://example.com/fixture" },
@@ -42,5 +47,9 @@ export const FIXTURES: SiteContent = {
     { name: "Fixture person B", relation: "Fixture relation", link: "https://example.com/fixture" },
     { name: "Fixture person C", relation: "Fixture relation" },
     { name: "Fixture person D", relation: "Fixture relation" },
+  ],
+  links: [
+    { label: "GitHub", url: "https://github.com/Emyol" },
+    { label: "Professional site", url: "https://project-miel.vercel.app" },
   ],
 };

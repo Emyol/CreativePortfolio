@@ -8,6 +8,14 @@ describe("content loading", () => {
   test("seed.json is valid", () => {
     expect(() => parseContent(seed, "seed.json")).not.toThrow();
   });
+  test("seed.json carries the two footer links and no songs yet", () => {
+    const c = parseContent(seed, "seed.json");
+    expect(c.links).toEqual([
+      { label: "GitHub", url: "https://github.com/Emyol" },
+      { label: "Professional site", url: "https://project-miel.vercel.app" },
+    ]);
+    expect(c.music).toEqual([]);
+  });
   test("seed.json never contains fixture text", () => {
     expect(JSON.stringify(seed)).not.toMatch(/fixture/i);
   });
