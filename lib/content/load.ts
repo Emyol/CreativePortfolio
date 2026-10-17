@@ -1,13 +1,17 @@
-import { z } from "zod";
-import { contentSchema, type SiteContent } from "./schema";
+import { supabaseConfig } from "@/lib/supabase/server";
+import { parseContent } from "./parse";
+import { readPublished } from "./repository";
+import type { SiteContent } from "./schema";
 import seed from "./seed.json";
 
-export function parseContent(raw: unknown, source: string): SiteContent {
-  const result = contentSchema.safeParse(raw);
-  if (!result.success) throw new Error(`Invalid content in ${source}:\n${z.prettifyError(result.error)}`);
-  return result.data;
-}
+export { parseContent };
 
+/**
+ * The tape visitors see. Fixtures in development; the repo seed when Supabase isn't
+ * configured (local dev, CI); otherwise the published row, or the seed until the first
+ * publish. A failing Supabase throws rather than falling back: pages are ISR, so a failed
+ * regeneration keeps serving the last good render instead of an empty tape.
+ */
 export async function getContent(): Promise<SiteContent> {
   if (process.env.CONTENT_SOURCE === "fixtures") {
     if (process.env.NODE_ENV === "production") {
@@ -17,5 +21,13 @@ export async function getContent(): Promise<SiteContent> {
     const { FIXTURES } = await import("./fixtures");
     return parseContent(FIXTURES, "lib/content/fixtures.ts");
   }
-  return parseContent(seed, "lib/content/seed.json");
+  if (!supabaseConfig()) return parseContent(seed, "lib/content/seed.json");
+  try {
+    return (await readPublished()) ?? parseContent(seed, "lib/content/seed.json");
+  } catch (e) {
+    if (process.env.NEXT_PHASE === "phase-production-build") {
+      throw new Error("Supabase is unreachable: refusing to build the tape from the seed", { cause: e });
+    }
+    throw e;
+  }
 }

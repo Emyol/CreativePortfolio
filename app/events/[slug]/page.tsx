@@ -12,7 +12,10 @@ import styles from "./page.module.css";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export const dynamicParams = false;
+// Events published from the admin get their page on first visit, without a deploy;
+// unknown slugs still 404 (notFound below). Pages refresh hourly and on publish.
+export const dynamicParams = true;
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const { events } = await getContent();

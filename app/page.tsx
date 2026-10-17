@@ -6,6 +6,9 @@ import { TapeBody } from "@/components/tracks/TapeBody";
 import { getContent } from "@/lib/content/load";
 import { visibleTracks } from "@/lib/tape";
 
+// Rebuilt hourly and whenever the tape is published; a failed rebuild keeps the last good page.
+export const revalidate = 3600;
+
 export default async function Home() {
   const content = await getContent();
   const tracks = visibleTracks(content);
