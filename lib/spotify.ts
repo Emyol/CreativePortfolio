@@ -30,12 +30,15 @@ export type SpotifyIFrameAPI = {
 type ReadyWindow = Window & { onSpotifyIframeApiReady?: (api: SpotifyIFrameAPI) => void };
 
 let pending: Promise<SpotifyIFrameAPI> | null = null;
+// Whatever Spotify hands over is kept, even if it arrives after a timeout gave up on it.
+let loaded: SpotifyIFrameAPI | null = null;
 
 /**
  * Loads the iFrame API once. Rejects when the script errors (blocked, offline) or never
  * answers within `timeoutMs`; a rejection clears the cache so a later press can retry.
  */
 export function loadSpotifyApi(timeoutMs = 8000): Promise<SpotifyIFrameAPI> {
+  if (loaded) return Promise.resolve(loaded);
   if (pending) return pending;
   pending = new Promise<SpotifyIFrameAPI>((resolve, reject) => {
     const w = window as ReadyWindow;
@@ -47,6 +50,7 @@ export function loadSpotifyApi(timeoutMs = 8000): Promise<SpotifyIFrameAPI> {
     const timer = window.setTimeout(() => fail("timed out"), timeoutMs);
     w.onSpotifyIframeApiReady = (api) => {
       window.clearTimeout(timer);
+      loaded = api;
       resolve(api);
     };
     const script = document.createElement("script");
@@ -63,5 +67,6 @@ export function loadSpotifyApi(timeoutMs = 8000): Promise<SpotifyIFrameAPI> {
 
 export function __resetSpotifyForTests(): void {
   pending = null;
+  loaded = null;
   delete (window as ReadyWindow).onSpotifyIframeApiReady;
 }

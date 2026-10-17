@@ -39,3 +39,10 @@ test("a blocked script fails fast instead of waiting for the timeout", async () 
   document.querySelector<HTMLScriptElement>(`script[src="${SPOTIFY_IFRAME_API}"]`)!.dispatchEvent(new Event("error"));
   await expect(p).rejects.toThrow(/Spotify/);
 });
+
+test("a script that answers after the timeout is kept, so the next press uses it at once", async () => {
+  await expect(loadSpotifyApi(30)).rejects.toThrow(/timed out/);
+  const api = { createController: () => {} };
+  (window as unknown as { onSpotifyIframeApiReady: (a: unknown) => void }).onSpotifyIframeApiReady(api);
+  await expect(loadSpotifyApi(30)).resolves.toBe(api);
+});

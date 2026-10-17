@@ -2,12 +2,15 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { MixtapeSong } from "@/lib/content/schema";
 import { getPlayback, getServerPlayback, resetPlayback, setPlayback, subscribePlayback } from "@/lib/playback";
-import { loadSpotifyApi, spotifyUri, type EmbedController } from "@/lib/spotify";
+import { loadSpotifyApi, spotifyUri, type EmbedController, type PlaybackUpdate } from "@/lib/spotify";
 import { formatTrackNumber } from "@/lib/tape";
 import styles from "./Mixtape.module.css";
 
 // If play() hasn't produced playback by then, the browser blocked it (Safari autoplay).
 const STALL_MS = 3000;
+// The script can load while the embed itself is blocked; give the player this long to answer.
+const EMBED_MS = 8000;
+const STALL_HINT = "Press play in the Spotify player.";
 
 export const clock = (ms: number): string => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -23,21 +26,29 @@ export function Mixtape({ songs }: { songs: MixtapeSong[] }) {
   const playback = useSyncExternalStore(subscribePlayback, getPlayback, getServerPlayback);
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<EmbedController | null>(null);
+  // One player is ever made: presses while it is being made only change what it will load.
+  const creating = useRef(false);
+  const wanted = useRef<string | null>(null);
+  const disposed = useRef(false);
   const stall = useRef<number | undefined>(undefined);
+  const embed = useRef<number | undefined>(undefined);
   const [stalled, setStalled] = useState(false);
   const [announced, setAnnounced] = useState("");
   const [failed, setFailed] = useState(false);
 
-  // Leaving the page (an event page, say) takes the deck with it: stop and reset.
-  useEffect(
-    () => () => {
+  // Leaving the page (an event page, say) takes the deck with it: stop and reset. A player
+  // that answers after this is destroyed on arrival (see the createController callback).
+  useEffect(() => {
+    disposed.current = false;
+    return () => {
+      disposed.current = true;
       window.clearTimeout(stall.current);
+      window.clearTimeout(embed.current);
       controller.current?.destroy();
       controller.current = null;
       resetPlayback();
-    },
-    [],
-  );
+    };
+  }, []);
 
   // Announce each new song once it actually plays.
   const playingSong = playback.status === "playing" ? playback.song : null;
@@ -53,13 +64,35 @@ export function Mixtape({ songs }: { songs: MixtapeSong[] }) {
     stall.current = window.setTimeout(() => setStalled(true), STALL_MS);
   };
 
-  const onUpdate = ({ data }: { data: { isPaused: boolean; isBuffering: boolean; position: number; duration: number } }) => {
-    const moving = !data.isPaused && !data.isBuffering;
-    if (moving) {
+  const fail = (why: unknown) => {
+    console.warn("[mixtape] Spotify didn't load", why);
+    window.clearTimeout(stall.current);
+    window.clearTimeout(embed.current);
+    creating.current = false;
+    setStalled(false);
+    setFailed(true);
+    setPlayback({ status: "error" });
+  };
+
+  const load = (c: EmbedController, uri: string) => {
+    if (c.loadEntity) c.loadEntity(uri);
+    else c.loadUri(uri);
+  };
+
+  const onUpdate = ({ data }: { data: PlaybackUpdate }) => {
+    if (disposed.current) return;
+    // Updates still in flight from the previous song say nothing about this one.
+    if (data.playingURI && wanted.current && data.playingURI !== wanted.current) return;
+    window.clearTimeout(embed.current);
+    if (data.isBuffering) {
+      setPlayback({ status: "loading", position: data.position, duration: data.duration });
+      return;
+    }
+    if (!data.isPaused) {
       window.clearTimeout(stall.current);
       setStalled(false);
     }
-    setPlayback({ status: moving ? "playing" : "paused", position: data.position, duration: data.duration });
+    setPlayback({ status: data.isPaused ? "paused" : "playing", position: data.position, duration: data.duration });
   };
 
   async function press(i: number) {
@@ -68,32 +101,53 @@ export function Mixtape({ songs }: { songs: MixtapeSong[] }) {
       controller.current.togglePlay();
       return;
     }
-    const uri = spotifyUri(songs[i].spotify);
-    setFailed(false);
-    setPlayback({ status: "loading", song: i, position: 0, duration: 0 });
-    armStall();
-    if (controller.current) {
-      if (controller.current.loadEntity) controller.current.loadEntity(uri);
-      else controller.current.loadUri(uri);
-      controller.current.play();
+    let uri: string;
+    try {
+      uri = spotifyUri(songs[i].spotify);
+    } catch (err) {
+      fail(err);
       return;
     }
+    wanted.current = uri;
+    setFailed(false);
+    setPlayback({ status: "loading", song: i, position: 0, duration: 0 });
+    if (controller.current) {
+      load(controller.current, uri);
+      controller.current.play();
+      armStall();
+      return;
+    }
+    if (creating.current) return; // the player being made loads wanted.current when it arrives
+    creating.current = true;
     try {
       const api = await loadSpotifyApi();
-      if (!host.current) return;
+      if (disposed.current || !host.current) return;
       // The API replaces the element it is given; hand it one React doesn't manage.
       const mount = document.createElement("div");
       host.current.append(mount);
+      let abandoned = false;
+      embed.current = window.setTimeout(() => {
+        abandoned = true;
+        mount.remove();
+        fail("the player never answered");
+      }, EMBED_MS);
       api.createController(mount, { uri, width: "100%", height: 152 }, (c) => {
+        if (disposed.current || abandoned) {
+          c.destroy();
+          return;
+        }
+        creating.current = false;
         controller.current = c;
         c.addListener("playback_update", onUpdate);
-        c.addListener("ready", () => c.play());
+        c.addListener("ready", () => {
+          if (!disposed.current) c.play();
+        });
+        if (wanted.current && wanted.current !== uri) load(c, wanted.current);
         c.play();
+        armStall();
       });
-    } catch {
-      window.clearTimeout(stall.current);
-      setFailed(true);
-      setPlayback({ status: "error" });
+    } catch (err) {
+      fail(err);
     }
   }
 
@@ -156,9 +210,10 @@ export function Mixtape({ songs }: { songs: MixtapeSong[] }) {
         </div>
         <div ref={host} className={styles.embed} data-embed />
         {failed && <p className={styles.warn} role="alert">Spotify didn&apos;t load. Open the song in Spotify instead.</p>}
-        {stalled && !failed && <p className={styles.warn}>Press play in the Spotify player.</p>}
+        <p className={stalled && !failed ? styles.warn : "sr-only"} role="status">
+          {stalled && !failed ? STALL_HINT : announced}
+        </p>
         <p className={styles.preview}>Logged-out listeners hear a preview from Spotify.</p>
-        <p className="sr-only" role="status">{announced}</p>
       </aside>
     </div>
   );

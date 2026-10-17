@@ -89,3 +89,22 @@ test.describe("phones", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   });
 });
+
+test("reduced motion switched on mid-song freezes the reels, but the song and its clock go on", async ({ page }) => {
+  await page.route(API, (route) => route.fulfill({ contentType: "text/javascript", body: STUB }));
+  await gotoReady(page, "/#mixtape");
+  await headingAtTop(page, "mixtape");
+  await page.getByRole("button", { name: "Play Fixture song 1 on Spotify" }).click();
+  const dockScreen = page.locator("[data-dock] [data-screen]");
+  await expect(dockScreen).toContainText(/0:0[1-9]/);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator("html")).toHaveAttribute("data-tier", "none");
+  const clockOf = async () => (await dockScreen.innerText()).match(/\d+:\d\d/)?.[0];
+  const before = { reels: await page.locator("[data-reel]").evaluateAll((els) => els.map((el) => (el as HTMLElement).style.transform)), clock: await clockOf() };
+  await page.waitForTimeout(1300);
+  expect(await page.locator("[data-reel]").evaluateAll((els) => els.map((el) => (el as HTMLElement).style.transform))).toEqual(before.reels);
+  expect(await clockOf()).not.toBe(before.clock);
+  await expect(page.locator("[data-fake-embed]")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pause Fixture song 1" })).toBeVisible();
+  await expect(page.locator("[data-hero] [data-led][data-on]")).toHaveCount(1);
+});
