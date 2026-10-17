@@ -17,6 +17,9 @@ html, body { margin: 0; }
   --panel-rule: #2A2C31;
   --bezel: #26282C;
 
+  /* Ink printed on the aluminium. The device art is the same in both themes, so this is too. */
+  --device-ink: #17181B;
+
   --gutter: clamp(16px, 4vw, 48px);
   --measure-wide: 1180px;
 

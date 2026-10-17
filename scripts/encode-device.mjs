@@ -22,8 +22,19 @@ async function feathered(file) {
   return sharp(await img.composite([{ input: mask, blend: "dest-in" }]).png().toBuffer());
 }
 
+// The contact shadow spreads to the canvas edge; fade the edge so it never ends in a line.
+async function vignetted(file) {
+  const img = sharp(IN + file);
+  const { width, height } = await img.metadata();
+  const blur = Math.round(width * 0.03);
+  const mask = Buffer.from(
+    `<svg width="${width}" height="${height}"><defs><filter id="b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${blur}"/></filter></defs><rect x="${blur * 2}" y="${blur * 2}" width="${width - blur * 4}" height="${height - blur * 4}" fill="#fff" filter="url(#b)"/></svg>`,
+  );
+  return sharp(await img.composite([{ input: mask, blend: "dest-in" }]).png().toBuffer());
+}
+
 for (const name of SPRITES) {
-  const src = name === "knob" ? await feathered("knob.png") : sharp(IN + name + ".png");
+  const src = name === "knob" ? await feathered("knob.png") : name === "shadow" ? await vignetted("shadow.png") : sharp(IN + name + ".png");
   const buf = await src.png().toBuffer();
   await sharp(buf).avif({ quality: 62, effort: 6 }).toFile(`${OUT}${name}.avif`);
   await sharp(buf).webp({ quality: 82, alphaQuality: 90, effort: 6 }).toFile(`${OUT}${name}.webp`);

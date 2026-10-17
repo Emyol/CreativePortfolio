@@ -1,3 +1,4 @@
+import { Device } from "@/components/device/Device";
 import { Footer } from "@/components/frame/Footer";
 import { ActiveTrackProvider } from "@/components/motion/ActiveTrack";
 import { TapeBody } from "@/components/tracks/TapeBody";
@@ -12,7 +13,7 @@ export default async function Home() {
   return (
     <ActiveTrackProvider ids={tracks.map((t) => t.id)}>
       <header data-hero id="top" className={styles.hero}>
-        <h1>Miel</h1>
+        <Device tracks={tracks} side="a" current={null} interactive className={styles.device} />
       </header>
       <main id="main" tabIndex={-1}>
         <TapeBody tracks={tracks} content={content} />

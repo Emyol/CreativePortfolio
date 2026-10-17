@@ -1,0 +1,54 @@
+.keys { display: contents; }
+
+.slot {
+  position: absolute;
+  display: block;
+  border-radius: 13%/19%;
+  color: var(--device-ink);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.slot:focus-visible { outline: 2px solid var(--signal); outline-offset: 0.35cqw; }
+
+/* Both cap states are stacked; the down state fades in, so the swap never flashes. */
+.cap,
+.capDown {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+  transition: translate 160ms var(--ease-out), scale 160ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+.capDown { opacity: 0; }
+
+.slot[data-latched] .capDown,
+.slot[data-pressed] .capDown { opacity: 1; }
+.slot[data-latched] .cap,
+.slot[data-pressed] .cap { opacity: 0; }
+
+/* A press sinks the key fast and lets it come back a little slower. */
+.slot[data-pressed] .cap,
+.slot[data-pressed] .capDown {
+  translate: 0 0.08cqw;
+  scale: 0.98;
+  transition-duration: 100ms;
+}
+
+/* The printed label under the key, part of the plate's artwork. */
+.label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2cqw);
+  translate: -50% 0;
+  font-family: var(--font-mono), monospace;
+  font-size: max(1.32cqw, 9px);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-transform: lowercase;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .slot:not([data-latched]):hover .cap { translate: 0 -0.04cqw; }
+}
