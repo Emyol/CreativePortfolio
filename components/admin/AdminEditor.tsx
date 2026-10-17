@@ -42,6 +42,10 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
   const status = useSyncExternalStore(autosave.subscribe, autosave.status, autosave.status);
   const [publish, setPublish] = useState<PublishState>({ kind: "idle" });
   const issues = useMemo(() => issuesByPath(content), [content]);
+  // Fields the owner has edited or left (by the editor's paths), and whether Fix showed all.
+  const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set());
+  const [revealed, setRevealed] = useState(false);
+  const touch = useCallback((path: Path) => setTouched((t) => (t.has(pathKey(path)) ? t : new Set(t).add(pathKey(path)))), []);
   // An edit after publishing means what's on screen is no longer what's live.
   const edited = useCallback(() => setPublish((p) => (p.kind === "done" || p.kind === "failed" ? { kind: "idle" } : p)), []);
 
@@ -70,6 +74,7 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
         setContent(next);
         autosave.change(next);
         edited();
+        touch(path);
       },
       update: (path, fn) => {
         const at = resolve(latest.current, path);
@@ -84,6 +89,8 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
         const at = resolve(content, path);
         return at ? issues.get(pathKey(at)) : undefined;
       },
+      shown: (path) => revealed || touched.has(pathKey(path)),
+      touch,
       issuesUnder: (path) => {
         const at = resolve(content, path);
         if (!at) return 0;
@@ -94,12 +101,13 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
       },
       newKey,
     }),
-    [content, issues, autosave, newKey, edited],
+    [content, issues, autosave, newKey, edited, touched, revealed, touch],
   );
 
   const showIssue = useCallback(() => {
     const first = issues.keys().next().value;
     if (first === undefined) return;
+    setRevealed(true);
     const parts = toTokens(content, first.split(".").map((p) => (/^\d+$/.test(p) ? Number(p) : p)));
     // The deepest field that exists on the page (a list-wide problem points at its section).
     for (let n = parts.length; n > 0; n--) {

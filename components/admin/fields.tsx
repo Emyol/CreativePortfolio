@@ -8,9 +8,10 @@ import styles from "./admin.module.css";
 
 /** Label, hint and the field's own problem, wired to the control for screen readers. */
 export function FieldFrame({ path, label, hint, children, group = false }: { path: Path; label: string; hint?: string; children: (a11y: { id: string; describedBy?: string; invalid: boolean }) => ReactNode; group?: boolean }) {
-  const { issue } = useEditor();
+  const { issue, shown, touch } = useEditor();
   const id = fieldId(path);
-  const problem = issue(path);
+  // A problem waits until the field has been touched, so a new entry isn't all red at once.
+  const problem = shown(path) ? issue(path) : undefined;
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = problem ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
@@ -19,7 +20,7 @@ export function FieldFrame({ path, label, hint, children, group = false }: { pat
   // "Fix" focuses and what carries the label and the problem.
   const groupProps = group ? { id, role: "group", tabIndex: -1, "aria-labelledby": `${id}-label`, "aria-describedby": describedBy } : {};
   return (
-    <div className={styles.field} data-invalid={problem ? "" : undefined} {...groupProps}>
+    <div className={styles.field} data-invalid={problem ? "" : undefined} onBlur={() => touch(path)} {...groupProps}>
       <Label className={styles.label} {...(group ? { id: `${id}-label` } : { htmlFor: id })}>{label}</Label>
       {hint && <p id={hintId} className={styles.hint}>{hint}</p>}
       {children({ id, describedBy, invalid: !!problem })}

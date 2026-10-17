@@ -20,10 +20,10 @@ describe("contentSchema", () => {
     expect(() => contentSchema.parse({ ...empty, events: [{ ...event, photos: [] }] })).toThrow(/photo/);
   });
   test("rejects duplicate event slugs", () => {
-    expect(() => contentSchema.parse({ ...empty, events: [event, event] })).toThrow(/duplicate/i);
+    expect(() => contentSchema.parse({ ...empty, events: [event, event] })).toThrow(/already uses the address/);
   });
   test("rejects non-kebab slugs", () => {
-    expect(() => contentSchema.parse({ ...empty, events: [{ ...event, slug: "Night Market" }] })).toThrow(/slug/);
+    expect(() => contentSchema.parse({ ...empty, events: [{ ...event, slug: "Night Market" }] })).toThrow(/lowercase words joined by hyphens/);
   });
   test("rejects a toolbox item the professional site does not support", () => {
     expect(() => contentSchema.parse({ ...empty, about: { letter: [], toolbox: ["Rust"] } })).toThrow();

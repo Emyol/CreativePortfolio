@@ -121,3 +121,27 @@ test("the publish confirmation takes focus, and Cancel gives it back", async () 
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   expect(screen.getByRole("button", { name: /^Publish$/ })).toHaveFocus();
 });
+
+test("a new entry's problems wait until a field is left, or Fix is pressed", async () => {
+  const user = userEvent.setup();
+  render(<AdminEditor initialContent={FIXTURES} initialRevision={1} />);
+  const events = screen.getByRole("region", { name: "events" });
+  await user.click(within(events).getByRole("button", { name: "Add an event" }));
+  expect(screen.queryByText("Fill this in")).toBeNull();
+  const name = within(events).getAllByLabelText("Name")[0];
+  await user.click(name);
+  await user.tab();
+  expect(name).toHaveAttribute("aria-invalid", "true");
+  expect(screen.getAllByText("Fill this in")).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: /^Fix \d+ things first/ }));
+  expect(screen.getAllByText("Fill this in").length).toBeGreaterThan(1);
+});
+
+test("an address that isn't lowercase words and hyphens says so plainly", async () => {
+  const user = userEvent.setup();
+  render(<AdminEditor initialContent={FIXTURES} initialRevision={1} />);
+  const address = screen.getAllByLabelText("Address")[0];
+  await user.clear(address);
+  await user.type(address, "Night Market");
+  expect(screen.getByText("Use lowercase words joined by hyphens, like pycon-ph-2025")).toBeInTheDocument();
+});

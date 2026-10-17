@@ -24,6 +24,8 @@ function Harness() {
     set: (p, v) => setContent((c) => setIn(c, p, v)),
     update: (p, fn) => setContent((c) => setIn(c, p, fn(getIn(c, p)))),
     issue: (p) => issues.get(pathKey(p)),
+    shown: () => true,
+    touch: () => {},
     issuesUnder: () => 0,
     newKey: () => "k",
   };

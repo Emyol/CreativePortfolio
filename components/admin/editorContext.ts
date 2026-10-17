@@ -15,6 +15,10 @@ export type Editor = {
   /** Applies `fn` to the latest value at `path` (for async work like uploads finishing). */
   update: (path: Path, fn: (current: unknown) => unknown) => void;
   issue: (path: Path) => string | undefined;
+  /** Whether a field's problem may show yet: once it has been edited or left, or after Fix. */
+  shown: (path: Path) => boolean;
+  /** Marks a field as left, so its problem shows. */
+  touch: (path: Path) => void;
   /** How many problems sit at or below `path`. */
   issuesUnder: (path: Path) => number;
   /** A fresh identity for a new list entry. */

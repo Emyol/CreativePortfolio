@@ -13,10 +13,10 @@ export const PROFESSIONAL_STACK = [
 export const PHONE = /\btel:|\+63|\b09\d{2}[\s-]?\d{3}[\s-]?\d{4}\b/;
 const noPhone = (t: string) => !PHONE.test(t);
 const NO_PHONE = "phone numbers stay off the tape";
-const text = z.string().trim().min(1).refine(noPhone, NO_PHONE);
+const text = z.string().trim().min(1, "Fill this in").refine(noPhone, NO_PHONE);
 /** Hides an entry from the tape without deleting it; stripped from what visitors get at publish. */
 const archived = z.boolean().optional();
-const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug must be kebab-case, e.g. pycon-ph-2025");
+const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase words joined by hyphens, like pycon-ph-2025");
 const date = z.string().refine((d) => {
   try {
     formatDate(d);
@@ -63,7 +63,7 @@ export const contentSchema = z.object({
   events: z.array(eventSchema).superRefine((events, ctx) => {
     const seen = new Set<string>();
     for (const e of events) {
-      if (seen.has(e.slug)) ctx.addIssue({ code: "custom", message: `duplicate event slug "${e.slug}"` });
+      if (seen.has(e.slug)) ctx.addIssue({ code: "custom", message: `Another event already uses the address "${e.slug}"` });
       seen.add(e.slug);
     }
   }),
