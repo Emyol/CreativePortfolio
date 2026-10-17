@@ -30,6 +30,10 @@ select
   (select count(*) = 3 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.prosecdef and 'search_path=""' = any(p.proconfig)
      and p.proname in ('is_tape_owner', 'save_tape_draft', 'publish_tape')) as definers_pin_search_path,
+  -- Supabase's API role preloads safeupdate, which refuses a DELETE without WHERE.
+  -- These checks run as postgres, where it isn't loaded, so look at the function itself.
+  coalesce((select prosrc !~* 'delete\s+from\s+[a-z_.]+\s*;' from pg_proc
+     where oid = to_regprocedure('public.publish_tape(bigint)')), false) as publish_survives_safeupdate,
   -- Hidden entries are what publishing strips: one of two events comes back.
   coalesce((select jsonb_array_length(public.tape_without_archives(
        '{"events":[{"name":"kept"},{"name":"hidden","archived":true}],"about":{"letter":[]}}'::jsonb) -> 'events') = 1
