@@ -145,3 +145,9 @@ test("an address that isn't lowercase words and hyphens says so plainly", async 
   await user.type(address, "Night Market");
   expect(screen.getByText("Use lowercase words joined by hyphens, like pycon-ph-2025")).toBeInTheDocument();
 });
+
+test("a date can be typed with its hyphens on a phone keyboard", () => {
+  render(<AdminEditor initialContent={FIXTURES} initialRevision={1} />);
+  // iOS's numeric keypad has no hyphen, so "2026-10" couldn't be typed.
+  expect(screen.getAllByLabelText("Date")[0]).not.toHaveAttribute("inputmode", "numeric");
+});

@@ -188,7 +188,7 @@ function DateField({ spec, path }: { spec: FieldSpec; path: Path }) {
     <FieldFrame path={path} label={spec.label} hint={spec.hint}>
       {({ id, describedBy, invalid }) => (
         <div className={styles.row}>
-          <input id={id} className={styles.input} inputMode="numeric" placeholder="2026-10-18" value={value} aria-describedby={describedBy} aria-invalid={invalid || undefined} onChange={(e) => set(path, e.target.value.trim())} />
+          <input id={id} className={styles.input} placeholder="2026-10-18" value={value} aria-describedby={describedBy} aria-invalid={invalid || undefined} onChange={(e) => set(path, e.target.value.trim())} />
           <input className={styles.calendar} type="date" aria-label="Pick a day" value={/^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ""} onChange={(e) => e.target.value && set(path, e.target.value)} />
         </div>
       )}
