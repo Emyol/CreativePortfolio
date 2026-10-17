@@ -49,6 +49,32 @@
   pointer-events: none;
 }
 
+/* In the dock the label is printed on the cap itself, and sinks with it. */
+.capLabel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-inline: 2px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--device-ink);
+  pointer-events: none;
+  transition: translate 160ms var(--ease-out);
+}
+.slot[data-latched] .capLabel,
+.slot[data-pressed] .capLabel { translate: 0 1px; }
+.slot[data-pressed] .capLabel { transition-duration: 100ms; }
+
 @media (hover: hover) and (pointer: fine) {
   .slot:not([data-latched]):hover .cap { translate: 0 -0.04cqw; }
 }
+
+/* Reduced motion: a press only swaps the cap; nothing moves. */
+:global(html[data-tier="none"]) .slot[data-pressed] .cap,
+:global(html[data-tier="none"]) .slot[data-pressed] .capDown { translate: none; scale: none; }

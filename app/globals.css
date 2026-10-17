@@ -93,6 +93,9 @@ html[data-tier="none"] *::after {
 /* main only receives focus from the skip link; it isn't interactive, so no ring. */
 main:focus, main:focus-visible { outline: none; }
 
+/* Room at the end of the page so the dock never covers the last lines. */
+body:has([data-dock]) { padding-bottom: 6.5rem; }
+
 /* CSS smooth scrolling fights Lenis. */
 html.lenis { scroll-behavior: auto !important; }
 

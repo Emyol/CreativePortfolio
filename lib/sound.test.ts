@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { __resetSoundForTests, playTap, setSoundEnabled, soundEnabled, subscribeSound } from "./sound";
+import { __resetSoundForTests, playClunk, playKey, setSoundEnabled, soundEnabled, subscribeSound } from "./sound";
 
 beforeEach(() => {
   localStorage.clear();
@@ -34,8 +34,19 @@ test("subscribers hear about changes", () => {
   expect(l).toHaveBeenCalledOnce();
 });
 
-test("playTap never throws, with or without Web Audio", () => {
-  expect(() => playTap()).not.toThrow();
+test("the key click and the tape clunk never throw, with or without Web Audio", () => {
+  expect(() => playKey()).not.toThrow();
+  expect(() => playClunk()).not.toThrow();
   setSoundEnabled(true); // jsdom has no AudioContext
-  expect(() => playTap()).not.toThrow();
+  expect(() => playKey()).not.toThrow();
+  expect(() => playClunk()).not.toThrow();
+});
+
+test("nothing touches Web Audio while sound is off", () => {
+  const ctor = vi.fn();
+  vi.stubGlobal("AudioContext", ctor);
+  playKey();
+  playClunk();
+  expect(ctor).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
 });

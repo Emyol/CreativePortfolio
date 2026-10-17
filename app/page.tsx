@@ -1,10 +1,9 @@
-import { Device } from "@/components/device/Device";
+import { HomeTape } from "@/components/device/HomeTape";
 import { Footer } from "@/components/frame/Footer";
 import { ActiveTrackProvider } from "@/components/motion/ActiveTrack";
 import { TapeBody } from "@/components/tracks/TapeBody";
 import { getContent } from "@/lib/content/load";
 import { visibleTracks } from "@/lib/tape";
-import styles from "./page.module.css";
 
 export default async function Home() {
   const content = await getContent();
@@ -12,13 +11,12 @@ export default async function Home() {
 
   return (
     <ActiveTrackProvider ids={tracks.map((t) => t.id)}>
-      <header data-hero id="top" className={styles.hero}>
-        <Device tracks={tracks} side="a" current={null} interactive className={styles.device} />
-      </header>
-      <main id="main" tabIndex={-1}>
-        <TapeBody tracks={tracks} content={content} />
-      </main>
-      <Footer />
+      <HomeTape tracks={tracks}>
+        <main id="main" tabIndex={-1}>
+          <TapeBody tracks={tracks} content={content} />
+        </main>
+        <Footer />
+      </HomeTape>
     </ActiveTrackProvider>
   );
 }

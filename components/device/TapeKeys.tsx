@@ -13,6 +13,8 @@ type Props = {
   hrefBase?: "" | "/";
   /** Positions in this box (the plate by default); the dock passes its own key rects. */
   rects?: readonly Rect[];
+  /** Where the label is printed: under the key on the plate, or on the cap in the dock. */
+  labels?: "under" | "cap";
   className?: string;
 };
 
@@ -34,7 +36,7 @@ const capSprite: CSSProperties = {
  * Four fixed keys on the plate. They show the current side's tracks; a key with no track
  * is a blank cap. The track being read stays latched down, like a deck's play key.
  */
-export function TapeKeys({ tracks, side, current, interactive, hrefBase = "", rects = DEVICE.keys, className }: Props) {
+export function TapeKeys({ tracks, side, current, interactive, hrefBase = "", rects = DEVICE.keys, labels = "under", className }: Props) {
   return (
     <nav aria-label="Tape" className={[styles.keys, className].filter(Boolean).join(" ")} inert={!interactive} data-tape-keys>
       {keySlots(tracks, side).map(({ index, track }) => {
@@ -63,7 +65,7 @@ export function TapeKeys({ tracks, side, current, interactive, hrefBase = "", re
             data-latched={latched ? "" : undefined}
           >
             {caps}
-            <span className={styles.label}>{track.label}</span>
+            <span className={labels === "cap" ? styles.capLabel : styles.label}>{track.label}</span>
           </a>
         );
       })}

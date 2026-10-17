@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { DEVICE, pct, type Pt } from "@/lib/device/layout";
-import { formatTrackNumber, knobAngle, packDiameters, sideTracks, type SideId, type Track, type TrackId } from "@/lib/tape";
+import { formatTrackNumber, knobAngle, sideTracks, type SideId, type Track, type TrackId } from "@/lib/tape";
+import { Cassette } from "./Cassette";
 import { Screen } from "./Screen";
 import { Sprite } from "./Sprite";
 import { TapeKeys } from "./TapeKeys";
@@ -16,7 +17,7 @@ type Props = {
   className?: string;
 };
 
-const { plate, reels, pack, knob } = DEVICE;
+const { plate, knob } = DEVICE;
 const aspect = plate.width / plate.height;
 const sq = (size: number): { px: number } => ({ px: Math.round(size * plate.width) });
 
@@ -45,7 +46,6 @@ export function screenLines(tracks: Track[], side: SideId, current: TrackId | nu
  */
 export function Device({ tracks, side, current, interactive, screen, className }: Props) {
   const own = sideTracks(tracks, side).slice(0, 4);
-  const start = packDiameters(0, pack);
   const angle = knobAngle(tracks, side, current);
 
   return (
@@ -53,25 +53,10 @@ export function Device({ tracks, side, current, interactive, screen, className }
       <Sprite name="shadow" className={`${styles.full} ${styles.shadow}`} eager />
       <Sprite name="plate" className={styles.full} eager />
 
-      <span className={styles.reelSlot} style={{ ...centred(reels.left, pack.max), scale: String(start.left / pack.max) }} data-pack="left">
-        <Sprite name="pack" className={styles.fill} width={sq(pack.max).px} height={sq(pack.max).px} eager />
-      </span>
-      <span className={styles.reelSlot} style={{ ...centred(reels.right, pack.max), scale: String(start.right / pack.max) }} data-pack="right">
-        <Sprite name="pack" className={styles.fill} width={sq(pack.max).px} height={sq(pack.max).px} eager />
-      </span>
-      <span className={styles.reelSlot} style={centred(reels.left, reels.hub)} data-reel="left">
-        <Sprite name="hub" className={styles.fill} width={sq(reels.hub).px} height={sq(reels.hub).px} eager />
-      </span>
-      <span className={styles.reelSlot} style={centred(reels.right, reels.hub)} data-reel="right">
-        <Sprite name="hub" className={styles.fill} width={sq(reels.hub).px} height={sq(reels.hub).px} eager />
-      </span>
-      <Sprite
-        name={side === "a" ? "shell-a" : "shell-b"}
+      <Cassette
+        side={side}
         className={styles.layer}
-        style={{ left: pct(DEVICE.cassette.x), top: pct(DEVICE.cassette.y), width: pct(DEVICE.cassette.w), height: pct(DEVICE.cassette.h) }}
-        width={1077}
-        height={714}
-        eager
+        style={{ position: "absolute", left: pct(DEVICE.cassette.x), top: pct(DEVICE.cassette.y), width: pct(DEVICE.cassette.w), height: pct(DEVICE.cassette.h) }}
       />
 
       <span className={styles.knob} style={{ ...centred(knob.centre, knob.sprite), rotate: `${angle}deg` }} data-knob>

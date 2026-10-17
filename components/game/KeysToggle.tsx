@@ -8,7 +8,7 @@ export function KeysToggle() {
   const on = useSyncExternalStore(subscribeTrackKeys, trackKeysEnabled, () => true);
   return (
     <button type="button" className={styles.toggle} aria-pressed={on} onClick={() => setTrackKeysEnabled(!on)}>
-      Track keys<span aria-hidden="true">: {on ? "on" : "off"}</span>
+      Track keys<span aria-hidden="true">{on ? "on" : "off"}</span>
     </button>
   );
 }
