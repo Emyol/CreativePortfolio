@@ -6,15 +6,16 @@ It is a separate site from the professional portfolio at `../portfolioV2`
 
 ## Status: Public site built, waiting for content
 
-The Kakejiku public site is implemented (spec: `docs/superpowers/specs/2026-10-13-kakejiku-world-design.md`,
-plan: `docs/superpowers/plans/2026-10-13-kakejiku-public-site.md`), as four stacked PRs.
-`lib/content/seed.json` is empty until the owner supplies material through `content-inbox/`;
-empty chapters stay hidden everywhere. `npm run dev:fixtures` shows the site with clearly
-fake fixtures (production builds refuse them).
+The **Side A** public site is implemented (spec: `docs/superpowers/specs/2026-10-17-side-a-design.md`,
+plan: `docs/superpowers/plans/2026-10-17-side-a-site.md`); it replaced Kakejiku entirely.
+`lib/content/seed.json` holds only the two footer links until the owner supplies material
+through `content-inbox/`; empty tracks stay hidden everywhere. `npm run dev:fixtures` shows
+the site with clearly fake fixtures (production builds refuse them).
 
 - Commands: `npm run dev`, `npm run dev:fixtures`, `npm run typecheck`, `npm test`
   (Vitest), `npm run test:e2e` (Playwright, against a fixtures dev server on port 3100),
-  `npm run build`, `npm run kanji:fetch`, `npm run texture:paper`.
+  `npm run build`, `npm run device:render` (headless Blender) then `npm run device:encode`
+  (see `art/blender/side-a/README.md`).
 - Next: the content-model spec (Supabase, photo hosting), then the admin port.
 - Brainstorm -> spec (`docs/superpowers/specs/`) -> plan (`docs/superpowers/plans/`)
   -> execute.
@@ -29,8 +30,10 @@ fake fixtures (production builds refuse them).
 | Updating content | **Reuse the Supabase admin editor** from portfolioV2 (owner chose this over files-only) |
 | Tech base | Next.js 16.4, React 19.3, TypeScript 5, CSS Modules, GSAP + Lenis, Zod; Vitest + Playwright |
 | Decomposition | 1) content model + public site, 2) admin port. Separate spec, plan and build for each |
-| World and site shape | **Kakejiku** hanging scroll: Sumi menu hero that becomes a seal rail, six seasonal chapters, smooth vertical scroll, a page per event, plain 目録 index. See the spec |
-| Motion | Kanji written in real stroke order (KanjiVG, credit required), ink bleed, brush dividers, seal stamps, one signature move per component, live reduced motion |
+| World and site shape | **Side A**: the site is a pocket tape player Miel built. Hero is the device top down; its control strip becomes a dock; six tracks over two sides with a flip between; a page per event ("live recording"); plain index at `/tracklist`. See the spec |
+| Device art | Rendered in Blender (`art/blender/side-a/device.py`) as layered top-down sprites plus `public/device/layout.json`; no WebGL. Live text wherever the device prints or lights something |
+| Music | A mixtape of songs Miel loves (max 12), played in the page through Spotify's iFrame API, loaded only on the first press. **No generated music** |
+| Motion | Reels turn with scroll velocity and at tape speed while a song plays; tape packs trade area as you read; keys sink and latch; knob points at the track; screen flicker; power-on once per session; the flip. One signature move per component, live reduced motion |
 | Priority | Desktop first, one to four weeks |
 
 ## Still open
@@ -109,7 +112,7 @@ the chosen World calls for it.
 | Phase | Skills |
 |---|---|
 | Sharpen an idea or decision | `/grill-me` (mattpocock `grilling`) to stress-test before committing to it |
-| Shape and theme/World | `superpowers:brainstorming` (done: Kakejiku), fed by `design-inspiration` boards in `docs/inspiration/` |
+| Shape and theme/World | `superpowers:brainstorming` (done: Side A), fed by `design-inspiration` boards in `docs/inspiration/` |
 | Gather references and components | `design-inspiration` (project skill), `animation-vocabulary` to name effects |
 | Spec, then plan | `superpowers:brainstorming` writes the spec, then `superpowers:writing-plans` |
 | Answer a design question by building | `mattpocock-skills:prototype` (throwaway, not the real app) |
