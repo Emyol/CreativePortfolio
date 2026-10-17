@@ -1,6 +1,6 @@
 import { Flip } from "@/components/device/Flip";
 import { HomeTape } from "@/components/device/HomeTape";
-import { Footer } from "@/components/frame/Footer";
+import { Underside } from "@/components/frame/Underside";
 import { ActiveTrackProvider } from "@/components/motion/ActiveTrack";
 import { TapeBody } from "@/components/tracks/TapeBody";
 import { getContent } from "@/lib/content/load";
@@ -16,7 +16,7 @@ export default async function Home() {
         <main id="main" tabIndex={-1}>
           <TapeBody tracks={tracks} content={content} flip={<Flip />} />
         </main>
-        <Footer />
+        <Underside toolbox={content.about.toolbox} links={content.links} />
       </HomeTape>
     </ActiveTrackProvider>
   );

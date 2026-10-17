@@ -96,6 +96,14 @@ main:focus, main:focus-visible { outline: none; }
 /* Room at the end of the page so the dock never covers the last lines. */
 body:has([data-dock]) { padding-bottom: 6.5rem; }
 
+/* Power-on: the hero screen waits dark until it is typed in (set before paint). If JS
+   never takes over, it lights after 3 s. */
+html[data-boot="pending"] [data-hero] [data-screen] > * {
+  visibility: hidden;
+  animation: boot-failsafe 0s linear 3s forwards;
+}
+@keyframes boot-failsafe { to { visibility: visible; } }
+
 /* CSS smooth scrolling fights Lenis. */
 html.lenis { scroll-behavior: auto !important; }
 

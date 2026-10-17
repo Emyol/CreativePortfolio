@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Archivo, Doto, Space_Mono } from "next/font/google";
 import "lenis/dist/lenis.css";
+import { InlineScript } from "@/components/InlineScript";
 import { HashLinks } from "@/components/motion/HashLinks";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { MotionProvider } from "@/lib/motion/MotionProvider";
+import { POWER_PREPAINT } from "@/lib/powerOn";
 import "./globals.css";
 
 // One job each: Archivo (width axis) for display and body, Space Mono for what is printed
@@ -21,6 +23,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={[sans.variable, mono.variable, dot.variable].join(" ")} suppressHydrationWarning>
+      <head>
+        <InlineScript html={POWER_PREPAINT} />
+      </head>
       <body>
         <a className="skip-link" href="#main">Skip to content</a>
         <a className="skip-link" href="/tracklist">Skip to the track list</a>

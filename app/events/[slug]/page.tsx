@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EventPhoto } from "@/components/tracks/EventPhoto";
-import { Footer } from "@/components/frame/Footer";
+import { Underside } from "@/components/frame/Underside";
 import { Photo } from "@/components/Photo";
 import { getContent } from "@/lib/content/load";
 import { formatDate } from "@/lib/dates";
@@ -28,7 +28,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function EventPage({ params }: Props) {
-  const event = await findEvent((await params).slug);
+  const { slug } = await params;
+  const content = await getContent();
+  const event = content.events.find((e) => e.slug === slug);
   if (!event) notFound();
   const rest = event.photos.slice(1);
 
@@ -68,7 +70,7 @@ export default async function EventPage({ params }: Props) {
           <Link href="/tracklist">Track list</Link>
         </nav>
       </main>
-      <Footer />
+      <Underside toolbox={content.about.toolbox} links={content.links} />
     </>
   );
 }

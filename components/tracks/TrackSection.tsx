@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+import { useRef, type ReactNode } from "react";
+import { gsap, useGSAP } from "@/lib/motion/gsap";
+import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { formatTrackNumber, type Track } from "@/lib/tape";
 import styles from "./TrackSection.module.css";
 
@@ -8,8 +11,25 @@ import styles from "./TrackSection.module.css";
  */
 export function TrackSection({ track, children }: { track: Track; children: ReactNode }) {
   const titleId = `${track.id}-title`;
+  const ref = useRef<HTMLElement>(null);
+  const tier = useMotionTier();
+
+  // Each track rises 8 px into place once, as it enters. From-states apply on mount only,
+  // so the server markup is fully visible; focus landing inside finishes it at once.
+  useGSAP(
+    () => {
+      if (tier === "none" || !ref.current) return;
+      const el = ref.current;
+      const tween = gsap.from(el, { y: 8, opacity: 0, duration: 0.4, ease: "power2.out", scrollTrigger: { trigger: el, start: "top 85%", once: true } });
+      const finish = () => tween.progress(1);
+      el.addEventListener("focusin", finish);
+      return () => el.removeEventListener("focusin", finish);
+    },
+    { scope: ref, dependencies: [tier], revertOnUpdate: true },
+  );
+
   return (
-    <section id={track.id} aria-labelledby={titleId} className={styles.track} data-track={track.id} data-side={track.side}>
+    <section ref={ref} id={track.id} aria-labelledby={titleId} className={styles.track} data-track={track.id} data-side={track.side}>
       <header className={styles.head}>
         <span className={styles.number} aria-hidden="true">{formatTrackNumber(track.number)}</span>
         <div className={styles.tab}>
