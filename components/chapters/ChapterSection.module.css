@@ -1,0 +1,10 @@
+.chapter {
+  background: var(--paper); color: var(--ink);
+  padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 6vw, 6rem) clamp(3rem, 8vw, 6rem);
+  scroll-margin-top: 1rem;
+}
+.head { display: flex; align-items: center; gap: clamp(1rem, 3vw, 2.5rem); margin-bottom: clamp(2rem, 5vw, 3.5rem); }
+.kanji { display: block; width: clamp(5.5rem, 12vw, 9rem); flex: none; }
+.title { display: inline-flex; align-items: center; gap: 0.9rem; margin: 0; font-size: clamp(2rem, 4.5vw, 3.25rem); }
+.title:focus-visible { outline-offset: 8px; }
+.body { max-width: 68rem; }
