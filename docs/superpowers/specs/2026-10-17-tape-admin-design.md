@@ -1,6 +1,6 @@
 # Tape admin: content store, photos and the editor
 
-Status: shaped with the owner on 2026-10-17; awaiting owner approval of this written spec.
+Status: approved by the owner on 2026-10-18.
 Follows: `2026-10-17-side-a-design.md` (the public site, built and merged). This replaces
 the two planned specs ("content model" then "admin port") with one: with the public site
 done they are one piece of work. CLAUDE.md's decomposition row changes accordingly.
@@ -195,9 +195,11 @@ owner UUID, first publish from the seed, backup and restore, and the verificatio
 checklist (signed-out access refused, draft photo 404 until published, stale-tab conflict,
 export contents).
 
-Creating the Supabase project, the GitHub OAuth app and the Vercel project are
-outward-facing, account-level actions: the owner does them, or explicitly authorises the
-builder to use the connected Supabase and Vercel tools for them.
+Account setup (decided by the owner on 2026-10-18): the builder creates the Supabase
+project and the Vercel project through the connected Supabase and Vercel tools. Both are
+named `miel-tape`, in Singapore (`ap-southeast-1`, Vercel `sin1`), in the owner's
+`amiel-portfolio` organisation on the free plan. The GitHub OAuth app needs the owner's
+own GitHub session, so the builder gives exact steps and the owner clicks through them.
 
 ## Tests
 
