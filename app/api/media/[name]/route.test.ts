@@ -1,16 +1,17 @@
 // @vitest-environment node
 import { beforeEach, expect, test, vi } from "vitest";
 
-const store = vi.hoisted(() => ({ published: new Set<string>(), files: new Map<string, Blob>(), owner: false }));
+const store = vi.hoisted(() => ({ published: new Set<string>(), files: new Map<string, Blob>(), owner: false, lookupFails: false, storageDown: false }));
 const bucket = (asOwner: boolean) => ({
   download: async (name: string) => {
+    if (store.storageDown) return { data: null, error: { message: "upstream timeout", status: 504 } };
     const file = store.files.get(name);
     return file && (asOwner || store.published.has(name)) ? { data: file, error: null } : { data: null, error: { message: "not found" } };
   },
 });
 vi.mock("@/lib/supabase/server", () => ({
   publicClient: () => ({
-    from: () => ({ select: () => ({ eq: (_c: string, name: string) => ({ maybeSingle: async () => ({ data: store.published.has(name) ? { name } : null }) }) }) }),
+    from: () => ({ select: () => ({ eq: (_c: string, name: string) => ({ maybeSingle: async () => (store.lookupFails ? { data: null, error: { message: "paused" } } : { data: store.published.has(name) ? { name } : null, error: null }) }) }) }),
     storage: { from: () => bucket(false) },
   }),
   serverClient: async () => ({ storage: { from: () => bucket(store.owner) } }),
@@ -25,6 +26,8 @@ beforeEach(() => {
   store.published.clear();
   store.files.clear();
   store.owner = false;
+  store.lookupFails = false;
+  store.storageDown = false;
   store.files.set(NAME, new Blob(["x"], { type: "image/webp" }));
 });
 
@@ -47,4 +50,18 @@ test("a draft photo is a 404 when signed out and private for the owner", async (
   const res = await get(NAME);
   expect(res.status).toBe(200);
   expect(res.headers.get("cache-control")).toBe("private, no-store");
+});
+
+test("a database or storage outage is a 503, never a quiet 404", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  store.lookupFails = true;
+  expect((await get(NAME)).status).toBe(503);
+  store.lookupFails = false;
+  store.published.add(NAME);
+  store.storageDown = true;
+  const res = await get(NAME);
+  expect(res.status).toBe(503);
+  expect(res.headers.get("cache-control")).toBe("private, no-store");
+  expect(log).toHaveBeenCalled();
+  log.mockRestore();
 });

@@ -29,3 +29,10 @@ test("failures carry their own status and message, never cached", async () => {
   expect(unknown.status).toBe(500);
   expect(await unknown.json()).toEqual({ error: "The operation failed. Please try again." });
 });
+
+test("a failure logs its underlying cause, so outages can be traced", () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  failure(new AdminError("Couldn't publish. Try again.", 500, { cause: { code: "42501", message: "permission denied" } }));
+  expect(JSON.stringify(log.mock.calls)).toMatch(/permission denied/);
+  log.mockRestore();
+});

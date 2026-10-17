@@ -26,7 +26,7 @@ export async function getDraft(): Promise<{ content: SiteContent; revision: numb
   }
   const client = await requireOwner();
   const { data, error } = await client.from("tape_draft").select("content,revision").eq("id", 1).maybeSingle();
-  if (error) throw new AdminError("Couldn't load the draft. Check the database setup.", 503);
+  if (error) throw new AdminError("Couldn't load the draft. Check the database setup.", 503, { cause: error });
   return data
     ? { content: data.content as SiteContent, revision: data.revision as number }
     : { content: parseContent(seed, "seed.json"), revision: 0 };

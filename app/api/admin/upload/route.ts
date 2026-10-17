@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if (!matches(ext, bytes)) throw new AdminError("File contents do not match its type.");
     const path = `${randomUUID()}.${ext}`;
     const { error } = await client.storage.from("tape-assets").upload(path, bytes, { contentType: file.type, upsert: false });
-    if (error) throw new AdminError("Upload failed. Check the storage setup and free space.", 503);
+    if (error) throw new AdminError("Upload failed. Check the storage setup and free space.", 503, { cause: error });
     return json({ url: `/api/media/${path}` });
   } catch (e) {
     return failure(e);

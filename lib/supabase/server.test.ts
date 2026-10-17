@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-const auth = vi.hoisted(() => ({ user: null as null | { id: string }, owner: false }));
+const auth = vi.hoisted(() => ({ user: null as null | { id: string }, owner: false, error: null as unknown }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => [], set: () => {} }) }));
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({
-    auth: { getUser: async () => ({ data: { user: auth.user }, error: null }) },
+    auth: { getUser: async () => ({ data: { user: auth.user }, error: auth.error }) },
     from: (table: string) => ({
       select: () => ({
         eq: () => ({
@@ -25,6 +25,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_x");
   auth.user = null;
   auth.owner = false;
+  auth.error = null;
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -46,5 +47,19 @@ test("fixtures make the admin ready in development only", async () => {
   vi.stubEnv("NODE_ENV", "development");
   expect((await getAdminStatus()).status).toBe("ready");
   vi.stubEnv("NODE_ENV", "production");
+  expect((await getAdminStatus()).status).toBe("signed-out");
+});
+
+test("an unreachable auth service is an outage, not a sign-out", async () => {
+  const { AuthRetryableFetchError } = await import("@supabase/supabase-js");
+  auth.error = new AuthRetryableFetchError("fetch failed", 0);
+  const state = await getAdminStatus();
+  expect(state.status).toBe("error");
+  expect(state.message).toBe("Couldn't reach the database. Try again in a moment.");
+});
+
+test("a missing session is a sign-out", async () => {
+  const { AuthSessionMissingError } = await import("@supabase/supabase-js");
+  auth.error = new AuthSessionMissingError();
   expect((await getAdminStatus()).status).toBe("signed-out");
 });

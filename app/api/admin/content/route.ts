@@ -28,7 +28,7 @@ export async function PUT(request: Request) {
       if (error.message.includes("revision_conflict")) throw new AdminError("Saved somewhere else since. Reload to get the latest.", 409);
       if (error.message.includes("invalid_content")) throw new AdminError("This draft is too big to save. Remove something long and try again.", 413);
       if (error.message.includes("forbidden")) throw new AdminError("This GitHub account isn't the tape's owner.", 403);
-      throw new AdminError("Couldn't save the draft.", 500);
+      throw new AdminError("Couldn't save the draft.", 500, { cause: error });
     }
     return json({ revision: data });
   } catch (e) {

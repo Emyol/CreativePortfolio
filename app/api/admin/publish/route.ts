@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     if (!Number.isSafeInteger(revision) || revision < 1) throw new AdminError("Save the draft before publishing.");
     // Drafts may be unfinished; only content the tape can render is published.
     const { data: draft, error: readError } = await client.from("tape_draft").select("content,revision").eq("id", 1).maybeSingle();
-    if (readError || !draft) throw new AdminError("Couldn't read the draft. Try again.", 503);
+    if (readError || !draft) throw new AdminError("Couldn't read the draft. Try again.", 503, { cause: readError });
     const parsed = contentSchema.safeParse(draft.content);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
@@ -22,8 +22,8 @@ export async function POST(request: Request) {
     const { error } = await client.rpc("publish_tape", { expected_revision: revision });
     if (error) {
       if (error.message.includes("revision_conflict")) throw new AdminError("The draft changed somewhere else. Reload before publishing.", 409);
-      if (error.message.includes("missing_asset")) throw new AdminError("Couldn't publish: a photo in the draft is missing.", 500);
-      throw new AdminError("Couldn't publish. Try again.", 500);
+      if (error.message.includes("missing_asset")) throw new AdminError("Couldn't publish: a photo in the draft is missing.", 500, { cause: error });
+      throw new AdminError("Couldn't publish. Try again.", 500, { cause: error });
     }
     revalidateTag(TAPE_TAG, { expire: 0 });
     revalidatePath("/");

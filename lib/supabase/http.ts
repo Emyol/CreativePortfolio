@@ -15,10 +15,9 @@ export function json(value: unknown, status = 200) {
   });
 }
 export function failure(error: unknown) {
-  console.error(
-    "[admin]",
-    error instanceof Error ? error.message : "Unknown failure",
-  );
+  // The owner sees a plain message; the log keeps the underlying Supabase error.
+  const cause = error instanceof Error ? error.cause : undefined;
+  console.error("[admin]", error instanceof Error ? error.message : "Unknown failure", cause ?? "");
   return json(
     {
       error:

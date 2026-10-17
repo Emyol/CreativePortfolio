@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 const db = vi.hoisted(() => ({ calls: 0, fail: false }));
 vi.mock("@/lib/supabase/server", async (orig) => ({
@@ -19,6 +19,8 @@ vi.mock("@/lib/supabase/server", async (orig) => ({
 
 import { GET } from "./route";
 
+afterEach(() => vi.unstubAllEnvs());
+
 const call = (auth?: string) => GET(new Request("https://tape.test/api/keepalive", { headers: auth ? { authorization: auth } : {} }));
 
 beforeEach(() => {
@@ -33,9 +35,14 @@ test("only Vercel Cron, with the secret, can wake the database", async () => {
   expect(db.calls).toBe(0);
 });
 
-test("with no secret configured, nobody can", async () => {
+test("with no secret configured, it fails loudly and nobody gets in", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
   vi.stubEnv("CRON_SECRET", "");
-  expect((await call("Bearer ")).status).toBe(401);
+  delete process.env.CRON_SECRET;
+  for (const auth of ["Bearer undefined", "Bearer ", undefined]) expect((await call(auth)).status).toBe(500);
+  expect(db.calls).toBe(0);
+  expect(String(log.mock.calls[0]?.[0])).toMatch(/CRON_SECRET/);
+  log.mockRestore();
 });
 
 test("one cheap read keeps the project awake", async () => {
@@ -45,8 +52,11 @@ test("one cheap read keeps the project awake", async () => {
 });
 
 test("a failing database is reported, not hidden", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
   db.fail = true;
   const res = await call("Bearer s3cret");
   expect(res.status).toBe(503);
   expect(await res.json()).toEqual({ ok: false });
+  expect(log).toHaveBeenCalled();
+  log.mockRestore();
 });

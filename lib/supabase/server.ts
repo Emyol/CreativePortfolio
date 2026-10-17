@@ -1,14 +1,15 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, isAuthApiError, isAuthSessionMissingError } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export class AdminError extends Error {
   constructor(
     message: string,
     public status = 400,
+    options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, options);
   }
 }
 /** Development only: CONTENT_SOURCE=fixtures runs the admin against fixtures with no Supabase. */
@@ -55,7 +56,14 @@ export async function requireOwner() {
     data: { user },
     error,
   } = await client.auth.getUser();
-  if (error || !user) throw new AdminError("Sign in to continue.", 401);
+  if (!user) {
+    // Only a missing or rejected session means "signed out". Anything else (Supabase paused,
+    // unreachable, 5xx) is an outage: saying "sign in" would send the owner away from an
+    // open draft for nothing.
+    const signedOut = !error || isAuthSessionMissingError(error) || (isAuthApiError(error) && error.status < 500);
+    if (signedOut) throw new AdminError("Sign in to continue.", 401);
+    throw new AdminError("Couldn't reach the database. Try again in a moment.", 503, { cause: error });
+  }
   const { data, error: lookupError } = await client
     .from("tape_admin_users")
     .select("user_id")

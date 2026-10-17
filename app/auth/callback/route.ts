@@ -8,9 +8,12 @@ export async function GET(request: Request) {
       const client = await serverClient();
       const { error } = await client.auth.exchangeCodeForSession(code);
       if (!error) return Response.redirect(`${origin}/admin`);
-    } catch {
-      /* Return a stable login error, never provider details. */
+      console.error("[auth/callback] code exchange failed", error);
+    } catch (e) {
+      // The owner gets a stable message; the log keeps the reason.
+      console.error("[auth/callback] code exchange threw", e);
     }
   }
+  if (!code) console.error("[auth/callback] no code", url.searchParams.get("error_description") ?? url.searchParams.get("error") ?? "");
   return Response.redirect(`${origin}/admin?error=login`);
 }
