@@ -4,7 +4,7 @@ import { createAutosave } from "@/lib/admin/autosave";
 import { issuesByPath, slugify } from "@/lib/admin/issues";
 import { SECTIONS } from "@/lib/admin/sections";
 import type { SiteContent } from "@/lib/content/schema";
-import { EditorContext, fieldId, getIn, pathKey, setIn, type Editor, type Path } from "./editorContext";
+import { EditorContext, fieldId, getIn, pathKey, resolve, setIn, toTokens, withKeys, withoutKeys, type Editor, type Path } from "./editorContext";
 import { Section } from "./Section";
 import { StatusBar, type PublishState } from "./StatusBar";
 import styles from "./admin.module.css";
@@ -13,7 +13,7 @@ async function saveDraft(content: unknown, revision: number): Promise<number> {
   const res = await fetch("/api/admin/content", {
     method: "PUT",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ content, revision }),
+    body: JSON.stringify({ content: withoutKeys(content), revision }),
   });
   if (!res.ok) throw { status: res.status };
   return ((await res.json()) as { revision: number }).revision;
@@ -30,9 +30,11 @@ function withSlug(content: SiteContent, path: Path, value: unknown): SiteContent
 }
 
 export function AdminEditor({ initialContent, initialRevision }: { initialContent: SiteContent; initialRevision: number }) {
-  const [content, setContent] = useState<SiteContent>(initialContent);
+  const counter = useRef(0);
+  const newKey = useCallback(() => `k${++counter.current}`, []);
+  const [content, setContent] = useState<SiteContent>(() => withKeys(initialContent, newKey));
   // The latest content, so quick successive edits never build on a stale copy.
-  const latest = useRef(initialContent);
+  const latest = useRef(content);
   const [autosave] = useState(() => createAutosave({ save: saveDraft, revision: initialRevision }));
   const status = useSyncExternalStore(autosave.subscribe, autosave.status, autosave.status);
   const [publish, setPublish] = useState<PublishState>({ kind: "idle" });
@@ -51,34 +53,47 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
 
   const editor = useMemo<Editor>(
     () => ({
-      get: (path) => getIn(content, path),
+      get: (path) => {
+        const at = resolve(content, path);
+        return at ? getIn(content, at) : undefined;
+      },
       set: (path, value) => {
-        const next = withSlug(latest.current, path, value);
+        const at = resolve(latest.current, path);
+        if (!at) return; // the entry was removed meanwhile
+        const next = withSlug(latest.current, at, value);
         latest.current = next;
         setContent(next);
         autosave.change(next);
       },
       update: (path, fn) => {
-        const next = setIn(latest.current, path, fn(getIn(latest.current, path)));
+        const at = resolve(latest.current, path);
+        if (!at) return;
+        const next = setIn(latest.current, at, fn(getIn(latest.current, at)));
         latest.current = next;
         setContent(next);
         autosave.change(next);
       },
-      issue: (path) => issues.get(pathKey(path)),
+      issue: (path) => {
+        const at = resolve(content, path);
+        return at ? issues.get(pathKey(at)) : undefined;
+      },
       issuesUnder: (path) => {
-        const key = pathKey(path);
+        const at = resolve(content, path);
+        if (!at) return 0;
+        const key = pathKey(at);
         let n = 0;
         for (const k of issues.keys()) if (k === key || k.startsWith(`${key}.`)) n++;
         return n;
       },
+      newKey,
     }),
-    [content, issues, autosave],
+    [content, issues, autosave, newKey],
   );
 
   const showIssue = useCallback(() => {
     const first = issues.keys().next().value;
     if (first === undefined) return;
-    const parts = first.split(".").map((p) => (/^\d+$/.test(p) ? Number(p) : p));
+    const parts = toTokens(content, first.split(".").map((p) => (/^\d+$/.test(p) ? Number(p) : p)));
     // The deepest field that exists on the page (a list-wide problem points at its section).
     for (let n = parts.length; n > 0; n--) {
       const el = document.getElementById(fieldId(parts.slice(0, n))) ?? (n === 1 ? document.getElementById(`edit-${parts[0]}`) : null);
@@ -88,7 +103,7 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
         return;
       }
     }
-  }, [issues]);
+  }, [issues, content]);
 
   const confirmPublish = async () => {
     setPublish({ kind: "working" });

@@ -25,6 +25,7 @@ function Harness() {
     update: (p, fn) => setContent((c) => setIn(c, p, fn(getIn(c, p)))),
     issue: (p) => issues.get(pathKey(p)),
     issuesUnder: () => 0,
+    newKey: () => "k",
   };
   return (
     <EditorContext.Provider value={editor}>
