@@ -51,3 +51,6 @@ private/
 # Python bytecode and Blender autosave backups from the render scripts
 __pycache__/
 *.blend1
+
+# Raw Blender renders; the encoded files in public/device/ are what ships
+art/blender/side-a/out/
