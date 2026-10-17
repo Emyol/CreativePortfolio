@@ -4,14 +4,14 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { FIXTURES } from "@/lib/content/fixtures";
 import { AdminEditor } from "./AdminEditor";
 
-const calls: { url: string; body: unknown }[] = [];
+const calls: { url: string; body: unknown; keepalive?: boolean }[] = [];
 beforeEach(() => {
   calls.length = 0;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-      calls.push({ url, body });
+      calls.push({ url, body, keepalive: init?.keepalive });
       if (url === "/api/admin/content") return Response.json({ revision: (body?.revision ?? 0) + 1 });
       if (url === "/api/admin/publish") return Response.json({ published: true });
       return new Response("{}", { status: 404 });
@@ -21,6 +21,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers(); // also when a fake-timer test fails partway
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 test("a new event's address fills in from its name", async () => {
@@ -150,4 +151,14 @@ test("a date can be typed with its hyphens on a phone keyboard", () => {
   render(<AdminEditor initialContent={FIXTURES} initialRevision={1} />);
   // iOS's numeric keypad has no hyphen, so "2026-10" couldn't be typed.
   expect(screen.getAllByLabelText("Date")[0]).not.toHaveAttribute("inputmode", "numeric");
+});
+
+test("switching away from the tab saves at once, in a request that outlives the page", async () => {
+  const user = userEvent.setup();
+  render(<AdminEditor initialContent={FIXTURES} initialRevision={1} />);
+  await user.type(screen.getAllByLabelText("Label")[0], "!");
+  expect(calls.some((c) => c.url === "/api/admin/content")).toBe(false);
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+  await act(async () => void document.dispatchEvent(new Event("visibilitychange")));
+  expect(calls.find((c) => c.url === "/api/admin/content")).toMatchObject({ keepalive: true });
 });

@@ -9,11 +9,17 @@ import { Section } from "./Section";
 import { StatusBar, type PublishState } from "./StatusBar";
 import styles from "./admin.module.css";
 
+// Browsers cap keepalive request bodies at 64 KB; a bigger draft saves normally.
+const KEEPALIVE_LIMIT = 60_000;
+
 async function saveDraft(content: unknown, revision: number): Promise<number> {
+  const body = JSON.stringify({ content: withoutKeys(content), revision });
   const res = await fetch("/api/admin/content", {
     method: "PUT",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ content: withoutKeys(content), revision }),
+    body,
+    // Lets a save started as the tab is hidden or closed finish after the page is gone.
+    keepalive: body.length < KEEPALIVE_LIMIT,
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -49,15 +55,23 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
   // An edit after publishing means what's on screen is no longer what's live.
   const edited = useCallback(() => setPublish((p) => (p.kind === "done" || p.kind === "failed" ? { kind: "idle" } : p)), []);
 
-  // Leaving with unsaved changes: save now and let the browser warn.
+  // Leaving with unsaved changes: save now (and let the browser warn).
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (autosave.status() === "saved") return;
       void autosave.flush();
       e.preventDefault();
     };
+    // Phones rarely fire beforeunload: switching apps hides the tab, which may never return.
+    const hidden = () => {
+      if (document.visibilityState === "hidden") void autosave.flush();
+    };
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      document.removeEventListener("visibilitychange", hidden);
+    };
   }, [autosave]);
 
   const editor = useMemo<Editor>(
