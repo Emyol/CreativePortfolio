@@ -114,6 +114,10 @@ describe("shouldHandleTrackKey", () => {
   test.each(["altKey", "ctrlKey", "metaKey", "shiftKey"] as const)("ignored with %s", (mod) => {
     expect(shouldHandleTrackKey({ ...base, [mod]: true })).toBe(false);
   });
+  test("Shift+B still flips: a capital B is the same key", () => {
+    expect(shouldHandleTrackKey({ ...base, key: "B", shiftKey: true })).toBe(true);
+    expect(shouldHandleTrackKey({ ...base, key: "!", shiftKey: true })).toBe(false);
+  });
   test.each(["input", "textarea", "select"])("ignored while typing in <%s>", (tag) => {
     expect(shouldHandleTrackKey({ ...base, target: document.createElement(tag) })).toBe(false);
   });

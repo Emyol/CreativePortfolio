@@ -70,7 +70,9 @@ export function trackForKey(key: string, tracks: Track[], side: SideId): Track |
 type KeyLike = Pick<KeyboardEvent, "key" | "altKey" | "ctrlKey" | "metaKey" | "shiftKey" | "target">;
 
 export function shouldHandleTrackKey(e: KeyLike): boolean {
-  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return false;
+  if (e.altKey || e.ctrlKey || e.metaKey) return false;
+  // Shift only ever makes a capital B (the flip); with digits it means something else.
+  if (e.shiftKey && e.key !== "B") return false;
   const t = e.target;
   if (!(t instanceof HTMLElement)) return true;
   if (t.isContentEditable || t.closest('[contenteditable]:not([contenteditable="false"])')) return false;
