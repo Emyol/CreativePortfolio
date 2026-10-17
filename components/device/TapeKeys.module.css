@@ -9,7 +9,7 @@
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
-.slot:focus-visible { outline: 2px solid var(--signal); outline-offset: 0.35cqw; }
+.slot:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; box-shadow: 0 0 0 5px var(--oled); }
 
 /* Both cap states are stacked; the down state fades in, so the swap never flashes. */
 .cap,
@@ -34,14 +34,17 @@
   transition-duration: 100ms;
 }
 
-/* The printed label under the key, part of the plate's artwork. */
+/* The printed label under the key. The plate is darkest along the bottom, so labels are
+   printed in a light ink there (dark ink measured about 2.7:1; this is about 6:1). */
 .label {
   position: absolute;
   left: 50%;
   top: calc(100% + 2cqw);
   translate: -50% 0;
+  color: var(--device-ink-light);
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.35);
   font-family: var(--font-mono), monospace;
-  font-size: max(1.32cqw, 9px);
+  font-size: max(1.32cqw, 11px);
   line-height: 1;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -60,9 +63,9 @@
   font-size: 0.6875rem;
   line-height: 1;
   letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Two words may take two lines ("on / rotation"): a cut label hides the key's name. */
+  text-align: center;
+  overflow-wrap: normal;
   color: var(--device-ink);
   pointer-events: none;
   transition: translate 160ms var(--ease-out);

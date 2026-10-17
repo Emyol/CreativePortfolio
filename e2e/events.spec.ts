@@ -32,6 +32,15 @@ test("the dock reads LIVE with the place and date, and its keys go back to the t
   await expect(dock.getByRole("link", { name: "people" })).toHaveAttribute("href", "/#people");
 });
 
+test("dock keys on an event page go back to the tape without reloading the page", async ({ page }) => {
+  await gotoReady(page, "/events/fixture-event-3");
+  await page.evaluate(() => ((window as unknown as { __kept: boolean }).__kept = true));
+  await page.locator("[data-dock]").getByRole("link", { name: "people" }).click();
+  await expect(page).toHaveURL(/\/#people$/, { timeout: 15_000 });
+  await headingAtTop(page, "people");
+  expect(await page.evaluate(() => (window as unknown as { __kept?: boolean }).__kept)).toBe(true);
+});
+
 test("the event page shows the story and the rest of the photos", async ({ page }) => {
   await gotoReady(page, "/events/fixture-event-3");
   await expect(page.getByText("Fixture story paragraph for event 3.")).toBeVisible();

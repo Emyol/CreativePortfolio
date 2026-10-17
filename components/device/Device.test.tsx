@@ -38,6 +38,7 @@ test("empty tape: four blank keys, nothing focusable", () => {
   expect(document.querySelectorAll("[data-blank-key]")).toHaveLength(4);
   for (const k of document.querySelectorAll("[data-blank-key]")) expect(k).toHaveAttribute("aria-hidden", "true");
   expect(screen.queryAllByRole("link")).toHaveLength(0);
+  expect(screen.queryByRole("navigation")).toBeNull(); // no empty "Tape" landmark
 });
 
 test("a non-interactive device is inert", () => {

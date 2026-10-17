@@ -19,6 +19,7 @@ html, body { margin: 0; }
 
   /* Ink printed on the aluminium. The device art is the same in both themes, so this is too. */
   --device-ink: #17181B;
+  --device-ink-light: #F2F3F5;
 
   --gutter: clamp(16px, 4vw, 48px);
   --measure-wide: 1180px;
@@ -61,9 +62,12 @@ img, svg, canvas { display: block; max-width: 100%; }
 a { color: inherit; text-underline-offset: 0.2em; text-decoration-thickness: from-font; }
 button { font: inherit; color: inherit; }
 
+/* The ring is --signal on a dark halo: orange alone falls under 3:1 on the light table and
+   on the aluminium, so the halo carries the contrast there and the orange marks it. */
 :focus-visible {
   outline: 2px solid var(--signal);
-  outline-offset: 3px;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--oled);
   border-radius: 2px;
 }
 
@@ -93,8 +97,10 @@ html[data-tier="none"] *::after {
 /* main only receives focus from the skip link; it isn't interactive, so no ring. */
 main:focus, main:focus-visible { outline: none; }
 
-/* Room at the end of the page so the dock never covers the last lines. */
+/* Room at the end of the page so the dock never covers the last lines, and room at the
+   bottom of the viewport so focus and jumps never land under it (WCAG 2.4.11). */
 body:has([data-dock]) { padding-bottom: 6.5rem; }
+html:has([data-dock]) { scroll-padding-bottom: 7rem; }
 
 /* Power-on: the hero screen waits dark until it is typed in (set before paint). If JS
    never takes over, it lights after 3 s. */

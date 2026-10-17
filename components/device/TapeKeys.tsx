@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import { DEVICE, pct, type Rect } from "@/lib/device/layout";
 import { keySlots, type SideId, type Track, type TrackId } from "@/lib/tape";
@@ -37,9 +38,14 @@ const capSprite: CSSProperties = {
  * is a blank cap. The track being read stays latched down, like a deck's play key.
  */
 export function TapeKeys({ tracks, side, current, interactive, hrefBase = "", rects = DEVICE.keys, labels = "under", className }: Props) {
+  const slots = keySlots(tracks, side);
+  // A tape with nothing on this side has no navigation to offer, so no landmark either.
+  const Box = slots.some((s) => s.track) ? "nav" : "div";
+  // Off the home page the keys lead back to it; next/link keeps that a client-side move.
+  const Anchor = hrefBase === "/" ? Link : "a";
   return (
-    <nav aria-label="Tape" className={[styles.keys, className].filter(Boolean).join(" ")} inert={!interactive} data-tape-keys>
-      {keySlots(tracks, side).map(({ index, track }) => {
+    <Box aria-label={Box === "nav" ? "Tape" : undefined} className={[styles.keys, className].filter(Boolean).join(" ")} inert={!interactive} data-tape-keys>
+      {slots.map(({ index, track }) => {
         const caps = (
           <>
             <Sprite name="key-up" className={styles.cap} style={capSprite} width={324} height={251} eager />
@@ -55,7 +61,7 @@ export function TapeKeys({ tracks, side, current, interactive, hrefBase = "", re
         }
         const latched = current === track.id;
         return (
-          <a
+          <Anchor
             key={track.id}
             href={`${hrefBase}#${track.id}`}
             className={styles.slot}
@@ -66,9 +72,9 @@ export function TapeKeys({ tracks, side, current, interactive, hrefBase = "", re
           >
             {caps}
             <span className={labels === "cap" ? styles.capLabel : styles.label}>{track.label}</span>
-          </a>
+          </Anchor>
         );
       })}
-    </nav>
+    </Box>
   );
 }

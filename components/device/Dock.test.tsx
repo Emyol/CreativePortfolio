@@ -11,6 +11,7 @@ const still = (ui: ReactNode) => render(<MotionTierContext.Provider value="none"
 
 test("the dock offers the track list even on an empty tape", () => {
   still(<Dock tracks={[]} side="a" current={null} visible />);
+  expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["list"]);
   expect(screen.getByRole("link", { name: "list" })).toHaveAttribute("href", "/tracklist");
   expect(document.querySelectorAll("[data-blank-key]")).toHaveLength(4);
 });
