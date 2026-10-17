@@ -4,6 +4,7 @@ import { useActiveTrack } from "@/components/motion/ActiveTrack";
 import { sideOf, type Track } from "@/lib/tape";
 import { Device } from "./Device";
 import { Dock } from "./Dock";
+import { useReelMotion } from "./useReelMotion";
 import { useKeyPress, useTrackKeys } from "./useTrackKeys";
 import styles from "./HomeTape.module.css";
 
@@ -31,6 +32,7 @@ export function HomeTape({ tracks, children }: { tracks: Track[]; children: Reac
 
   useTrackKeys(tracks, side);
   useKeyPress();
+  useReelMotion(tracks);
 
   return (
     <>
