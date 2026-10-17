@@ -34,9 +34,17 @@ test("unknown ids do nothing", () => {
 test("uses Lenis when active and focuses on completion", () => {
   chapter();
   const scrollTo = vi.fn((_el: unknown, opts: { onComplete?: () => void }) => opts.onComplete?.());
-  setLenis({ scrollTo } as never);
+  setLenis({ scrollTo, resize: vi.fn() } as never);
   scrollToId("music", { push: false });
   expect(scrollTo).toHaveBeenCalledOnce();
   expect(document.activeElement?.textContent).toBe("Music");
   expect(location.hash).toBe("");
+});
+
+test("re-measures Lenis before jumping, so a page swap's new height is reachable", () => {
+  chapter();
+  const calls: string[] = [];
+  setLenis({ resize: () => calls.push("resize"), scrollTo: () => calls.push("scrollTo") } as never);
+  scrollToId("music");
+  expect(calls).toEqual(["resize", "scrollTo"]);
 });

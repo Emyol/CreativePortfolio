@@ -1,0 +1,24 @@
+.about {
+  display: grid; gap: clamp(2rem, 5vw, 4rem);
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-areas: "letter candid" "letter toolbox";
+  align-items: start;
+}
+.letter {
+  grid-area: letter;
+  font-family: var(--font-hand), serif; font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 2.2rem;
+  padding: 1.1rem clamp(1rem, 3vw, 2.25rem) 1.5rem;
+  background: repeating-linear-gradient(to bottom, transparent 0 calc(2.2rem - 1px), color-mix(in srgb, var(--ink) 18%, transparent) calc(2.2rem - 1px) 2.2rem);
+  background-position: 0 1.1rem;
+}
+.line { margin: 0 0 2.2rem; }
+.sign { margin: 0; text-align: right; font-weight: 600; }
+.candid { grid-area: candid; position: relative; margin: 0; padding: 0.6rem 0.6rem 2rem; background: #fbf8f1; box-shadow: 0 8px 20px rgb(0 0 0 / 0.18); rotate: 2.5deg; justify-self: center; max-width: 20rem; }
+.photo { width: 100%; height: auto; }
+.tape { position: absolute; top: -0.7rem; left: 50%; translate: -50% 0; rotate: -4deg; width: 6rem; height: 1.6rem; background: rgb(236 222 190 / 0.85); box-shadow: 0 1px 2px rgb(0 0 0 / 0.12); }
+.toolbox { grid-area: toolbox; }
+.toolboxTitle { margin: 0 0 0.9rem; font-size: 1.1rem; color: var(--muted); }
+.stamps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.6rem; }
+@media (max-width: 767px) {
+  .about { grid-template-columns: 1fr; grid-template-areas: "letter" "candid" "toolbox"; }
+}

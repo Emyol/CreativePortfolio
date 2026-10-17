@@ -25,6 +25,9 @@ export function scrollToId(id: string, { push = true, immediate = false } = {}):
   if (!el) return false;
   if (push && location.hash !== `#${id}`) history.pushState(null, "", `#${id}`);
   if (lenis) {
+    // One Lenis instance outlives client-side navigation; re-measure so its scroll limit
+    // matches the page we're on now, not the one we came from.
+    lenis.resize();
     lenis.scrollTo(el, { immediate, onComplete: () => focusTarget(el) });
   } else {
     el.scrollIntoView({ block: "start", behavior: immediate ? "instant" : "auto" });
