@@ -16,8 +16,10 @@ const mono = Space_Mono({ weight: ["400", "700"], subsets: ["latin"], variable: 
 const dot = Doto({ subsets: ["latin"], variable: "--font-dot", display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "Miel",
   description: "Miel's tape: the events he went to, the songs he loves and the people around him.",
+  openGraph: { images: ["/device/beauty.jpg"] },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
