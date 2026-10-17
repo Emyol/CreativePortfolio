@@ -1,3 +1,4 @@
+import { Flip } from "@/components/device/Flip";
 import { HomeTape } from "@/components/device/HomeTape";
 import { Footer } from "@/components/frame/Footer";
 import { ActiveTrackProvider } from "@/components/motion/ActiveTrack";
@@ -13,7 +14,7 @@ export default async function Home() {
     <ActiveTrackProvider ids={tracks.map((t) => t.id)}>
       <HomeTape tracks={tracks}>
         <main id="main" tabIndex={-1}>
-          <TapeBody tracks={tracks} content={content} />
+          <TapeBody tracks={tracks} content={content} flip={<Flip />} />
         </main>
         <Footer />
       </HomeTape>
