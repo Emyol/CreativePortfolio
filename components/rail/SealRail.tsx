@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Ja } from "@/components/Ja";
 import { useActiveChapter } from "@/components/motion/ActiveChapter";
 import { chapterForKey, shouldHandleChapterKey, type Chapter } from "@/lib/chapters";
+import { chapterKeysEnabled } from "@/lib/keys";
 import { scrollToId } from "@/lib/motion/navigate";
+import { playTap } from "@/lib/sound";
 import styles from "./SealRail.module.css";
 
 export function SealRail({ chapters }: { chapters: Chapter[] }) {
@@ -21,12 +23,12 @@ export function SealRail({ chapters }: { chapters: Chapter[] }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!shouldHandleChapterKey(e)) return;
+      if (!chapterKeysEnabled() || !shouldHandleChapterKey(e)) return;
       const chapter = chapterForKey(e.key, chapters);
       if (!chapter) return;
       e.preventDefault();
       scrollToId(chapter.id);
-      // Task 20 adds playTap() here.
+      playTap();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

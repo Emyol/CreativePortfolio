@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Ja } from "@/components/Ja";
+import { KeysToggle } from "@/components/game/KeysToggle";
+import { SoundToggle } from "@/components/game/SoundToggle";
 import { StrokeKanjiInView } from "@/components/kanji/StrokeKanjiInView";
 import { Roller } from "./ScrollFrame";
 import styles from "./Footer.module.css";
@@ -18,7 +20,10 @@ export function Footer() {
         <p>
           <Link href="/mokuroku">Plain index <Ja aria-hidden="true">目録</Ja></Link>
         </p>
-        {/* Task 20 adds <SoundToggle /> here. */}
+        <p className={styles.toggles}>
+          <SoundToggle />
+          <KeysToggle />
+        </p>
       </div>
       <div className={styles.bottom}>
         <Roller />

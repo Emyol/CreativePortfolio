@@ -3,6 +3,7 @@ import { useEffect, useReducer, useRef } from "react";
 import type { ShelfItem } from "@/lib/content/schema";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { dialogueReducer, splitPages } from "@/lib/shelf";
+import { playTap } from "@/lib/sound";
 import { useTypewriter } from "@/lib/useTypewriter";
 import styles from "./Shelf.module.css";
 
@@ -56,7 +57,10 @@ export function Shelf({ items }: { items: ShelfItem[] }) {
               data-kind={item.kind}
               aria-expanded={state.open && state.item === i}
               aria-controls="shelf-dialogue"
-              onClick={() => dispatch({ type: "select", item: i })}
+              onClick={() => {
+                playTap();
+                dispatch({ type: "select", item: i });
+              }}
             >
               <span className={styles.spineTitle}>{item.title}</span>
               <span className={styles.kind}>{KIND_LABEL[item.kind]}</span>

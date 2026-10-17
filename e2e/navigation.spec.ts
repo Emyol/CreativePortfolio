@@ -38,7 +38,7 @@ test("Lenis runs at full motion and is removed live on reduced motion", async ({
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
 });
 
-test.fixme("no smooth scrolling on the plain index (enable in Task 21)", async ({ page }) => {
+test("no smooth scrolling on the plain index", async ({ page }) => {
   await gotoReady(page, "/mokuroku");
   await expect(page.locator("html")).not.toHaveClass(/lenis/);
 });

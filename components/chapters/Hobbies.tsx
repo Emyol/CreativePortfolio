@@ -2,6 +2,7 @@
 import { useRef } from "react";
 import { Photo } from "@/components/Photo";
 import type { Hobby } from "@/lib/content/schema";
+import { finishOnFocus } from "@/lib/motion/finishOnFocus";
 import { gsap, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import styles from "./Hobbies.module.css";
@@ -13,11 +14,12 @@ export function Hobbies({ hobbies }: { hobbies: Hobby[] }) {
   useGSAP(
     () => {
       if (tier === "none") return;
-      gsap.from("[data-ema]", {
-        y: -90, rotation: (i: number) => (i % 2 ? 8 : -8), autoAlpha: 0,
+      const drop = gsap.from("[data-ema]", {
+        y: -90, rotation: (i: number) => (i % 2 ? 8 : -8), opacity: 0,
         duration: 1.1, ease: "elastic.out(1, 0.45)", stagger: 0.12,
         scrollTrigger: { trigger: ref.current, start: "top 75%", once: true },
       });
+      return finishOnFocus(ref.current, drop);
     },
     { scope: ref, dependencies: [tier], revertOnUpdate: true },
   );

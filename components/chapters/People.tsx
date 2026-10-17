@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { Person } from "@/lib/content/schema";
+import { finishOnFocus } from "@/lib/motion/finishOnFocus";
 import { gsap, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { threadPath } from "@/lib/thread";
@@ -40,9 +41,10 @@ export function People({ people }: { people: Person[] }) {
         strokeDashoffset: 0, ease: "none",
         scrollTrigger: { trigger: ref.current, start: "top 70%", end: "bottom 60%", scrub: 0.6 },
       });
-      for (const node of gsap.utils.toArray<HTMLElement>("[data-node]")) {
-        gsap.from(node, { autoAlpha: 0, scale: 0.85, duration: 0.5, ease: "back.out(2)", scrollTrigger: { trigger: node, start: "top 70%", once: true } });
-      }
+      const cleanups = gsap.utils.toArray<HTMLElement>("[data-node]").map((node) =>
+        finishOnFocus(node, gsap.from(node, { opacity: 0, scale: 0.85, duration: 0.5, ease: "back.out(2)", scrollTrigger: { trigger: node, start: "top 70%", once: true } })),
+      );
+      return () => cleanups.forEach((c) => c());
     },
     { scope: ref, dependencies: [tier, geom.d], revertOnUpdate: true },
   );

@@ -25,10 +25,10 @@ test("dates are machine-readable and human-formatted", () => {
   expect(time).toHaveTextContent("10 January 2024");
 });
 
-test("tile shapes cycle through the six-slot pattern", () => {
+test("tile shapes follow the six-slot pattern, with a full-width last row", () => {
   const { container } = renderEvents();
   const shapes = [...container.querySelectorAll("[data-shape]")].map((el) => el.getAttribute("data-shape"));
-  expect(shapes).toEqual(["a", "b", "c", "d", "e", "f", "a"]);
+  expect(shapes).toEqual(["a", "b", "c", "d", "e", "f", "full"]);
 });
 
 test("an event without a place shows only its date", () => {
@@ -36,4 +36,14 @@ test("an event without a place shows only its date", () => {
   const noPlace = FIXTURES.events.find((e) => !e.place)!;
   const link = screen.getAllByRole("link").find((l) => l.getAttribute("href") === `/events/${noPlace.slug}`)!;
   expect(link.textContent).not.toContain("·");
+});
+
+test("tile photos are decorative: the link is named by its heading, not the photo's alt", () => {
+  const { container } = renderEvents();
+  for (const img of container.querySelectorAll("li img")) expect(img).toHaveAttribute("alt", "");
+});
+
+test("a single event fills the row instead of leaving a hole", () => {
+  const { container } = render(<MotionTierContext.Provider value="none"><Events events={FIXTURES.events.slice(0, 1)} /></MotionTierContext.Provider>);
+  expect(container.querySelector("[data-shape]")).toHaveAttribute("data-shape", "full");
 });

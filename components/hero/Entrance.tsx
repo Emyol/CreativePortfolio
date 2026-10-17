@@ -72,7 +72,7 @@ export function EntranceProvider({ children }: { children: ReactNode }) {
     () => {
       if (phase !== "menu") return;
       document.documentElement.removeAttribute("data-entrance"); // release the menu for its stagger
-      gsap.from("[data-hero-menu] li", { autoAlpha: 0, y: 16, stagger: 0.08, duration: 0.5, ease: "power2.out", onComplete: finish });
+      gsap.from("[data-hero-menu] li", { opacity: 0, y: 16, stagger: 0.08, duration: 0.5, ease: "power2.out", onComplete: finish });
     },
     { scope: ref, dependencies: [phase] },
   );

@@ -1,0 +1,4 @@
+.crane { position: fixed; top: 20vh; left: 0; z-index: 45; width: clamp(5rem, 9vw, 8rem); fill: #f6f0e2; opacity: 0; visibility: hidden; pointer-events: none; filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.3)); }
+.toast { position: fixed; left: 1rem; bottom: 1rem; z-index: 50; max-width: 18rem; }
+.toast[data-shown="true"] { padding: 0.6rem 1rem; border-radius: 6px; background: #141826; color: #f1e8d6; box-shadow: 0 0 0 2px var(--gold); }
+.mark { font-family: var(--font-brush), serif; color: #f2c14e; margin-right: 0.35rem; }

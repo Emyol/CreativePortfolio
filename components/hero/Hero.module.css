@@ -1,6 +1,7 @@
 .hero {
   position: relative; overflow: hidden;
   min-height: min(92vh, 60rem);
+  background-image: url("/textures/paper-grain.png");
   display: grid; grid-template-rows: 1fr auto; justify-items: center;
   /* Bottom padding keeps the menu clear of the mountains so its labels stay on paper. */
   padding: clamp(3rem, 8vh, 6rem) clamp(1rem, 6vw, 6rem) clamp(9rem, 24vh, 15rem);

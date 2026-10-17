@@ -40,9 +40,10 @@ export default async function EventPage({ params }: Props) {
       <main id="main" tabIndex={-1} className={styles.page} style={seasonVars("summer-night")}>
         <article>
           <header className={styles.header}>
-            <InkBleed className={styles.cover}>
-              <EventPhoto event={event} sizes="(min-width: 1180px) 1100px, 100vw" className={styles.coverImg} />
-            </InkBleed>
+            {/* The tile-to-page morph is the cover's entrance; it gets no ink bleed of its own. */}
+            <div className={styles.cover}>
+              <EventPhoto event={event} sizes="(min-width: 1180px) 1100px, 100vw" className={styles.coverImg} priority />
+            </div>
             <p className={styles.kicker}>Event attended</p>
             <h1 className={styles.title}>{event.name}</h1>
             <p className={styles.meta}>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import { Klee_One, Shippori_Mincho_B1, Yuji_Syuku, Zen_Kaku_Gothic_New } from "next/font/google";
 import "lenis/dist/lenis.css";
+import { Konami } from "@/components/game/Konami";
 import { InlineScript } from "@/components/InlineScript";
 import { HashLinks } from "@/components/motion/HashLinks";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <SmoothScroll />
           <HashLinks />
           {children}
+          <Konami />
         </MotionProvider>
       </body>
     </html>

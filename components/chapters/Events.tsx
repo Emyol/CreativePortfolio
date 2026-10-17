@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { InkBleed } from "@/components/motion/InkBleed";
+import { bentoShapes } from "@/lib/bento";
 import type { EventItem } from "@/lib/content/schema";
 import { formatDate } from "@/lib/dates";
 import { gsap, useGSAP } from "@/lib/motion/gsap";
@@ -10,11 +11,10 @@ import { tiltFor } from "@/lib/tilt";
 import { EventPhoto } from "./EventPhoto";
 import styles from "./Events.module.css";
 
-export const BENTO_SHAPES = ["a", "b", "c", "d", "e", "f"] as const;
-
 export function Events({ events }: { events: EventItem[] }) {
   const ref = useRef<HTMLUListElement>(null);
   const tier = useMotionTier();
+  const shapes = bentoShapes(events.length);
 
   // Inner parallax: the photo drifts inside its mount as the tile crosses the viewport.
   useGSAP(
@@ -61,11 +61,11 @@ export function Events({ events }: { events: EventItem[] }) {
   return (
     <ul ref={ref} className={styles.bento}>
       {events.map((event, i) => (
-        <li key={event.slug} className={styles.tile} data-shape={BENTO_SHAPES[i % BENTO_SHAPES.length]}>
+        <li key={event.slug} className={styles.tile} data-shape={shapes[i]}>
           <Link href={`/events/${event.slug}`} className={styles.print} data-tilt>
             <InkBleed origin="random" className={styles.media}>
               <div className={styles.parallax} data-parallax>
-                <EventPhoto event={event} sizes="(min-width: 1180px) 700px, (min-width: 768px) 60vw, 100vw" className={styles.img} />
+                <EventPhoto event={event} sizes="(min-width: 1180px) 700px, (min-width: 768px) 60vw, 100vw" className={styles.img} decorative />
               </div>
             </InkBleed>
             <div className={styles.caption}>

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 import { CHAPTERS } from "@/lib/chapters";
+import { __resetKeysForTests, setChapterKeysEnabled } from "@/lib/keys";
 import { scrollToId } from "@/lib/motion/navigate";
 import { SealRail } from "./SealRail";
 
@@ -9,7 +10,11 @@ vi.mock("next/link", () => ({
   default: ({ href, children, ...p }: { href: string; children: ReactNode }) => <a href={href} {...p}>{children}</a>,
 }));
 vi.mock("@/lib/motion/navigate", () => ({ scrollToId: vi.fn(() => true) }));
-afterEach(() => vi.mocked(scrollToId).mockClear());
+afterEach(() => {
+  vi.mocked(scrollToId).mockClear();
+  localStorage.clear();
+  __resetKeysForTests();
+});
 
 const two = [CHAPTERS[2], CHAPTERS[5]]; // music, people
 
@@ -42,4 +47,11 @@ test("modifier digits are left to the browser", () => {
 test("renders nothing for an empty site", () => {
   const { container } = render(<SealRail chapters={[]} />);
   expect(container).toBeEmptyDOMElement();
+});
+
+test("digit keys do nothing once the visitor turns chapter keys off", () => {
+  setChapterKeysEnabled(false);
+  render(<SealRail chapters={two} />);
+  fireEvent.keyDown(window, { key: "1" });
+  expect(scrollToId).not.toHaveBeenCalled();
 });

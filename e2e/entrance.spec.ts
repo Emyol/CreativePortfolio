@@ -60,8 +60,20 @@ test.describe("without JavaScript", () => {
 
 test("if the script never takes over, the failsafe unclips the hero within 4 seconds", async ({ page }) => {
   // Simulate "pre-paint ran, app JS crashed": block the Next.js bundles but keep the inline script.
-  await page.route(/\/_next\/static\/chunks\//, (route) => route.abort());
+  await page.route(/\/_next\/static\/chunks\/.*\.js(\?|$)/, (route) => route.abort()); // JS only: CSS lives here too
   await page.goto("/");
-  await page.waitForTimeout(4_500);
-  expect(await heroClip(page)).not.toContain("100%");
+  // The 4s failsafe clock starts at first render, which a dev server can delay past goto().
+  await expect.poll(() => heroClip(page), { timeout: 8_000 }).not.toContain("100%");
+});
+
+test.describe("reduced motion, app script never loads", () => {
+  test.use({ reducedMotion: "reduce" });
+  test("the name and chapter kanji are written, not blank", async ({ page }) => {
+    // Scripting is on (so <noscript> doesn't help) but the bundles fail: CSS alone must show glyphs.
+    await page.route(/\/_next\/static\/chunks\/.*\.js(\?|$)/, (route) => route.abort()); // JS only: CSS lives here too
+    await page.goto("/");
+    const opacities = await page.locator("[data-hero-name] [data-mask]").evaluateAll((els) => els.map((el) => getComputedStyle(el).opacity));
+    expect(opacities.length).toBeGreaterThan(0);
+    expect(new Set(opacities)).toEqual(new Set(["1"]));
+  });
 });
