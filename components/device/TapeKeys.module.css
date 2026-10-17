@@ -78,3 +78,18 @@
 /* Reduced motion: a press only swaps the cap; nothing moves. */
 :global(html[data-tier="none"]) .slot[data-pressed] .cap,
 :global(html[data-tier="none"]) .slot[data-pressed] .capDown { translate: none; scale: none; }
+
+/* A latched key carries a small lit lamp, so the current track reads at any size. */
+.slot[data-latched]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  width: max(4px, 0.42cqw);
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow: 0 0 6px rgb(255 46 0 / 0.8);
+  pointer-events: none;
+}

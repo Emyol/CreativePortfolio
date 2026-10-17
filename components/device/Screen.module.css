@@ -26,3 +26,22 @@
 }
 .primary { font-weight: 900; font-size: 1.45em; letter-spacing: 0.06em; }
 .secondary { font-weight: 700; color: #F1E7E2; text-shadow: 0 0 0.3em rgb(255 255 255 / 0.25); }
+
+/* The playhead, in --signal, the line the reels answer to. */
+.playhead {
+  position: absolute;
+  left: 0.2em;
+  right: 0.2em;
+  bottom: 0.45em;
+  height: max(2px, 0.12em);
+  background: rgb(255 255 255 / 0.12);
+  overflow: hidden;
+}
+.playhead span {
+  position: absolute;
+  inset: 0;
+  background: var(--signal);
+  box-shadow: 0 0 0.4em rgb(255 46 0 / 0.8);
+  transform-origin: left;
+  transition: transform 500ms linear;
+}

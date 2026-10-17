@@ -12,8 +12,11 @@ type Props = {
   side: SideId;
   current: TrackId | null;
   interactive: boolean;
-  /** Overrides what the screen shows (the dock and the deck pass the playing song). */
+  /** Overrides what the screen shows (the playing song). */
   screen?: string[];
+  progress?: number;
+  /** The LED lights while a song plays. */
+  led?: boolean;
   className?: string;
 };
 
@@ -44,7 +47,7 @@ export function screenLines(tracks: Track[], side: SideId, current: TrackId | nu
  * The tape player, top down: rendered layers stacked over the plate, with live text where
  * the device prints or lights something. Reels and packs are moved by useReelMotion.
  */
-export function Device({ tracks, side, current, interactive, screen, className }: Props) {
+export function Device({ tracks, side, current, interactive, screen, progress, led = false, className }: Props) {
   const own = sideTracks(tracks, side).slice(0, 4);
   const angle = knobAngle(tracks, side, current);
 
@@ -69,10 +72,11 @@ export function Device({ tracks, side, current, interactive, screen, className }
 
       <Screen
         lines={screen ?? screenLines(tracks, side, current)}
+        progress={progress}
         className={styles.screen}
         style={{ left: pct(DEVICE.screen.x), top: pct(DEVICE.screen.y), width: pct(DEVICE.screen.w), height: pct(DEVICE.screen.h) }}
       />
-      <span className={styles.led} style={{ left: pct(DEVICE.led.x), top: pct(DEVICE.led.y) }} data-led aria-hidden="true" />
+      <span className={styles.led} style={{ left: pct(DEVICE.led.x), top: pct(DEVICE.led.y) }} data-led data-on={led ? "" : undefined} aria-hidden="true" />
 
       <h1
         className={styles.name}

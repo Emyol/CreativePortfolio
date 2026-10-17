@@ -12,7 +12,7 @@ export default async function Home() {
 
   return (
     <ActiveTrackProvider ids={tracks.map((t) => t.id)}>
-      <HomeTape tracks={tracks}>
+      <HomeTape tracks={tracks} songs={content.music.map(({ title, artist }) => ({ title, artist }))}>
         <main id="main" tabIndex={-1}>
           <TapeBody tracks={tracks} content={content} flip={<Flip />} />
         </main>

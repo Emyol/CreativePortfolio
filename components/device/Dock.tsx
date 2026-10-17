@@ -18,6 +18,7 @@ type Props = {
   visible: boolean;
   /** Overrides the screen (now playing, or LIVE on an event page). */
   screen?: string[];
+  progress?: number;
   hrefBase?: "" | "/";
 };
 
@@ -29,7 +30,7 @@ const DOCK_KEYS: Rect[] = [0, 1, 2, 3].map((i) => ({ x: i * (KEY_W + GAP), y: 0,
 const knobCap = DEVICE.knob.size / DEVICE.knob.sprite;
 
 /** The device's control strip, docked: cassette window, screen, knob, keys, and three plain switches. */
-export function Dock({ tracks, side, current, visible, screen, hrefBase = "" }: Props) {
+export function Dock({ tracks, side, current, visible, screen, progress, hrefBase = "" }: Props) {
   const angle = knobAngle(tracks, side, current);
   return (
     <div className={styles.dock} data-dock data-visible={visible ? "" : undefined} inert={!visible}>
@@ -37,7 +38,7 @@ export function Dock({ tracks, side, current, visible, screen, hrefBase = "" }: 
         <Cassette side={side} className={styles.cassette} eager={false} />
       </div>
 
-      <Screen lines={screen ?? screenLines(tracks, side, current)} className={styles.screen} />
+      <Screen lines={screen ?? screenLines(tracks, side, current)} progress={progress} className={styles.screen} />
 
       <span className={styles.knob} aria-hidden="true" style={{ ["--cap" as string]: String(knobCap) }}>
         <Sprite name="knob" className={styles.knobBody} width={513} height={513} />
