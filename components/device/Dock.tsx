@@ -19,7 +19,7 @@ type Props = {
   /** Overrides the screen (now playing, or LIVE on an event page). */
   screen?: string[];
   progress?: number;
-  hrefBase?: "" | "/";
+  hrefBase?: string;
 };
 
 // Four keys across the dock's key bed, as fractions of that bed.
