@@ -1,6 +1,6 @@
 import { readStorage, writeStorage } from "./motion/storage";
 
-const KEY = "kakejiku:sound";
+const KEY = "side-a:sound";
 const listeners = new Set<() => void>();
 let enabled: boolean | null = null;
 let ctx: AudioContext | null = null;

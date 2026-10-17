@@ -1,0 +1,12 @@
+.page {
+  max-width: 44rem;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 3rem var(--gutter) 5rem;
+  font-size: 1.0625rem;
+}
+.page h1 { font-size: 2.25rem; font-stretch: 112%; }
+.page h2 { margin-top: 2.5rem; font-size: 1.375rem; font-stretch: 112%; }
+.page li + li { margin-top: 0.35rem; }
+.toc { padding-left: 0; list-style: none; font-family: var(--font-mono), monospace; font-size: 0.9375rem; }
+.toc span { color: var(--ink-muted); }

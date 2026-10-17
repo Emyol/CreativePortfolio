@@ -1,0 +1,88 @@
+.track {
+  width: min(100% - 2 * var(--gutter), var(--measure-wide));
+  margin-inline: auto;
+  padding-block: clamp(3rem, 8vw, 6.5rem) 0;
+  /* Headings land below the fixed dock's clearance when jumped to. */
+  scroll-margin-top: 1.5rem;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+/* The screen tab: same glass and bezel as the panel, open at the bottom so the two read
+   as one piece. Its ::after covers the panel's top bezel where they join. */
+.tab {
+  position: relative;
+  z-index: 1;
+  margin-bottom: -3px;
+  padding: 0.55em 0.85em 0.45em;
+  border-radius: 12px 12px 0 0;
+  background: var(--oled);
+  box-shadow: inset 3px 0 0 var(--bezel), inset -3px 0 0 var(--bezel), inset 0 3px 0 var(--bezel);
+}
+.tab::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: 0;
+  height: 3px;
+  background: var(--oled);
+}
+
+.number {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  padding-bottom: 0.9rem;
+}
+
+/* The title is lit like text on the device's screen. */
+.title {
+  margin: 0;
+  font-family: var(--font-dot), monospace;
+  font-weight: 800;
+  font-size: clamp(2.25rem, 1.4rem + 3.6vw, 4.25rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--oled-text);
+  text-shadow: 0 0 0.35em rgb(255 90 31 / 0.45);
+}
+.title:focus { outline: none; }
+.title:focus-visible { outline: 2px solid var(--signal); outline-offset: 6px; border-radius: 4px; }
+
+/* A panel that reads as an extension of the device's OLED: black glass in a graphite
+   bezel, with a faint pixel grid and a soft reflection along the top edge. */
+.panel {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(1.25rem, 3.5vw, 2.75rem);
+  border-radius: 14px;
+  background: var(--oled);
+  color: var(--panel-text);
+  box-shadow:
+    inset 0 0 0 3px var(--bezel),
+    0 1px 0 rgb(255 255 255 / 0.5),
+    0 24px 48px -28px rgb(10 12 16 / 0.55);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
+  border-radius: 11px;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.055), transparent 18%),
+    radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.035) 0.6px, transparent 0.8px) 0 0 / 4px 4px;
+}
+
+@media (max-width: 767px) {
+  .panel { border-radius: 12px; }
+  .panel::before { border-radius: 9px; }
+}

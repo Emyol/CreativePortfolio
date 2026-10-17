@@ -1,2 +1,33 @@
-.toggle { border: 1px solid currentColor; border-radius: 999px; padding: 0.3rem 0.9rem; background: none; color: inherit; font: inherit; font-size: 0.85rem; cursor: pointer; }
-.toggle[aria-pressed="true"] { background: var(--seal); border-color: var(--seal); color: #fff; }
+/* A small labelled switch, printed like the device's labels; the lamp lights when on. */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+.toggle::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 30%, transparent);
+  transition: background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.toggle[aria-pressed="true"]::before {
+  background: var(--signal);
+  box-shadow: 0 0 0.5rem rgb(255 46 0 / 0.6);
+}
+@media (hover: hover) and (pointer: fine) {
+  .toggle:hover { border-color: currentColor; }
+}

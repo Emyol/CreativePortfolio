@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { __resetKeysForTests, chapterKeysEnabled, setChapterKeysEnabled, subscribeChapterKeys } from "./keys";
+import { __resetKeysForTests, trackKeysEnabled, setTrackKeysEnabled, subscribeTrackKeys } from "./keys";
 
 beforeEach(() => {
   localStorage.clear();
@@ -7,20 +7,20 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-test("chapter keys are on by default", () => {
-  expect(chapterKeysEnabled()).toBe(true);
+test("track keys are on by default", () => {
+  expect(trackKeysEnabled()).toBe(true);
 });
 
 test("turning them off is remembered (WCAG 2.1.4: single-key shortcuts can be turned off)", () => {
-  setChapterKeysEnabled(false);
+  setTrackKeysEnabled(false);
   __resetKeysForTests();
-  expect(chapterKeysEnabled()).toBe(false);
+  expect(trackKeysEnabled()).toBe(false);
 });
 
 test("subscribers hear about changes", () => {
   const l = vi.fn();
-  const off = subscribeChapterKeys(l);
-  setChapterKeysEnabled(false);
+  const off = subscribeTrackKeys(l);
+  setTrackKeysEnabled(false);
   off();
   expect(l).toHaveBeenCalledOnce();
 });

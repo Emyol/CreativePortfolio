@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EventPhoto } from "@/components/chapters/EventPhoto";
+import { EventPhoto } from "@/components/tracks/EventPhoto";
 import { Footer } from "@/components/frame/Footer";
-import { ScrollFrame } from "@/components/frame/ScrollFrame";
-import { InkBleed } from "@/components/motion/InkBleed";
 import { Photo } from "@/components/Photo";
 import { getContent } from "@/lib/content/load";
 import { formatDate } from "@/lib/dates";
-import { seasonVars } from "@/lib/seasons";
 import styles from "./page.module.css";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -36,11 +33,10 @@ export default async function EventPage({ params }: Props) {
   const rest = event.photos.slice(1);
 
   return (
-    <ScrollFrame>
-      <main id="main" tabIndex={-1} className={styles.page} style={seasonVars("summer-night")}>
+    <>
+      <main id="main" tabIndex={-1} className={styles.page}>
         <article>
           <header className={styles.header}>
-            {/* The tile-to-page morph is the cover's entrance; it gets no ink bleed of its own. */}
             <div className={styles.cover}>
               <EventPhoto event={event} sizes="(min-width: 1180px) 1100px, 100vw" className={styles.coverImg} priority />
             </div>
@@ -61,9 +57,7 @@ export default async function EventPage({ params }: Props) {
             <ul className={styles.gallery}>
               {rest.map((photo, i) => (
                 <li key={`${photo.src}-${i}`}>
-                  <InkBleed origin="random">
-                    <Photo photo={photo} sizes="(min-width: 768px) 50vw, 100vw" className={styles.galleryImg} />
-                  </InkBleed>
+                  <Photo photo={photo} sizes="(min-width: 768px) 50vw, 100vw" className={styles.galleryImg} />
                 </li>
               ))}
             </ul>
@@ -71,10 +65,10 @@ export default async function EventPage({ params }: Props) {
         </article>
         <nav aria-label="Event" className={styles.nav}>
           <Link href="/#events">Back to Events</Link>
-          <Link href="/mokuroku">Plain index</Link>
+          <Link href="/tracklist">Track list</Link>
         </nav>
       </main>
       <Footer />
-    </ScrollFrame>
+    </>
   );
 }

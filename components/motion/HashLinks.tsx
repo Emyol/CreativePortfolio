@@ -5,7 +5,7 @@ import { getLenis, scrollToId } from "@/lib/motion/navigate";
 import { readStorage, writeStorage } from "@/lib/motion/storage";
 
 const idFromHash = (hash: string) => decodeURIComponent(hash.replace(/^#/, ""));
-const scrollKey = () => `kakejiku:scroll:${location.pathname}${location.hash}`;
+const scrollKey = () => `side-a:scroll:${location.pathname}${location.hash}`;
 
 export function HashLinks() {
   const pathname = usePathname();

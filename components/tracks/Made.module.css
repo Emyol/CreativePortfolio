@@ -1,0 +1,43 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: clamp(1.5rem, 3vw, 2.25rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Photo-led: a hobby with a photo takes two columns where there is room. */
+.item[data-photo] { grid-column: span 2; }
+@media (max-width: 720px) { .item[data-photo] { grid-column: auto; } }
+
+.item { min-width: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+
+.photo {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--font-sans), sans-serif;
+  font-stretch: 112%;
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.note { margin: 0.35rem 0 0; max-width: 52ch; }
+
+.link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-underline-offset: 0.25em;
+}

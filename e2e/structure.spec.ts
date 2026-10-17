@@ -4,40 +4,39 @@ import { gotoReady } from "./helpers";
 
 test.use({ reducedMotion: "reduce" }); // judge final states
 
-const CHAPTERS = [["about", "About"], ["events", "Events"], ["music", "Music"], ["hobbies", "Hobbies"], ["shelf", "Shelf"], ["people", "People"]];
+const TRACKS = [["about", "about"], ["events", "events"], ["mixtape", "mixtape"], ["people", "people"], ["made", "made"], ["on-rotation", "on rotation"]];
 
-test("one h1, one h2 per chapter, each heading owns its section", async ({ page }) => {
+test("one h1, one h2 per track in tape order", async ({ page }) => {
   await gotoReady(page, "/");
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator("h1")).toHaveAccessibleName("Miel");
-  for (const [id, label] of CHAPTERS) await expect(page.locator(`section#${id} h2`)).toHaveAccessibleName(label);
-  await expect(page.locator("h2")).toHaveCount(6);
+  const ids = await page.locator("section[data-track]").evaluateAll((s) => s.map((e) => e.id));
+  expect(ids).toEqual(TRACKS.map(([id]) => id));
+  for (const [id, label] of TRACKS) await expect(page.locator(`section#${id} h2`)).toHaveAccessibleName(label);
 });
 
-test("first Tab reaches the skip link, which moves focus to main", async ({ page }) => {
+test("skip links: content first, then the track list", async ({ page }) => {
   await gotoReady(page, "/");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  const list = page.getByRole("link", { name: "Skip to the track list" });
+  await expect(list).toBeFocused();
+  await expect(list).toHaveAttribute("href", "/tracklist");
+  await page.keyboard.press("Shift+Tab");
   await page.keyboard.press("Enter");
   await expect(page.locator("#main")).toBeFocused();
 });
 
-test("a second skip link goes to the plain index", async ({ page }) => {
+test("no Kakejiku left: no Japanese characters, no KanjiVG credit", async ({ page }) => {
   await gotoReady(page, "/");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Skip to the plain index" })).toBeFocused();
-});
-
-test("footer credits KanjiVG and ends on 終", async ({ page }) => {
-  await gotoReady(page, "/");
-  await expect(page.getByRole("link", { name: "KanjiVG" })).toHaveAttribute("href", "http://kanjivg.tagaini.net");
-  await expect(page.getByRole("img", { name: "The end" })).toBeVisible();
+  expect(await page.locator("body").innerText()).not.toMatch(/[぀-ヿ㐀-鿿]/);
+  await expect(page.getByText("KanjiVG")).toHaveCount(0);
 });
 
 test("no portrait in the hero", async ({ page }) => {
   await gotoReady(page, "/");
-  await expect(page.locator("[data-hero] img")).toHaveCount(0);
+  await expect(page.locator("[data-hero] img:not([alt=''])")).toHaveCount(0);
 });
 
 test("home has no axe violations at WCAG 2.1 AA", async ({ page }) => {

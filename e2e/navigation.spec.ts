@@ -5,23 +5,16 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
   test.describe(`motion: ${reducedMotion}`, () => {
     test.use({ reducedMotion });
 
-    test("a cold deep link lands on the chapter with focus on its heading", async ({ page }) => {
-      await gotoReady(page, "/#music");
-      await headingAtTop(page, "music");
-      await expect(page.locator("#music-title")).toBeFocused();
+    test("a cold deep link lands on the track with focus on its heading", async ({ page }) => {
+      await gotoReady(page, "/#mixtape");
+      await headingAtTop(page, "mixtape");
+      await expect(page.locator("#mixtape-title")).toBeFocused();
     });
 
-    test("menu links scroll, focus and update the URL", async ({ page }) => {
-      await gotoReady(page, "/#top");
-      await page.locator("[data-hero-menu]").getByRole("link", { name: "Hobbies" }).click();
-      await headingAtTop(page, "hobbies");
-      await expect(page.locator("#hobbies-title")).toBeFocused();
-      await expect(page).toHaveURL(/#hobbies$/);
-    });
-
-    test("back returns to the previous chapter", async ({ page }) => {
+    // Track shortcuts return with the dock (Task 6); this runs again from then on.
+    test.fixme("back returns to the previous track", async ({ page }) => {
       await gotoReady(page, "/#about");
-      await page.keyboard.press("6");
+      await page.keyboard.press("4");
       await headingAtTop(page, "people");
       await page.goBack();
       await headingAtTop(page, "about");
@@ -39,6 +32,6 @@ test("Lenis runs at full motion and is removed live on reduced motion", async ({
 });
 
 test("no smooth scrolling on the plain index", async ({ page }) => {
-  await gotoReady(page, "/mokuroku");
+  await gotoReady(page, "/tracklist");
   await expect(page.locator("html")).not.toHaveClass(/lenis/);
 });
