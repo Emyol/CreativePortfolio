@@ -66,7 +66,8 @@ for (const [name, use] of [["desktop", {}], ["phone", iphone]] as const) {
       await expect(first.getByText("Cover", { exact: true })).toBeVisible();
       await first.getByLabel("Describe this photo").nth(0).fill("Fixture stage");
       await first.getByLabel("Describe this photo").nth(1).fill("Fixture crowd");
-      await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible({ timeout: 5_000 });
+      // Routine saves are shown, not announced, so this is the visible status line.
+      await expect(page.getByRole("region", { name: "Save and publish" }).getByText("Saved", { exact: true })).toBeVisible({ timeout: 5_000 });
       await page.getByRole("button", { name: "Publish", exact: true }).click();
       await page.getByRole("button", { name: "Publish to the tape" }).click();
       await expect(page.getByText("Published")).toBeVisible();
@@ -78,7 +79,9 @@ for (const [name, use] of [["desktop", {}], ["phone", iphone]] as const) {
       const links = page.getByRole("region", { name: "links" });
       await links.locator("summary").first().click();
       await links.getByLabel("Label").first().fill("Fixture link");
-      await expect(page.getByText("Saved somewhere else since. Reload to get the latest.")).toBeVisible({ timeout: 5_000 });
+      // Shown on the bar and announced as an alert.
+      await expect(page.getByRole("region", { name: "Save and publish" }).getByRole("alert")).toHaveText("Saved somewhere else since. Reload to get the latest.", { timeout: 5_000 });
+      await expect(page.locator("[data-status=conflict]")).toBeVisible();
       await expect(page.getByRole("button", { name: "Reload" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeDisabled();
     });

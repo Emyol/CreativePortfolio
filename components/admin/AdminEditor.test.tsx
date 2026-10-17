@@ -162,3 +162,12 @@ test("switching away from the tab saves at once, in a request that outlives the 
   await act(async () => void document.dispatchEvent(new Event("visibilitychange")));
   expect(calls.find((c) => c.url === "/api/admin/content")).toMatchObject({ keepalive: true });
 });
+
+test("no two elements share an id, so every label reaches its field", async () => {
+  const user = userEvent.setup();
+  const { container } = render(<AdminEditor initialContent={FIXTURES} initialRevision={1} />);
+  await user.click(within(screen.getByRole("region", { name: "events" })).getByRole("button", { name: "Add an event" }));
+  const ids = [...container.querySelectorAll("[id]")].map((e) => e.id);
+  expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+  expect(screen.getAllByLabelText("Summary")[0].tagName).toBe("TEXTAREA");
+});

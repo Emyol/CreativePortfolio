@@ -65,7 +65,7 @@ export function ListEditor({ section }: { section: SectionSpec }) {
     next.splice(Math.min(removed.index, next.length), 0, removed.item);
     write(next);
     setRemoved(null);
-    setFocusAfter(`${fieldId(pathOf(removed.item))}-summary`);
+    setFocusAfter(`${fieldId(pathOf(removed.item))}--entry`);
   };
   const listIssue = issue([section.id]);
 
@@ -115,7 +115,7 @@ export function ListEditor({ section }: { section: SectionSpec }) {
                 }}
               >
                 <summary
-                  id={`${id}-summary`}
+                  id={`${id}--entry`} // "--": no field key can make this, unlike "-summary"
                   className={styles.summary}
                   draggable
                   onDragStart={() => (dragFrom.current = i)}
