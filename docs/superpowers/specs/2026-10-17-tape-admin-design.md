@@ -81,20 +81,37 @@ What the owner decided, which this spec preserves:
 
 ### Supabase project
 
-Its **own** Supabase Free project (the migration is single-document, so it cannot share
-portfolioV2's). Port `supabase/migrations/202610120001_portfolio.sql` from portfolioV2 as
-this repo's first migration, with these changes:
+**Shared with the professional site, isolated by name** (decided 2026-10-18). Creating
+its own project failed: the owner's account is at Supabase's limit of two active free
+projects, and freeing one would mean pausing or deleting a project, which only the owner
+can choose. So the tape lives in the professional site's existing free project
+(`zbdrjutezijwpyfextmj`, Tokyo), with nothing shared but the database server and the
+GitHub login provider. CLAUDE.md's "own project" requirement existed because the
+migration is single-document with fixed names; prefixing every name removes the clash.
 
-- uploads are images only: JPEG, PNG and WebP (no PDF), still 4 MB per file at most;
-- the asset pattern in `publish_portfolio` and the media route drops `pdf`;
-- everything else stays: owner allowlist (`admin_users`), `portfolio_draft` /
-  `portfolio_published` single rows, `save_portfolio_draft` with the optimistic revision
-  check, atomic `publish_portfolio` that writes the published asset allowlist, archived
-  entries stripped at publish, a private `portfolio-assets` bucket, RLS everywhere, no
-  service-role key used by the app.
+Port `supabase/migrations/202610120001_portfolio.sql` from portfolioV2 as this repo's
+first migration, renamed and changed:
+
+- tables `tape_admin_users`, `tape_draft`, `tape_published`, `tape_published_assets`;
+  functions `is_tape_owner`, `save_tape_draft`, `publish_tape`, `tape_without_archives`;
+  a separate advisory-lock key; bucket `tape-assets`. Nothing of the professional site's
+  (`admin_users`, `portfolio_*`, `portfolio-assets`) is read, altered or dropped;
+- the tape's owner list is its own table, seeded with the owner's already verified
+  GitHub user id (the single row in `admin_users`), so no owner step is needed;
+- uploads are images only: JPEG, PNG and WebP (no PDF), still 4 MB per file at most; the
+  asset pattern in `publish_tape` and the media route drops `pdf`;
+- everything else stays: single-row draft and published records, the optimistic revision
+  check, atomic publish that writes the published asset allowlist, archived entries
+  stripped at publish, a private bucket, RLS everywhere, no service-role key used by the
+  app.
+
+If the owner later frees a project slot, the same migration runs unchanged in a project
+of its own; only the env vars change.
 
 Login is GitHub OAuth through Supabase, exactly as portfolioV2 (`app/auth/*`,
-`proxy.ts`, `lib/supabase/{server,http}.ts`), with this site's URLs.
+`proxy.ts`, `lib/supabase/{server,http}.ts`). The provider is already configured in the
+shared project; the tape only needs its callback URLs added to the allowed redirect list
+(an owner dashboard step, since the tools cannot change auth settings).
 
 ### How the public site reads content
 
@@ -195,11 +212,11 @@ owner UUID, first publish from the seed, backup and restore, and the verificatio
 checklist (signed-out access refused, draft photo 404 until published, stale-tab conflict,
 export contents).
 
-Account setup (decided by the owner on 2026-10-18): the builder creates the Supabase
-project and the Vercel project through the connected Supabase and Vercel tools. Both are
-named `miel-tape`, in Singapore (`ap-southeast-1`, Vercel `sin1`), in the owner's
-`amiel-portfolio` organisation on the free plan. The GitHub OAuth app needs the owner's
-own GitHub session, so the builder gives exact steps and the owner clicks through them.
+Account setup (decided by the owner on 2026-10-18): the builder sets things up through
+the connected Supabase and Vercel tools. Supabase: the shared project above. Vercel: a
+project named `miel-tape` (address `miel-tape.vercel.app` if free), functions in Tokyo
+(`hnd1`) next to the database. The owner's only steps are adding the tape's callback URLs
+in Supabase and, if the connector cannot, linking the GitHub repo in Vercel.
 
 ## Tests
 
@@ -228,7 +245,8 @@ own GitHub session, so the builder gives exact steps and the owner clicks throug
 - One spec for store plus admin, not two.
 - Long edge 2400 px, WebP, before upload.
 - Published photos cached long and immutable at the CDN; drafts private.
-- A daily keep-alive via Vercel Cron (Hobby's limit), unlike portfolioV2.
+- A daily keep-alive via Vercel Cron (Hobby's limit), unlike portfolioV2; it now keeps both sites' shared project awake.
+- The tape shares the professional site's Supabase project under `tape_` names (free-plan limit).
 - The site keeps serving the last good publication when Supabase is down; a production
   build refuses to replace a publication with the seed.
 - Event pages generated on demand for newly published events.
