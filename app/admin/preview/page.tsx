@@ -10,11 +10,11 @@ export const dynamic = "force-dynamic";
 /** The draft on the real tape, owner-only and never cached. */
 export default async function Preview() {
   if ((await getAdminStatus()).status !== "ready") redirect("/admin");
-  const { content } = await getDraft();
+  const { content, hidden } = previewable((await getDraft()).content);
   return (
     <>
-      <PreviewLabel />
-      <TapePage content={previewable(content)} eventHref={(slug) => `/admin/preview/events/${slug}`} />
+      <PreviewLabel hidden={hidden} />
+      <TapePage content={content} eventHref={(slug) => `/admin/preview/events/${slug}`} />
     </>
   );
 }

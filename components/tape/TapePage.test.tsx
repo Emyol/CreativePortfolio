@@ -35,7 +35,8 @@ test("the preview hides archived entries and loads uploaded photos as drafts", (
 
 test("an unfinished draft previews what is complete and leaves the rest out", () => {
   const unfinished = { ...FIXTURES, events: [{ slug: "", name: "Half written", date: "", summary: "", story: [], photos: [] }, ...FIXTURES.events], about: { letter: [""], toolbox: [] } };
-  const c = previewable(unfinished);
+  const { content: c, hidden } = previewable(unfinished);
+  expect(hidden).toBe(1);
   expect(c.events).toHaveLength(FIXTURES.events.length);
   expect(c.about.letter).toEqual([]);
   const { container } = render(
@@ -44,4 +45,9 @@ test("an unfinished draft previews what is complete and leaves the rest out", ()
     </MotionTierContext.Provider>,
   );
   expect(container.querySelector("#events")).not.toBeNull();
+});
+
+test("a hidden entry isn't counted as unfinished in the preview", () => {
+  const { hidden } = previewable({ ...FIXTURES, events: [...FIXTURES.events, { slug: "", name: "Draft", archived: true }] });
+  expect(hidden).toBe(0);
 });

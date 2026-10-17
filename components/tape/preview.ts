@@ -30,11 +30,12 @@ function entrySchema(key: (typeof LISTS)[number]): z.ZodType {
 
 /**
  * A draft the preview can always render: when it isn't valid yet, keep each entry that is
- * complete and leave the unfinished ones out (the editor still points at them).
+ * complete and leave the unfinished ones out (the editor still points at them). `hidden`
+ * counts those, so the preview can say it isn't the whole draft.
  */
-export function previewable(raw: unknown): SiteContent {
+export function previewable(raw: unknown): { content: SiteContent; hidden: number } {
   const whole = contentSchema.safeParse(raw);
-  if (whole.success) return previewContent(whole.data);
+  if (whole.success) return { content: previewContent(whole.data), hidden: 0 };
   const r = (raw ?? {}) as Record<string, unknown>;
   const about = (r.about ?? {}) as Record<string, unknown>;
   const keep = (key: (typeof LISTS)[number]) => {
@@ -59,5 +60,9 @@ export function previewable(raw: unknown): SiteContent {
     links: keep("links").slice(0, 4),
   };
   const parsed = contentSchema.safeParse(candidate);
-  return previewContent(parsed.success ? parsed.data : contentSchema.parse({ about: { letter: [], toolbox: [] }, events: [], music: [], hobbies: [], shelf: [], people: [] }));
+  const content = previewContent(parsed.success ? parsed.data : contentSchema.parse({ about: { letter: [], toolbox: [] }, events: [], music: [], hobbies: [], shelf: [], people: [] }));
+  // Entries the owner hasn't hidden, minus the ones the preview shows.
+  const wanted = LISTS.reduce((n, key) => n + (Array.isArray(r[key]) ? r[key].filter((i: { archived?: unknown }) => i?.archived !== true).length : 0), 0);
+  const shown = LISTS.reduce((n, key) => n + content[key].length, 0);
+  return { content, hidden: Math.max(0, wanted - shown) };
 }
