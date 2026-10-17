@@ -58,6 +58,12 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
         setContent(next);
         autosave.change(next);
       },
+      update: (path, fn) => {
+        const next = setIn(latest.current, path, fn(getIn(latest.current, path)));
+        latest.current = next;
+        setContent(next);
+        autosave.change(next);
+      },
       issue: (path) => issues.get(pathKey(path)),
       issuesUnder: (path) => {
         const key = pathKey(path);

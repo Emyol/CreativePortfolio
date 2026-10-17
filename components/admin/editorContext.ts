@@ -7,6 +7,8 @@ export type Editor = {
   get: (path: Path) => unknown;
   /** Sets a value; undefined removes the key (empty optional fields). */
   set: (path: Path, value: unknown) => void;
+  /** Applies `fn` to the latest value at `path` (for async work like uploads finishing). */
+  update: (path: Path, fn: (current: unknown) => unknown) => void;
   issue: (path: Path) => string | undefined;
   /** How many problems sit at or below `path`. */
   issuesUnder: (path: Path) => number;

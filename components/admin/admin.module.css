@@ -142,9 +142,38 @@
 .chip input:checked + span { background: var(--oled); color: #fff; border-color: var(--oled); }
 .chip input:focus-visible + span { outline: 2px solid var(--signal); outline-offset: 2px; }
 
-.photos { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.photoField { display: grid; gap: 0.75rem; min-width: 0; }
+.photos { display: grid; gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
 .photo { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.75rem; align-items: start; }
+.thumbWrap { position: relative; }
 .thumb { width: 5.5rem; height: 5.5rem; object-fit: cover; border-radius: 8px; background: var(--oled); }
+.cover {
+  position: absolute;
+  left: 0.3rem;
+  bottom: 0.3rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  background: var(--oled);
+  color: var(--oled-text);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+}
+.photoBody { display: grid; gap: 0.5rem; min-width: 0; }
+/* The file input is visually replaced by a big tap target (its label); it stays focusable. */
+.file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.pick {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 1.1rem;
+  border-radius: 10px;
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 40%, transparent);
+  font-weight: 600;
+  cursor: pointer;
+}
+.file:focus-visible + .pick,
+.pick:has(+ .file:focus-visible) { outline: 2px solid var(--signal); outline-offset: 2px; }
 
 /* ---------------------------------------------------------------- buttons */
 .add,

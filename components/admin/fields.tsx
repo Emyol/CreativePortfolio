@@ -3,9 +3,8 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import { PROFESSIONAL_STACK } from "@/lib/content/schema";
 import type { FieldSpec } from "@/lib/admin/sections";
 import { fieldId, useEditor, type Path } from "./editorContext";
+import { PhotoList } from "./PhotoList";
 import styles from "./admin.module.css";
-
-type Photo = { src: string; alt: string; width: number; height: number };
 
 /** Label, hint and the field's own problem, wired to the control for screen readers. */
 export function FieldFrame({ path, label, hint, children, group = false }: { path: Path; label: string; hint?: string; children: (a11y: { id: string; describedBy?: string; invalid: boolean }) => ReactNode; group?: boolean }) {
@@ -156,35 +155,6 @@ function ToolboxField({ spec, path }: { spec: FieldSpec; path: Path }) {
   );
 }
 
-/** Existing photos with their descriptions; uploading and reordering arrive with PhotoList. */
-function PhotosField({ spec, path, single }: { spec: FieldSpec; path: Path; single?: boolean }) {
-  const { get, set } = useEditor();
-  const value = get(path) as Photo[] | Photo | undefined;
-  const photos = single ? (value ? [value as Photo] : []) : ((value as Photo[] | undefined) ?? []);
-  return (
-    <FieldFrame path={path} label={spec.label} hint={spec.hint} group>
-      {() => (
-        <ul className={styles.photos}>
-          {photos.map((p, i) => {
-            const altPath = single ? [...path, "alt"] : [...path, i, "alt"];
-            return (
-              <li key={`${p.src}-${i}`} className={styles.photo}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- admin thumbnails of draft uploads */}
-                <img src={p.src} alt="" width={p.width} height={p.height} className={styles.thumb} />
-                <FieldFrame path={altPath} label="Describe this photo">
-                  {({ id, describedBy, invalid }) => (
-                    <input id={id} className={styles.input} value={p.alt} aria-describedby={describedBy} aria-invalid={invalid || undefined} onChange={(e) => set(altPath, e.target.value)} />
-                  )}
-                </FieldFrame>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </FieldFrame>
-  );
-}
-
 export function Field({ spec, path }: { spec: FieldSpec; path: Path }) {
   switch (spec.kind) {
     case "text":
@@ -204,8 +174,8 @@ export function Field({ spec, path }: { spec: FieldSpec; path: Path }) {
     case "toolbox":
       return <ToolboxField spec={spec} path={path} />;
     case "photos":
-      return <PhotosField spec={spec} path={path} />;
+      return <PhotoList path={path} label={spec.label} hint={spec.hint} />;
     case "photo":
-      return <PhotosField spec={spec} path={path} single />;
+      return <PhotoList path={path} label={spec.label} hint={spec.hint} single />;
   }
 }
