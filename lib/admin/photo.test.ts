@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { fitWithin, PhotoError, prepareImage } from "./photo";
+import { fitWithin, PhotoError, prepareImage, uploadPhoto } from "./photo";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -47,4 +47,32 @@ test("where the browser can't make WebP (older Safari), it falls back to JPEG", 
   expect(toBlob.mock.calls.map((c) => c[1])).toEqual(["image/webp", "image/jpeg"]);
   expect(out.blob.type).toBe("image/jpeg");
   vi.restoreAllMocks();
+});
+
+class StalledXhr {
+  static last: StalledXhr;
+  timeout = 0;
+  upload = { onprogress: null };
+  ontimeout: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+  constructor() {
+    StalledXhr.last = this;
+  }
+  open() {}
+  send() {}
+}
+
+test("an upload that stalls gives up after a minute with a plain message", async () => {
+  vi.stubGlobal("XMLHttpRequest", StalledXhr);
+  const done = uploadPhoto(new Blob(["x"], { type: "image/webp" }), () => {});
+  expect(StalledXhr.last.timeout).toBe(60000);
+  StalledXhr.last.ontimeout?.();
+  await expect(done).rejects.toThrow("The upload took too long. Check the connection and try again.");
+});
+
+test("an upload the browser cancels says so", async () => {
+  vi.stubGlobal("XMLHttpRequest", StalledXhr);
+  const done = uploadPhoto(new Blob(["x"], { type: "image/webp" }), () => {});
+  StalledXhr.last.onabort?.();
+  await expect(done).rejects.toThrow("The upload was cancelled. Try again.");
 });

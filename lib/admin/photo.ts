@@ -43,6 +43,7 @@ export function uploadPhoto(blob: Blob, onProgress: (fraction: number) => void):
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/admin/upload");
+    xhr.timeout = 60000; // a stalled phone connection otherwise shows "Uploading" forever
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
     xhr.onload = () => {
       let body: { url?: string; error?: string } = {};
@@ -55,6 +56,8 @@ export function uploadPhoto(blob: Blob, onProgress: (fraction: number) => void):
       else reject(new PhotoError(body.error ?? "Upload failed. Try again."));
     };
     xhr.onerror = () => reject(new PhotoError("Couldn't reach the server. Check the connection and try again."));
+    xhr.ontimeout = () => reject(new PhotoError("The upload took too long. Check the connection and try again."));
+    xhr.onabort = () => reject(new PhotoError("The upload was cancelled. Try again."));
     const form = new FormData();
     form.set("file", blob, blob.type === "image/webp" ? "photo.webp" : "photo.jpg");
     xhr.send(form);
