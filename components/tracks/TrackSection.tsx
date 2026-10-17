@@ -14,16 +14,26 @@ export function TrackSection({ track, children }: { track: Track; children: Reac
   const ref = useRef<HTMLElement>(null);
   const tier = useMotionTier();
 
-  // Each track rises 8 px into place once, as it enters. From-states apply on mount only,
-  // so the server markup is fully visible; focus landing inside finishes it at once.
+  // Each track rises 8 px into place once, as it enters. A track already on screen (or
+  // above it) when the page settles is left alone: hiding it to fade it back would blink.
+  // The decision waits two frames so a deep link's jump has landed first. Focus landing
+  // inside finishes the rise at once.
   useGSAP(
-    () => {
-      if (tier === "none" || !ref.current) return;
+    (_context, contextSafe) => {
+      if (tier === "none" || !ref.current || !contextSafe) return;
       const el = ref.current;
-      const tween = gsap.from(el, { y: 8, opacity: 0, duration: 0.4, ease: "power2.out", scrollTrigger: { trigger: el, start: "top 85%", once: true } });
-      const finish = () => tween.progress(1);
+      let tween: gsap.core.Tween | undefined;
+      const arm = contextSafe(() => {
+        if (el.getBoundingClientRect().top < window.innerHeight * 0.85) return;
+        tween = gsap.from(el, { y: 8, opacity: 0, duration: 0.4, ease: "power2.out", scrollTrigger: { trigger: el, start: "top 85%", once: true } });
+      });
+      let raf = requestAnimationFrame(() => (raf = requestAnimationFrame(arm)));
+      const finish = () => tween?.progress(1);
       el.addEventListener("focusin", finish);
-      return () => el.removeEventListener("focusin", finish);
+      return () => {
+        cancelAnimationFrame(raf);
+        el.removeEventListener("focusin", finish);
+      };
     },
     { scope: ref, dependencies: [tier], revertOnUpdate: true },
   );
