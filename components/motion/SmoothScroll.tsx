@@ -9,7 +9,8 @@ import { setLenis } from "@/lib/motion/navigate";
 export function SmoothScroll() {
   const tier = useMotionTier();
   const pathname = usePathname();
-  const enabled = tier === "full" && pathname !== "/tracklist";
+  // The plain index and the admin scroll natively.
+  const enabled = tier === "full" && pathname !== "/tracklist" && !pathname.startsWith("/admin");
 
   useEffect(() => {
     if (!enabled) return;

@@ -16,7 +16,7 @@ import { POST } from "./route";
 
 const WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 1, 2, 3]);
 const PNG = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1, 2]);
-const send = (bytes: Uint8Array, type: string, size?: number) => {
+const send = (bytes: Uint8Array<ArrayBuffer>, type: string, size?: number) => {
   const form = new FormData();
   const file = new File([size ? new Uint8Array(size) : bytes], "p", { type });
   form.set("file", file);

@@ -1,0 +1,32 @@
+.shell {
+  min-height: 100dvh;
+  background: var(--table);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.notice,
+.editor {
+  width: min(100% - 2 * var(--gutter), 44rem);
+  margin-inline: auto;
+  padding-block: clamp(2.5rem, 8vw, 5rem);
+}
+.notice { display: grid; gap: 1rem; justify-items: start; }
+.notice h1,
+.editor h1 { margin: 0; font-stretch: 118%; font-size: clamp(1.75rem, 1.3rem + 2vw, 2.5rem); }
+.notice p { margin: 0; max-width: 52ch; }
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.primary { background: var(--oled); color: #fff; border: 0; }
+.secondary { background: none; color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
