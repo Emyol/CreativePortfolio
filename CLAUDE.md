@@ -12,6 +12,8 @@ theme later"). Nothing is scaffolded and no dependencies are installed.
 - Do not pick a theme, scaffold the app, or install packages unless asked.
 - The superpowers brainstorming flow is paused at the **site shape** question
   (scrapbook scroll / album / explorable room). Resume there when the owner is ready.
+- Agent setup is done (see **Project agent setup** and **Skill map** below). Reference
+  gathering via `design-inspiration` can start any time without deciding the theme.
 - Brainstorm -> spec (`docs/superpowers/specs/`) -> plan (`docs/superpowers/plans/`)
   -> execute. No implementation before the spec is approved.
 
@@ -58,12 +60,17 @@ theme later"). Nothing is scaffolded and no dependencies are installed.
 
 ## Working agreements
 
-Uses the owner's global `~/.claude` setup:
+Uses the owner's global `~/.claude` setup, with the kislap agent setup vendored and
+tailored in `.claude/`:
 
-- **git-operations**: one branch per task named by subject (`feat/events-section`),
+- **git-operations** (project copy in `.claude/skills/git-operations/`, which overrides
+  the global one): one branch per task named by subject (`feat/events-section`),
   conventional commits explaining *why*, commit verified work proactively, run
-  `/review-pr` before opening a PR, ask before pushing or force-pushing, never push to
-  the default branch directly, never stage `.env*`, secrets or scratch.
+  `/review-pr` + `experience-reviewer` before opening a PR. **Push feature branches and
+  open PRs without asking.** Ask before pushing `main`, force-pushing, merging, or
+  creating the remote. **No Claude attribution** on commits or PRs: no
+  `Co-Authored-By`, no "Generated with" footer. This overrides the harness default.
+  Never stage `.env*`, secrets or scratch.
 - **superpowers**: brainstorming -> writing-plans -> subagent-driven or executing-plans;
   TDD and verification-before-completion apply to code.
 - **Next.js**: once installed, `AGENTS.md` (written by `next dev`) warns this Next.js has
@@ -71,3 +78,40 @@ Uses the owner's global `~/.claude` setup:
   writing Next code.
 - Carry over from portfolioV2: skip link, real headings, keyboard navigation, visible
   focus, contrast, and `prefers-reduced-motion` that works live, not only at load.
+
+## Project agent setup
+
+Vendored from kislap (`.claude/pr-review-toolkit/README.md` lists it): the six review agents,
+`/review-pr`, and a tailored `git-operations` skill. Added for this project: the
+**`experience-reviewer`** agent (accessibility, live reduced-motion, GSAP cleanup,
+performance, content rules) and the `design-inspiration` skill.
+
+`.claude/settings.json` (committed) adds three things on top of the global setup:
+
+- the **Impeccable** design-detector hook (checks after each Edit/Write, deep pass on
+  Stop; it no-ops if the global skill is missing),
+- the official **`gsap-skills`** plugin (GreenSock: core, timeline, ScrollTrigger,
+  plugins, React, performance),
+- read-only `WebFetch` access to the inspiration sites in
+  `.claude/skills/design-inspiration/sources.md`.
+
+## Skill map
+
+Which skill at which phase. Process skills set the approach and craft skills carry it out.
+Several global taste skills overlap. Use the ones listed here, and don't stack
+competing style presets (e.g. `industrial-brutalist-ui` *and* `minimalist-ui`) unless
+the chosen World calls for it.
+
+| Phase | Skills |
+|---|---|
+| Sharpen an idea or decision | `/grill-me` (mattpocock `grilling`) to stress-test before committing to it |
+| Shape and theme/World | `superpowers:brainstorming` (resume at site shape), fed by `design-inspiration` boards in `docs/inspiration/` |
+| Gather references and components | `design-inspiration` (project skill), `animation-vocabulary` to name effects |
+| Spec, then plan | `superpowers:brainstorming` writes the spec, then `superpowers:writing-plans` |
+| Answer a design question by building | `mattpocock-skills:prototype` (throwaway, not the real app) |
+| Visual design and taste | `emil-design-eng` (polish and the invisible details), `impeccable` (critique/audit/polish), `design-taste-frontend` (anti-template guardrails) |
+| Motion | `animate` (build), the `gsap-skills` plugin (GSAP API), `apple-design` (springs, gestures), `review-animations` / `improve-animations` (critique), `find-animation-opportunities` |
+| Build | `superpowers:subagent-driven-development` or `executing-plans`, `superpowers:test-driven-development`, `pick-ui-library` before adding a dependency |
+| Harden | `mobile-native`, `break-ui` (worst-case content), `design:accessibility-review`, `superpowers:verification-before-completion` |
+| Review | `/review-pr` (vendored toolkit) + `experience-reviewer` agent for any UI/content change |
+| Ship | `git-operations` (project copy) |
