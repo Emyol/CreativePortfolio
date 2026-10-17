@@ -37,7 +37,7 @@ own; only the environment variables change.
    Production and Preview):
    - `NEXT_PUBLIC_SUPABASE_URL`: the project URL
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: the publishable key (never service_role)
-   - `SITE_URL`: `http://localhost:3000` locally, `https://miel-tape.vercel.app` on Vercel
+   - `SITE_URL`: `http://localhost:3000` locally; on Vercel, `https://miel-tape.vercel.app` for **Production only**. Leave it unset for Preview, so each preview checks requests against its own address (a production value there would refuse every save from the preview URL).
    - `CRON_SECRET`: a long random string (Vercel sends it to the keep-alive)
 
    Redeploy after changing them.
