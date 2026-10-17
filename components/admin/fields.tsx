@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { PROFESSIONAL_STACK } from "@/lib/content/schema";
 import type { FieldSpec } from "@/lib/admin/sections";
 import { fieldId, useEditor, type Path } from "./editorContext";
@@ -44,6 +44,72 @@ function TextField({ spec, path, type = "text" }: { spec: FieldSpec; path: Path;
           aria-invalid={invalid || undefined}
           onChange={(e) => set(path, optionalText(e.target.value, spec.optional))}
         />
+      )}
+    </FieldFrame>
+  );
+}
+
+const SPOTIFY_TRACK = /^https:\/\/open\.spotify\.com\/track\/[A-Za-z0-9]{22}(\?.*)?$/;
+
+/**
+ * A pasted song link fills in the title and artist from Spotify when they are still empty.
+ * Spotify may not answer; then nothing happens and they are typed by hand.
+ */
+function SpotifyField({ spec, path }: { spec: FieldSpec; path: Path }) {
+  const { get, set, update } = useEditor();
+  const value = (get(path) as string | undefined) ?? "";
+  const [filled, setFilled] = useState(false);
+  const looked = useRef("");
+  const item = path.slice(0, -1);
+
+  async function lookUp(link: string) {
+    const url = link.trim();
+    if (!SPOTIFY_TRACK.test(url) || looked.current === url) return;
+    looked.current = url;
+    try {
+      const res = await fetch(`/api/admin/spotify?url=${encodeURIComponent(url)}`);
+      if (!res.ok) return;
+      const found = (await res.json()) as { title?: string; artist?: string };
+      let changed = false;
+      for (const key of ["title", "artist"] as const) {
+        const v = found[key];
+        if (!v) continue;
+        update([...item, key], (now) => {
+          if (typeof now === "string" && now.trim()) return now;
+          changed = true;
+          return v;
+        });
+      }
+      if (changed) {
+        setFilled(true);
+        window.setTimeout(() => setFilled(false), 4000);
+      }
+    } catch {
+      /* Spotify unreachable: the fields stay for typing. */
+    }
+  }
+
+  return (
+    <FieldFrame path={path} label={spec.label} hint={spec.hint}>
+      {({ id, describedBy, invalid }) => (
+        <>
+          <input
+            id={id}
+            className={styles.input}
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            value={value}
+            aria-describedby={describedBy}
+            aria-invalid={invalid || undefined}
+            onChange={(e) => {
+              set(path, e.target.value.trim());
+              void lookUp(e.target.value);
+            }}
+            onBlur={(e) => void lookUp(e.target.value)}
+          />
+          <p className={styles.hint} role="status">{filled ? "Filled in from Spotify. Check it." : ""}</p>
+        </>
       )}
     </FieldFrame>
   );
@@ -159,8 +225,9 @@ export function Field({ spec, path }: { spec: FieldSpec; path: Path }) {
   switch (spec.kind) {
     case "text":
     case "slug":
-    case "spotify":
       return <TextField spec={spec} path={path} />;
+    case "spotify":
+      return <SpotifyField spec={spec} path={path} />;
     case "url":
       return <TextField spec={spec} path={path} type="url" />;
     case "longtext":
