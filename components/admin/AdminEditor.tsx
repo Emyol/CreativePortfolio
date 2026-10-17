@@ -139,6 +139,12 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
       <div className={styles.editorBody}>
         <h1 className={styles.title}>Edit the tape</h1>
         <p className={styles.lede}>Changes save as you go. Nothing reaches visitors until you publish.</p>
+        <div className={styles.account}>
+          <a className={styles.secondary} href="/api/admin/export" download>Export backup</a>
+          <form action="/auth/logout" method="post">
+            <button className={styles.secondary} type="submit">Sign out</button>
+          </form>
+        </div>
         <nav aria-label="Sections" className={styles.jump}>
           {SECTIONS.map((s) => (
             <a key={s.id} href={`#edit-${s.id}`} data-issues={editor.issuesUnder([s.id]) || undefined}>{s.title}</a>

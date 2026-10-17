@@ -14,6 +14,8 @@
 .section, .list, .items, .item, .item details, .summary, .itemBody { min-width: 0; }
 .title { margin: 0; font-stretch: 118%; font-size: clamp(1.75rem, 1.3rem + 2vw, 2.5rem); }
 .lede { margin: -1.75rem 0 0; color: var(--ink-muted); }
+.account { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.account form { margin: 0; }
 
 .jump {
   display: flex;

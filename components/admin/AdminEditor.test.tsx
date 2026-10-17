@@ -18,7 +18,10 @@ beforeEach(() => {
     }),
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.useRealTimers(); // also when a fake-timer test fails partway
+  vi.unstubAllGlobals();
+});
 
 test("a new event's address fills in from its name", async () => {
   const user = userEvent.setup();
@@ -49,7 +52,6 @@ test("edits autosave and the bar says so", async () => {
   await act(async () => vi.advanceTimersByTime(900));
   expect(await screen.findByText("Saved")).toBeInTheDocument();
   expect(calls.find((c) => c.url === "/api/admin/content")?.body).toMatchObject({ revision: 1 });
-  vi.useRealTimers();
 });
 
 test("publishing asks once, then publishes the saved revision", async () => {
@@ -99,4 +101,23 @@ test("after publishing, the next edit clears 'Published'", async () => {
   expect(await screen.findByText("Published")).toBeInTheDocument();
   await user.type(screen.getAllByLabelText("Describe this photo")[0], "!");
   expect(screen.queryByText("Published")).toBeNull();
+});
+
+test("the editor offers a backup download and a way to sign out", () => {
+  render(<AdminEditor initialContent={FIXTURES} initialRevision={1} />);
+  const backup = screen.getByRole("link", { name: "Export backup" });
+  expect(backup).toHaveAttribute("href", "/api/admin/export");
+  expect(backup).toHaveAttribute("download");
+  const signOut = screen.getByRole("button", { name: "Sign out" });
+  expect(signOut.closest("form")).toHaveAttribute("action", "/auth/logout");
+  expect(signOut.closest("form")).toHaveAttribute("method", "post");
+});
+
+test("the publish confirmation takes focus, and Cancel gives it back", async () => {
+  const user = userEvent.setup();
+  render(<AdminEditor initialContent={FIXTURES} initialRevision={5} />);
+  await user.click(screen.getByRole("button", { name: /^Publish/ }));
+  expect(screen.getByRole("button", { name: "Publish to the tape" })).toHaveFocus();
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.getByRole("button", { name: /^Publish$/ })).toHaveFocus();
 });
