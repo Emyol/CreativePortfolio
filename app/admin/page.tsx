@@ -1,3 +1,4 @@
+import { AdminEditor } from "@/components/admin/AdminEditor";
 import { getDraft } from "@/lib/content/repository";
 import { getAdminStatus } from "@/lib/supabase/server";
 import styles from "./admin.module.css";
@@ -53,8 +54,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
   const draft = await getDraft();
   return (
-    <main id="main" tabIndex={-1} className={styles.editor} data-revision={draft.revision}>
-      <h1>Edit the tape</h1>
+    <main id="main" tabIndex={-1}>
+      <AdminEditor initialContent={draft.content} initialRevision={draft.revision} />
     </main>
   );
 }
