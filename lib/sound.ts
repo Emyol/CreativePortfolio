@@ -25,9 +25,31 @@ export function subscribeSound(listener: () => void): () => void {
 
 function audio(): AudioContext | null {
   if (!soundEnabled() || typeof window === "undefined" || typeof window.AudioContext === "undefined") return null;
-  ctx ??= new AudioContext();
-  if (ctx.state === "suspended") void ctx.resume();
+  try {
+    ctx ??= new window.AudioContext();
+  } catch {
+    return null; // no audio hardware or too many contexts: sound just stays quiet
+  }
+  // Browsers refuse to resume without a gesture; the next gesture unlocks it (see below).
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
   return ctx;
+}
+
+/**
+ * A clunk driven by scroll is not a user gesture, so after a reload with sound on it would
+ * be dropped. Waking the context on the first tap or key makes later sounds audible.
+ */
+export function installSoundUnlock(): () => void {
+  const wake = () => {
+    if (audio()) off();
+  };
+  const off = () => {
+    window.removeEventListener("pointerdown", wake, true);
+    window.removeEventListener("keydown", wake, true);
+  };
+  window.addEventListener("pointerdown", wake, true);
+  window.addEventListener("keydown", wake, true);
+  return off;
 }
 
 function noise(ac: AudioContext, seconds: number): AudioBufferSourceNode {
@@ -88,5 +110,6 @@ export function playClunk(): void {
 
 export function __resetSoundForTests(): void {
   enabled = null;
+  ctx = null;
   listeners.clear();
 }

@@ -3,6 +3,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react
 import { useActiveTrack } from "@/components/motion/ActiveTrack";
 import { clock } from "@/components/tracks/Mixtape";
 import { getPlayback, getServerPlayback, subscribePlayback } from "@/lib/playback";
+import { installSoundUnlock } from "@/lib/sound";
 import { sideOf, type Track } from "@/lib/tape";
 import { Device } from "./Device";
 import { Dock } from "./Dock";
@@ -42,6 +43,9 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   const progress = song ? (playback.duration > 0 ? playback.position / playback.duration : 0) : undefined;
   const lit = playback.status === "playing";
   const power = usePowerOn();
+
+  // The flip's clunk is scroll-driven, not a gesture; wake audio on the first tap or key.
+  useEffect(() => installSoundUnlock(), []);
 
   useTrackKeys(tracks, side);
   useKeyPress();
