@@ -1,6 +1,6 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { TAPE_TAG } from "@/lib/content/repository";
-import { contentSchema } from "@/lib/content/schema";
+import { contentSchema, stripArchived } from "@/lib/content/schema";
 import { failure, json, readBody, sameOrigin } from "@/lib/supabase/http";
 import { AdminError, requireOwner } from "@/lib/supabase/server";
 
@@ -14,7 +14,8 @@ export async function POST(request: Request) {
     // Drafts may be unfinished; only content the tape can render is published.
     const { data: draft, error: readError } = await client.from("tape_draft").select("content,revision").eq("id", 1).maybeSingle();
     if (readError || !draft) throw new AdminError("Couldn't read the draft. Try again.", 503, { cause: readError });
-    const parsed = contentSchema.safeParse(draft.content);
+    // Hidden entries may be unfinished: they are stripped at publish, so they don't count.
+    const parsed = contentSchema.safeParse(stripArchived(draft.content));
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       return json({ error: `Fix this first: ${issue.message}`, path: issue.path }, 400);

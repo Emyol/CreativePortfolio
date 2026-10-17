@@ -58,3 +58,14 @@ test("published content that no longer fits the schema fails loudly", async () =
   db.row = { content: { ...FIXTURES, music: "nope" } };
   await expect(getContent()).rejects.toThrow(/music/);
 });
+
+test("hidden entries never reach visitors, even if the database left them in", async () => {
+  db.row = { content: { ...FIXTURES, events: [{ ...FIXTURES.events[0], archived: true }, FIXTURES.events[1]] } };
+  expect((await getContent()).events.map((e) => e.slug)).toEqual([FIXTURES.events[1].slug]);
+});
+
+test("a production deploy without its Supabase settings refuses to serve the seed", async () => {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+  vi.stubEnv("VERCEL_ENV", "production");
+  await expect(getContent()).rejects.toThrow("Supabase settings are missing in production: refusing to serve the seed");
+});

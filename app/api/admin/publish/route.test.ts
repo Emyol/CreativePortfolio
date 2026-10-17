@@ -63,3 +63,8 @@ test("a photo missing from storage stops the publish with a reason", async () =>
   expect(res.status).toBe(500);
   expect(await res.json()).toEqual({ error: "Couldn't publish: a photo in the draft is missing." });
 });
+
+test("a hidden unfinished entry doesn't stop the publish", async () => {
+  state.draft = { ...FIXTURES, events: [{ slug: "", name: "Half", date: "", summary: "", story: [], photos: [], archived: true }, ...FIXTURES.events] };
+  expect((await publish(4)).status).toBe(200);
+});

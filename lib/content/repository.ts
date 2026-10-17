@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { AdminError, fixturesMode, publicClient, requireOwner } from "@/lib/supabase/server";
 import { parseContent } from "./parse";
-import type { SiteContent } from "./schema";
+import { withoutArchived, type SiteContent } from "./schema";
 import seed from "./seed.json";
 
 /** Publishing revalidates this tag, so a publish is live within seconds. */
@@ -13,7 +13,8 @@ export const readPublished = unstable_cache(
   async (): Promise<SiteContent | null> => {
     const { data, error } = await publicClient().from("tape_published").select("content").eq("id", 1).maybeSingle();
     if (error) throw new Error(`Supabase did not return the published tape: ${error.message}`);
-    return data ? parseContent(data.content, "tape_published") : null;
+    // publish_tape strips hidden entries; stripping again keeps visitors safe if it regresses.
+    return data ? withoutArchived(parseContent(data.content, "tape_published")) : null;
   },
   ["tape-published-v1"],
   { revalidate: 3600, tags: [TAPE_TAG] },

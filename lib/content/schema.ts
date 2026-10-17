@@ -10,7 +10,7 @@ export const PROFESSIONAL_STACK = [
 ] as const;
 
 /** A phone number never goes on the tape (CLAUDE.md content rules); the admin refuses one as it is typed. */
-export const PHONE = /tel:|\+63|\b09\d{2}[\s-]?\d{3}[\s-]?\d{4}\b/;
+export const PHONE = /\btel:|\+63|\b09\d{2}[\s-]?\d{3}[\s-]?\d{4}\b/;
 const noPhone = (t: string) => !PHONE.test(t);
 const NO_PHONE = "phone numbers stay off the tape";
 const text = z.string().trim().min(1).refine(noPhone, NO_PHONE);
@@ -94,6 +94,16 @@ export const draftSchema = z
   .loose();
 
 const LISTS = ["events", "music", "hobbies", "shelf", "people", "links"] as const;
+
+/** Any draft, finished or not, with archived entries removed from every list. */
+export function stripArchived(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const out = { ...(raw as Record<string, unknown>) };
+  for (const key of LISTS) {
+    if (Array.isArray(out[key])) out[key] = (out[key] as { archived?: unknown }[]).filter((item) => item?.archived !== true);
+  }
+  return out;
+}
 
 /** What visitors get: archived entries removed from every list (as publish_tape does in SQL). */
 export function withoutArchived(c: SiteContent): SiteContent {

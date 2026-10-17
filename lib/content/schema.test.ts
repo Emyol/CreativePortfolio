@@ -84,3 +84,7 @@ describe("content written in the admin", () => {
     expect(out.music).toHaveLength(FIXTURES.music.length);
   });
 });
+
+test("a hotel is not a phone number", () => {
+  expect(contentSchema.safeParse({ ...FIXTURES, people: [{ name: "A", relation: "Stayed at the Hotel: Okura" }] }).success).toBe(true);
+});

@@ -21,7 +21,12 @@ export async function getContent(): Promise<SiteContent> {
     const { FIXTURES } = await import("./fixtures");
     return parseContent(FIXTURES, "lib/content/fixtures.ts");
   }
-  if (!supabaseConfig()) return parseContent(seed, "lib/content/seed.json");
+  if (!supabaseConfig()) {
+    // Local dev, CI and unconfigured previews use the seed; production never should: a lost
+    // env var would otherwise replace the published tape with two links.
+    if (process.env.VERCEL_ENV === "production") throw new Error("Supabase settings are missing in production: refusing to serve the seed");
+    return parseContent(seed, "lib/content/seed.json");
+  }
   try {
     return (await readPublished()) ?? parseContent(seed, "lib/content/seed.json");
   } catch (e) {

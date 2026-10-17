@@ -21,3 +21,9 @@ test("slugs come from names", () => {
   expect(slugify("  Música & Mates ")).toBe("musica-mates");
   expect(slugify("")).toBe("");
 });
+
+test("a hidden entry's unfinished fields don't block publishing", () => {
+  const half = { slug: "", name: "Half written", date: "", summary: "", story: [], photos: [], archived: true };
+  expect(issuesByPath({ ...FIXTURES, events: [half, ...FIXTURES.events] }).size).toBe(0);
+  expect(issuesByPath({ ...FIXTURES, events: [{ ...half, archived: false }, ...FIXTURES.events] }).size).toBeGreaterThan(0);
+});
