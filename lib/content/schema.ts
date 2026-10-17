@@ -77,6 +77,22 @@ export const contentSchema = z.object({
 
 export type SiteContent = z.output<typeof contentSchema>;
 
+/**
+ * What a saved draft must at least be: the tape's shape, its fields still being filled in.
+ * Autosave keeps unfinished work; publishing requires the full contentSchema.
+ */
+export const draftSchema = z
+  .object({
+    about: z.looseObject({ letter: z.array(z.unknown()), toolbox: z.array(z.unknown()) }),
+    events: z.array(z.looseObject({})),
+    music: z.array(z.looseObject({})),
+    hobbies: z.array(z.looseObject({})),
+    shelf: z.array(z.looseObject({})),
+    people: z.array(z.looseObject({})),
+    links: z.array(z.looseObject({})).default([]),
+  })
+  .loose();
+
 const LISTS = ["events", "music", "hobbies", "shelf", "people", "links"] as const;
 
 /** What visitors get: archived entries removed from every list (as publish_tape does in SQL). */

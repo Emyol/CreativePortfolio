@@ -26,17 +26,19 @@ test("valid content is saved against the revision it was edited from", async () 
   expect(rpc.calls[0][1]).toMatchObject({ expected_revision: 7 });
 });
 
-test("content the tape would refuse is not saved, and the field is named", async () => {
-  const bad = { ...FIXTURES, events: [{ ...FIXTURES.events[0], photos: [{ ...FIXTURES.events[0].photos[0], alt: "" }] }] };
-  const res = await put({ content: bad, revision: 7 });
-  expect(res.status).toBe(400);
-  expect(await res.json()).toEqual({ error: "every photo needs alt text", path: ["events", 0, "photos", 0, "alt"] });
-  expect(rpc.calls).toEqual([]);
+test("an unfinished draft still saves, so work in progress is never lost", async () => {
+  const unfinished = { ...FIXTURES, events: [{ slug: "", name: "", date: "", summary: "", story: [], photos: [] }, ...FIXTURES.events] };
+  const res = await put({ content: unfinished, revision: 7 });
+  expect(res.status).toBe(200);
+  expect(rpc.calls[0][1]).toMatchObject({ new_content: JSON.parse(JSON.stringify(unfinished)) });
 });
 
-test("a duplicate event slug is refused", async () => {
-  const res = await put({ content: { ...FIXTURES, events: [FIXTURES.events[0], FIXTURES.events[0]] }, revision: 1 });
-  expect((await res.json()).error).toMatch(/duplicate event slug/);
+test("anything that isn't a tape draft is refused", async () => {
+  for (const content of [null, [], "x", { events: "nope" }]) {
+    const res = await put({ content, revision: 1 });
+    expect(res.status, JSON.stringify(content)).toBe(400);
+  }
+  expect(rpc.calls).toEqual([]);
 });
 
 test("an edit from a stale tab is a conflict, never an overwrite", async () => {
