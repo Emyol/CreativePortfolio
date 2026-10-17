@@ -11,7 +11,7 @@ type Props = {
   current: TrackId | null;
   interactive: boolean;
   /** "" on the home page; "/" elsewhere so keys go back to the tape. */
-  hrefBase?: "" | "/";
+  hrefBase?: string;
   /** Positions in this box (the plate by default); the dock passes its own key rects. */
   rects?: readonly Rect[];
   /** Where the label is printed: under the key on the plate, or on the cap in the dock. */

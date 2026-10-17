@@ -1,0 +1,19 @@
+.label {
+  position: fixed;
+  z-index: 60;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: max(0.75rem, env(safe-area-inset-left));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.9rem;
+  margin: 0;
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  background: var(--oled);
+  color: var(--oled-text);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8125rem;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.5);
+}
+.label a { color: #fff; min-height: 32px; display: inline-flex; align-items: center; }

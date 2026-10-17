@@ -22,8 +22,9 @@ export function Photo({ photo, sizes, className, decorative = false, priority = 
       className={className}
       loading={priority ? "eager" : undefined}
       fetchPriority={priority ? "high" : undefined}
-      // Fixture swatches are data: URIs, which the optimiser can't process.
-      unoptimized={photo.src.startsWith("data:")}
+      // Fixture swatches are data: URIs, which the optimiser can't process; draft photos in the
+      // admin preview (?draft) need the owner's cookie, which the optimiser doesn't send.
+      unoptimized={photo.src.startsWith("data:") || photo.src.endsWith("?draft")}
     />
   );
 }

@@ -5,6 +5,9 @@ import { getContent } from "@/lib/content/load";
 import { formatTrackNumber, visibleTracks } from "@/lib/tape";
 import styles from "./page.module.css";
 
+// Rebuilt hourly and whenever the tape is published; a failed rebuild keeps the last good page.
+export const revalidate = 3600;
+
 export const metadata: Metadata = { title: "Track list · Miel", description: "Everything on Miel's tape, as a plain list." };
 
 export default async function TrackList() {

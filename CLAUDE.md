@@ -4,19 +4,21 @@ Amiel Josiah "Miel" Acuña's **creative / personal portfolio**: the person, not 
 It is a separate site from the professional portfolio at `../portfolioV2`
 (live at project-miel.vercel.app).
 
-## Status: Public site built, waiting for content
+## Status: Public site and admin built, waiting for content
 
 The **Side A** public site is implemented (spec: `docs/superpowers/specs/2026-10-17-side-a-design.md`,
 plan: `docs/superpowers/plans/2026-10-17-side-a-site.md`); it replaced Kakejiku entirely.
-`lib/content/seed.json` holds only the two footer links until the owner supplies material
-through `content-inbox/`; empty tracks stay hidden everywhere. `npm run dev:fixtures` shows
-the site with clearly fake fixtures (production builds refuse them).
+Content is edited at **`/admin`** (spec: `docs/superpowers/specs/2026-10-17-tape-admin-design.md`;
+setup: `docs/admin-setup.md`): drafts autosave, the preview is the real tape, publishing makes it
+live. Until the first publish the site shows `lib/content/seed.json` (only the two footer links);
+empty tracks stay hidden everywhere. `npm run dev:fixtures` shows the site and the admin with
+clearly fake fixtures (production builds refuse them).
 
 - Commands: `npm run dev`, `npm run dev:fixtures`, `npm run typecheck`, `npm test`
   (Vitest), `npm run test:e2e` (Playwright, against a fixtures dev server on port 3100),
   `npm run build`, `npm run device:render` (headless Blender) then `npm run device:encode`
   (see `art/blender/side-a/README.md`).
-- Next: the content-model spec (Supabase, photo hosting), then the admin port.
+- Next: real content from the owner, through `/admin`.
 - Brainstorm -> spec (`docs/superpowers/specs/`) -> plan (`docs/superpowers/plans/`)
   -> execute.
 
@@ -29,7 +31,8 @@ the site with clearly fake fixtures (production builds refuse them).
 | Capability layer | Light: languages and frameworks as a supporting "toolbox", never the headline |
 | Updating content | **Reuse the Supabase admin editor** from portfolioV2 (owner chose this over files-only) |
 | Tech base | Next.js 16.4, React 19.3, TypeScript 5, CSS Modules, GSAP + Lenis, Zod; Vitest + Playwright |
-| Decomposition | 1) content model + public site, 2) admin port. Separate spec, plan and build for each |
+| Decomposition | 1) public site (Side A), 2) content store + admin (one spec, built after the site) |
+| Content store | The professional site's Supabase project, shared under `tape_` names (free plan's two-project limit); photos uploaded in the admin into the private `tape-assets` bucket, shrunk in the browser first, published ones cached by the CDN; a daily Vercel Cron keep-alive |
 | World and site shape | **Side A**: the site is a pocket tape player Miel built. Hero is the device top down; its control strip becomes a dock; six tracks over two sides with a flip between; a page per event ("live recording"); plain index at `/tracklist`. See the spec |
 | Device art | Rendered in Blender (`art/blender/side-a/device.py`) as layered top-down sprites plus `public/device/layout.json`; no WebGL. Live text wherever the device prints or lights something |
 | Music | A mixtape of songs Miel loves (max 12), played in the page through Spotify's iFrame API, loaded only on the first press. **No generated music** |
@@ -38,12 +41,7 @@ the site with clearly fake fixtures (production builds refuse them).
 
 ## Still open
 
-- **Photo hosting.** Supabase free projects pause when inactive and uploaded media needs
-  Supabase up. Recommended: launch photos live in `public/` under Git, uploads only for
-  new ones. Decide in the spec.
-- **Supabase project.** The migration is single-document (`portfolio_draft` /
-  `portfolio_published`), so this site needs **its own project**, not portfolioV2's.
-- Domain and hosting.
+- Domain (the site runs at a `*.vercel.app` address until one is chosen).
 
 ## Content rules
 

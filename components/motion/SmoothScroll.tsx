@@ -9,7 +9,9 @@ import { setLenis } from "@/lib/motion/navigate";
 export function SmoothScroll() {
   const tier = useMotionTier();
   const pathname = usePathname();
-  const enabled = tier === "full" && pathname !== "/tracklist";
+  // The plain index and the editor scroll natively; the preview moves like the real tape.
+  const native = pathname === "/tracklist" || (pathname.startsWith("/admin") && !pathname.startsWith("/admin/preview"));
+  const enabled = tier === "full" && !native;
 
   useEffect(() => {
     if (!enabled) return;

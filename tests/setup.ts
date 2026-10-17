@@ -3,7 +3,9 @@ import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { installMatchMedia, resetMedia } from "./media";
 
-installMatchMedia();
+// Route handler tests run in the node environment, where there is no window.
+const browser = typeof window !== "undefined";
+if (browser) installMatchMedia();
 
 class NoopIntersectionObserver {
   observe() {}
@@ -14,9 +16,10 @@ class NoopIntersectionObserver {
   }
 }
 // jsdom has no IntersectionObserver; tests that need one stub it locally.
-globalThis.IntersectionObserver ??= NoopIntersectionObserver as unknown as typeof IntersectionObserver;
+if (browser) globalThis.IntersectionObserver ??= NoopIntersectionObserver as unknown as typeof IntersectionObserver;
 
 afterEach(() => {
+  if (!browser) return;
   cleanup();
   resetMedia();
 });

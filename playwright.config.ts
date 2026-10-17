@@ -9,7 +9,7 @@ export default defineConfig({
   webServer: {
     command: "npx next dev -p 3100",
     url: "http://localhost:3100",
-    env: { CONTENT_SOURCE: "fixtures" },
+    env: { CONTENT_SOURCE: "fixtures", NEXT_DIST_DIR: ".next-e2e" },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
