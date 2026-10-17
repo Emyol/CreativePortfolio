@@ -1,0 +1,15 @@
+.kanji { width: 100%; height: auto; overflow: visible; color: inherit; }
+.glyph { font-family: var(--font-brush), serif; font-size: 96px; fill: currentColor; }
+.pen path { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.mask path { fill: none; stroke: #fff; stroke-width: 15; stroke-linecap: round; stroke-linejoin: round; }
+
+.kanji[data-phase="idle"] path,
+.kanji[data-phase="write"] path { stroke-dashoffset: 1; }
+.kanji[data-phase="done"] .pen { opacity: 0; }
+.kanji[data-phase="done"] .mask path { stroke-dashoffset: 0; stroke-width: 40; }
+
+/* Before hydration, reduced-motion visitors already see finished glyphs. */
+@media (prefers-reduced-motion: reduce) {
+  .kanji .mask path { stroke-dashoffset: 0; stroke-width: 40; }
+  .kanji .pen { opacity: 0; }
+}
