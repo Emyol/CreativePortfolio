@@ -55,7 +55,7 @@ export function PhotoList({ path, label, hint, single = false }: Props) {
 
   return (
     <FieldFrame path={path} label={label} hint={hint} group>
-      {() => (
+      {({ describedBy }) => (
         <div className={styles.photoField}>
           {photos.length > 0 && (
             <ul className={styles.photos}>
@@ -103,6 +103,7 @@ export function PhotoList({ path, label, hint, single = false }: Props) {
             type="file"
             accept="image/*"
             multiple={!single}
+            aria-describedby={describedBy}
             onChange={(e) => {
               void add(e.target.files);
               e.target.value = "";

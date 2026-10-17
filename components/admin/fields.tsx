@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PROFESSIONAL_STACK } from "@/lib/content/schema";
 import type { FieldSpec } from "@/lib/admin/sections";
 import { fieldId, useEditor, type Path } from "./editorContext";
@@ -15,8 +15,11 @@ export function FieldFrame({ path, label, hint, children, group = false }: { pat
   const errorId = problem ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   const Label = group ? "span" : "label";
+  // A group (photos, the toolbox) has no single control, so the group itself is what
+  // "Fix" focuses and what carries the label and the problem.
+  const groupProps = group ? { id, role: "group", tabIndex: -1, "aria-labelledby": `${id}-label`, "aria-describedby": describedBy } : {};
   return (
-    <div className={styles.field} data-invalid={problem ? "" : undefined}>
+    <div className={styles.field} data-invalid={problem ? "" : undefined} {...groupProps}>
       <Label className={styles.label} {...(group ? { id: `${id}-label` } : { htmlFor: id })}>{label}</Label>
       {hint && <p id={hintId} className={styles.hint}>{hint}</p>}
       {children({ id, describedBy, invalid: !!problem })}
@@ -195,11 +198,10 @@ function DateField({ spec, path }: { spec: FieldSpec; path: Path }) {
 function ToolboxField({ spec, path }: { spec: FieldSpec; path: Path }) {
   const { get, set } = useEditor();
   const chosen = new Set((get(path) as string[] | undefined) ?? []);
-  const groupId = useId();
   return (
     <FieldFrame path={path} label={spec.label} hint={spec.hint} group>
-      {({ id, describedBy }) => (
-        <div role="group" aria-labelledby={`${id}-label`} aria-describedby={describedBy} className={styles.chips} id={groupId}>
+      {() => (
+        <div className={styles.chips}>
           {PROFESSIONAL_STACK.map((tool) => (
             <label key={tool} className={styles.chip}>
               <input

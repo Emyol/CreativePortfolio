@@ -4,7 +4,7 @@ import { useState } from "react";
 import { expect, test, vi } from "vitest";
 import { issuesByPath } from "@/lib/admin/issues";
 import { FIXTURES } from "@/lib/content/fixtures";
-import { EditorContext, getIn, pathKey, setIn, type Editor } from "./editorContext";
+import { EditorContext, fieldId, getIn, pathKey, setIn, type Editor } from "./editorContext";
 import { PhotoList } from "./PhotoList";
 
 vi.mock("@/lib/admin/photo", async (orig) => ({
@@ -61,4 +61,13 @@ test("removing a photo takes it off the list", async () => {
   await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
   await user.click(screen.getByRole("button", { name: "Remove photo 1" }));
   expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+});
+
+test("the photo field is a named group that Fix can focus, and the picker reads its problem", () => {
+  render(<Harness />);
+  const group = screen.getByRole("group", { name: "Photos" });
+  expect(group).toHaveAttribute("id", fieldId(["events", 0, "photos"]));
+  expect(group).toHaveAttribute("tabindex", "-1");
+  const problem = screen.getByText("an event needs at least one photo");
+  expect(screen.getByLabelText("Add photos").getAttribute("aria-describedby")).toContain(problem.id);
 });
