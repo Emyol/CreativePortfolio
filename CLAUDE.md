@@ -4,16 +4,15 @@ Amiel Josiah "Miel" Acuña's **creative / personal portfolio**: the person, not 
 It is a separate site from the professional portfolio at `../portfolioV2`
 (live at project-miel.vercel.app).
 
-## Status: pre-design
+## Status: World chosen, spec in review
 
-Theme, visual direction and site shape are **deliberately undecided** (owner: "plan the
-theme later"). Nothing is scaffolded and no dependencies are installed.
+The theme/World and site shape are decided: **Kakejiku**, a hanging scroll read top to
+bottom (spec: `docs/superpowers/specs/2026-10-13-kakejiku-world-design.md`). Nothing is
+scaffolded and no dependencies are installed yet.
 
-- Do not pick a theme, scaffold the app, or install packages unless asked.
-- The superpowers brainstorming flow is paused at the **site shape** question
-  (scrapbook scroll / album / explorable room). Resume there when the owner is ready.
-- Agent setup is done (see **Project agent setup** and **Skill map** below). Reference
-  gathering via `design-inspiration` can start any time without deciding the theme.
+- Do not scaffold the app or install packages until the owner approves the spec and
+  the implementation plan.
+- Next step after spec approval: `superpowers:writing-plans`.
 - Brainstorm -> spec (`docs/superpowers/specs/`) -> plan (`docs/superpowers/plans/`)
   -> execute. No implementation before the spec is approved.
 
@@ -27,10 +26,13 @@ theme later"). Nothing is scaffolded and no dependencies are installed.
 | Updating content | **Reuse the Supabase admin editor** from portfolioV2 (owner chose this over files-only) |
 | Tech base (assumed, confirm) | Next.js 16, because the admin is Next route handlers + `proxy.ts` |
 | Decomposition | 1) content model + public site, 2) admin port. Separate spec, plan and build for each |
+| World and site shape | **Kakejiku** hanging scroll: Sumi menu hero that becomes a seal rail, six seasonal chapters, smooth vertical scroll, a page per event, plain 目録 index. See the spec |
+| Motion | Kanji written in real stroke order (KanjiVG, credit required), ink bleed, brush dividers, seal stamps, one signature move per component, live reduced motion |
+| Priority | Desktop first, one to four weeks |
 
 ## Still open
 
-- **Site shape** and **theme/World** (later, by owner's choice).
+- View Transitions support in Next.js 16 for the event-page morph (verify in planning).
 - **Photo hosting.** Supabase free projects pause when inactive and uploaded media needs
   Supabase up. Recommended: launch photos live in `public/` under Git, uploads only for
   new ones. Decide in the spec.
@@ -105,7 +107,7 @@ the chosen World calls for it.
 | Phase | Skills |
 |---|---|
 | Sharpen an idea or decision | `/grill-me` (mattpocock `grilling`) to stress-test before committing to it |
-| Shape and theme/World | `superpowers:brainstorming` (resume at site shape), fed by `design-inspiration` boards in `docs/inspiration/` |
+| Shape and theme/World | `superpowers:brainstorming` (done: Kakejiku), fed by `design-inspiration` boards in `docs/inspiration/` |
 | Gather references and components | `design-inspiration` (project skill), `animation-vocabulary` to name effects |
 | Spec, then plan | `superpowers:brainstorming` writes the spec, then `superpowers:writing-plans` |
 | Answer a design question by building | `mattpocock-skills:prototype` (throwaway, not the real app) |
