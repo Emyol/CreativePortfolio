@@ -1,7 +1,7 @@
-export type SaveStatus = "saved" | "pending" | "saving" | "offline" | "conflict" | "error";
+export type SaveStatus = "saved" | "pending" | "saving" | "offline" | "conflict" | "signed-out" | "error";
 
 type Options = {
-  /** Resolves with the new revision; rejects with { status } (409 = conflict) or a network error. */
+  /** Resolves with the new revision; rejects with { status, message } or a network error. */
   save: (content: unknown, revision: number) => Promise<number>;
   revision: number;
   delay?: number;
@@ -17,6 +17,7 @@ const BACKOFF = [2000, 4000, 8000, 16000, 30000];
 export function createAutosave({ save, revision: initial, delay = 800 }: Options) {
   let revision = initial;
   let status: SaveStatus = "saved";
+  let message: string | undefined;
   let latest: unknown;
   let dirty = false;
   let inFlight: Promise<void> | null = null;
@@ -51,11 +52,14 @@ export function createAutosave({ save, revision: initial, delay = 800 }: Options
       } catch (e) {
         dirty = true;
         const code = (e as { status?: number })?.status;
+        message = (e as { message?: string })?.message;
         if (code === 409) set("conflict");
-        else if (code === undefined || code >= 500) {
+        else if (code === 401) set("signed-out");
+        else if (code === undefined || code === 502 || code === 503 || code === 504) {
+          // No answer, or the server says it's briefly unavailable: wait and try again.
           set("offline");
           schedule(BACKOFF[Math.min(attempt++, BACKOFF.length - 1)]);
-        } else set("error");
+        } else set("error"); // a real refusal: retrying won't help, so say why
       } finally {
         inFlight = null;
       }
@@ -66,6 +70,7 @@ export function createAutosave({ save, revision: initial, delay = 800 }: Options
   return {
     change(content: unknown) {
       if (status === "conflict") return;
+      if (status === "error" || status === "signed-out") status = "pending"; // the next edit tries again
       latest = content;
       dirty = true;
       if (status !== "saving" && status !== "offline") set("pending");
@@ -77,6 +82,8 @@ export function createAutosave({ save, revision: initial, delay = 800 }: Options
       await run();
     },
     status: () => status,
+    /** The server's reason for the last failed save, if it gave one. */
+    message: () => message,
     revision: () => revision,
     subscribe(listener: () => void) {
       listeners.add(listener);

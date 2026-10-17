@@ -25,8 +25,10 @@ export async function PUT(request: Request) {
     if (!parsed.success) throw new AdminError("That isn't a tape draft.");
     const { data, error } = await client.rpc("save_tape_draft", { new_content: parsed.data, expected_revision: revision });
     if (error) {
-      const conflict = error.message.includes("revision_conflict");
-      throw new AdminError(conflict ? "Saved somewhere else since. Reload to get the latest." : "Couldn't save the draft.", conflict ? 409 : 500);
+      if (error.message.includes("revision_conflict")) throw new AdminError("Saved somewhere else since. Reload to get the latest.", 409);
+      if (error.message.includes("invalid_content")) throw new AdminError("This draft is too big to save. Remove something long and try again.", 413);
+      if (error.message.includes("forbidden")) throw new AdminError("This GitHub account isn't the tape's owner.", 403);
+      throw new AdminError("Couldn't save the draft.", 500);
     }
     return json({ revision: data });
   } catch (e) {

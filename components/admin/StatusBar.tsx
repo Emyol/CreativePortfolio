@@ -8,13 +8,16 @@ const LABEL: Record<SaveStatus, string> = {
   saving: "Saving",
   offline: "Offline, will retry",
   conflict: "Saved somewhere else since. Reload to get the latest.",
-  error: "Couldn't save. Check the last change.",
+  "signed-out": "Signed out. Sign in again in a new tab, then come back here.",
+  error: "Couldn't save.",
 };
 
 export type PublishState = { kind: "idle" } | { kind: "confirm" } | { kind: "working" } | { kind: "done" } | { kind: "failed"; message: string };
 
 type Props = {
   status: SaveStatus;
+  /** The server's reason for a failed save. */
+  message?: string;
   issues: number;
   publish: PublishState;
   onShowIssue: () => void;
@@ -24,14 +27,18 @@ type Props = {
 };
 
 /** Always in reach: what autosave is doing, the preview, and publishing. */
-export function StatusBar({ status, issues, publish, onShowIssue, onPublish, onConfirm, onCancel }: Props) {
-  const blocked = issues > 0 || status === "conflict";
+export function StatusBar({ status, message, issues, publish, onShowIssue, onPublish, onConfirm, onCancel }: Props) {
+  // Publishing goes by the saved draft, so it waits until the latest change is saved.
+  const blocked = issues > 0 || status === "conflict" || status === "offline" || status === "signed-out" || status === "error";
   return (
     <div className={styles.bar} role="region" aria-label="Save and publish">
       <p className={styles.status} role="status" data-status={status}>
         <span className={styles.lamp} aria-hidden="true" />
-        {LABEL[status]}
+        {status === "error" && message ? `${LABEL.error} ${message}` : LABEL[status]}
       </p>
+      {status === "signed-out" && (
+        <a className={styles.secondary} href="/auth/login" target="_blank" rel="noopener">Sign in</a>
+      )}
       {status === "conflict" && (
         <button type="button" className={styles.secondary} onClick={() => location.reload()}>Reload</button>
       )}

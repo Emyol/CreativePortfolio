@@ -68,3 +68,32 @@ test("flush saves now", async () => {
   expect(save).toHaveBeenCalledTimes(1);
   expect(a.status()).toBe("saved");
 });
+
+test("a server error that isn't an outage stops, with the server's own reason", async () => {
+  const save = vi.fn(async () => Promise.reject({ status: 500, message: "Couldn't save the draft." }));
+  const a = createAutosave({ save, revision: 1 });
+  a.change(FIXTURES);
+  await vi.advanceTimersByTimeAsync(800);
+  expect(a.status()).toBe("error");
+  expect(a.message()).toBe("Couldn't save the draft.");
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(save).toHaveBeenCalledTimes(1);
+});
+
+test("an outage (503) is retried like being offline", async () => {
+  const save = vi.fn(async () => Promise.reject({ status: 503 }));
+  const a = createAutosave({ save, revision: 1 });
+  a.change(FIXTURES);
+  await vi.advanceTimersByTimeAsync(800);
+  expect(a.status()).toBe("offline");
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(save).toHaveBeenCalledTimes(2);
+});
+
+test("an expired session says so", async () => {
+  const save = vi.fn(async () => Promise.reject({ status: 401, message: "Sign in to continue." }));
+  const a = createAutosave({ save, revision: 1 });
+  a.change(FIXTURES);
+  await vi.advanceTimersByTimeAsync(800);
+  expect(a.status()).toBe("signed-out");
+});

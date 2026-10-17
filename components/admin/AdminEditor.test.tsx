@@ -71,3 +71,32 @@ test("removing an entry can be undone", async () => {
   await user.click(within(people).getByRole("button", { name: "Undo" }));
   expect(within(people).getAllByLabelText("Name")).toHaveLength(before);
 });
+
+test("nothing is published when the latest change couldn't be saved", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      if (url === "/api/admin/content") return Response.json({ error: "Couldn't save the draft." }, { status: 500 });
+      return Response.json({ published: true });
+    }),
+  );
+  const user = userEvent.setup();
+  render(<AdminEditor initialContent={FIXTURES} initialRevision={5} />);
+  await user.type(screen.getAllByLabelText("Describe this photo")[0], "!");
+  await user.click(screen.getByRole("button", { name: /^Publish/ }));
+  await user.click(screen.getByRole("button", { name: "Publish to the tape" }));
+  expect(await screen.findByText("Your latest changes aren't saved yet, so nothing was published.")).toBeInTheDocument();
+  expect(calls.some((c) => c.url === "/api/admin/publish")).toBe(false);
+  expect(screen.getByRole("button", { name: /^Publish/ })).toBeDisabled();
+});
+
+test("after publishing, the next edit clears 'Published'", async () => {
+  const user = userEvent.setup();
+  render(<AdminEditor initialContent={FIXTURES} initialRevision={5} />);
+  await user.click(screen.getByRole("button", { name: /^Publish/ }));
+  await user.click(screen.getByRole("button", { name: "Publish to the tape" }));
+  expect(await screen.findByText("Published")).toBeInTheDocument();
+  await user.type(screen.getAllByLabelText("Describe this photo")[0], "!");
+  expect(screen.queryByText("Published")).toBeNull();
+});

@@ -47,3 +47,10 @@ test("an edit from a stale tab is a conflict, never an overwrite", async () => {
   expect(res.status).toBe(409);
   expect(await res.json()).toEqual({ error: "Saved somewhere else since. Reload to get the latest." });
 });
+
+test("a draft over the database's size limit, or a non-owner, gets its own answer", async () => {
+  rpc.error = { message: "invalid_content" };
+  expect((await put({ content: FIXTURES, revision: 1 })).status).toBe(413);
+  rpc.error = { message: "forbidden" };
+  expect((await put({ content: FIXTURES, revision: 1 })).status).toBe(403);
+});

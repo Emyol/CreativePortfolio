@@ -15,7 +15,10 @@ async function saveDraft(content: unknown, revision: number): Promise<number> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content: withoutKeys(content), revision }),
   });
-  if (!res.ok) throw { status: res.status };
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw { status: res.status, message: body.error };
+  }
   return ((await res.json()) as { revision: number }).revision;
 }
 
@@ -39,6 +42,8 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
   const status = useSyncExternalStore(autosave.subscribe, autosave.status, autosave.status);
   const [publish, setPublish] = useState<PublishState>({ kind: "idle" });
   const issues = useMemo(() => issuesByPath(content), [content]);
+  // An edit after publishing means what's on screen is no longer what's live.
+  const edited = useCallback(() => setPublish((p) => (p.kind === "done" || p.kind === "failed" ? { kind: "idle" } : p)), []);
 
   // Leaving with unsaved changes: save now and let the browser warn.
   useEffect(() => {
@@ -64,6 +69,7 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
         latest.current = next;
         setContent(next);
         autosave.change(next);
+        edited();
       },
       update: (path, fn) => {
         const at = resolve(latest.current, path);
@@ -72,6 +78,7 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
         latest.current = next;
         setContent(next);
         autosave.change(next);
+        edited();
       },
       issue: (path) => {
         const at = resolve(content, path);
@@ -87,7 +94,7 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
       },
       newKey,
     }),
-    [content, issues, autosave, newKey],
+    [content, issues, autosave, newKey, edited],
   );
 
   const showIssue = useCallback(() => {
@@ -109,6 +116,12 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
     setPublish({ kind: "working" });
     try {
       await autosave.flush();
+      // Publishing goes by the saved draft: if the latest change didn't save, publishing
+      // now would put an older version live while the screen shows the newer one.
+      if (autosave.status() !== "saved") {
+        setPublish({ kind: "failed", message: "Your latest changes aren't saved yet, so nothing was published." });
+        return;
+      }
       const res = await fetch("/api/admin/publish", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -137,6 +150,7 @@ export function AdminEditor({ initialContent, initialRevision }: { initialConten
       </div>
       <StatusBar
         status={status}
+        message={autosave.message()}
         issues={issues.size}
         publish={publish}
         onShowIssue={showIssue}
