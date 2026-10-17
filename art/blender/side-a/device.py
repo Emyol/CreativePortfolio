@@ -103,6 +103,35 @@ def rings(name, base, rough, freq=260.0, amount=0.08, metallic=0.0):
     return m
 
 
+def knurled(name, base, ribs=90):
+    """The knob's grip: fine vertical ribs as a bump on the side wall only (masked by the
+    normal, so the top stays smooth)."""
+    m = principled(name, base, rough=0.34, coat=0.55, coat_rough=0.12)
+    nt, p = m.node_tree, bsdf(m)
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    ang = nt.nodes.new("ShaderNodeMath"); ang.operation = "ARCTAN2"
+    mul = nt.nodes.new("ShaderNodeMath"); mul.operation = "MULTIPLY"; mul.inputs[1].default_value = ribs
+    sin = nt.nodes.new("ShaderNodeMath"); sin.operation = "SINE"
+    geo = nt.nodes.new("ShaderNodeNewGeometry")
+    nsep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    absz = nt.nodes.new("ShaderNodeMath"); absz.operation = "ABSOLUTE"
+    side = nt.nodes.new("ShaderNodeMath"); side.operation = "SUBTRACT"; side.inputs[0].default_value = 1.0
+    bump = nt.nodes.new("ShaderNodeBump"); bump.inputs["Distance"].default_value = 0.004
+    nt.links.new(tc.outputs["Object"], sep.inputs[0])
+    nt.links.new(sep.outputs["Y"], ang.inputs[0])
+    nt.links.new(sep.outputs["X"], ang.inputs[1])
+    nt.links.new(ang.outputs[0], mul.inputs[0])
+    nt.links.new(mul.outputs[0], sin.inputs[0])
+    nt.links.new(sin.outputs[0], bump.inputs["Height"])
+    nt.links.new(geo.outputs["Normal"], nsep.inputs[0])
+    nt.links.new(nsep.outputs["Z"], absz.inputs[0])
+    nt.links.new(absz.outputs[0], side.inputs[1])
+    nt.links.new(side.outputs[0], bump.inputs["Strength"])
+    nt.links.new(bump.outputs["Normal"], p.inputs["Normal"])
+    return m
+
+
 M = {
     "alu": brushed("Aluminium", "#C9CDD3"),
     "alu_door": brushed("AluDoor", "#C3C7CD", rough=0.36),
@@ -119,7 +148,7 @@ M = {
     "tape": rings("Tape", "#1E120C", 0.2, freq=900, amount=0.1, metallic=0.35),
     "hub": principled("Hub", "#F3F3F1", rough=0.42),
     "screw": rings("Screw", "#9EA2A8", 0.3, freq=0, amount=0.0, metallic=1.0),
-    "knob": principled("Knob", "#FF2E00", rough=0.34, coat=0.55, coat_rough=0.12),
+    "knob": knurled("Knob", "#FF2E00"),
     "mark": principled("KnobMark", "#FAFAF8", rough=0.4),
     "key": principled("Key", "#A2A6AD", rough=0.48),
     "rubber": principled("Rubber", "#1A1B1E", rough=0.85),
