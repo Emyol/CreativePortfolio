@@ -1,9 +1,11 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
+import { PHONE } from "./content/schema";
 
 const ROOTS = ["app", "components", "lib"];
-const SKIP = [/\.test\.tsx?$/, /fixtures\.ts$/];
+// schema.ts defines the phone pattern itself, so it is the one file that may contain it.
+const SKIP = [/\.test\.tsx?$/, /fixtures\.ts$/, /content[\\/]schema\.ts$/];
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -24,7 +26,7 @@ describe("content rules", () => {
     expect(css.filter((f) => /feTurbulence/.test(readFileSync(f, "utf8")))).toEqual([]);
   });
   test("no phone numbers anywhere", () => {
-    const phone = /tel:|\+63|\b09\d{2}[\s-]?\d{3}[\s-]?\d{4}\b/;
+    const phone = PHONE;
     expect(sources.filter((f) => phone.test(readFileSync(f, "utf8")))).toEqual([]);
   });
 });

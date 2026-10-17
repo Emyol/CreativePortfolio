@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { contentSchema, musicSongSchema } from "./schema";
+import { contentSchema, musicSongSchema, withoutArchived } from "./schema";
 import { FIXTURES } from "./fixtures";
 
 const empty = { about: { letter: [], toolbox: [] }, events: [], music: [], hobbies: [], shelf: [], people: [] };
@@ -54,5 +54,33 @@ describe("the mixtape and links", () => {
     expect(contentSchema.parse({ ...FIXTURES, links: undefined }).links).toEqual([]);
     expect(contentSchema.safeParse({ ...FIXTURES, links: [{ label: "x", url: "http://a.b" }] }).success).toBe(false);
     expect(contentSchema.safeParse({ ...FIXTURES, links: Array(5).fill({ label: "x", url: "https://a.b" }) }).success).toBe(false);
+  });
+});
+
+describe("content written in the admin", () => {
+  const photo = { src: "/api/media/0b0e5c3c-1f2a-4b3c-9d8e-123456789abc.webp", alt: "A stage", width: 2400, height: 1600 };
+  const event = { slug: "a-gig", name: "A gig", date: "2026-10", summary: "Went.", photos: [photo] };
+  test("an archived entry is valid and keeps its flag (Zod would otherwise strip it)", () => {
+    const parsed = contentSchema.parse({ ...FIXTURES, events: [{ ...event, archived: true }], music: [{ ...FIXTURES.music[0], archived: true }] });
+    expect(parsed.events[0].archived).toBe(true);
+    expect(parsed.music[0].archived).toBe(true);
+  });
+  test("an uploaded photo path is valid, a photo hosted elsewhere is not", () => {
+    expect(contentSchema.safeParse({ ...FIXTURES, events: [event] }).success).toBe(true);
+    expect(contentSchema.safeParse({ ...FIXTURES, events: [{ ...event, photos: [{ ...photo, src: "https://x.test/a.jpg" }] }] }).success).toBe(false);
+  });
+  test("phone numbers stay off the tape", () => {
+    const people = [{ name: "A", relation: "friend", note: "call 0917 123 4567" }];
+    const r = contentSchema.safeParse({ ...FIXTURES, people });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0].message).toBe("phone numbers stay off the tape");
+    expect(contentSchema.safeParse({ ...FIXTURES, people: [{ name: "A", relation: "+63 friend" }] }).success).toBe(false);
+  });
+  test("withoutArchived drops archived entries from every list", () => {
+    const c = contentSchema.parse({ ...FIXTURES, events: [{ ...event, archived: true }, { ...event, slug: "kept" }], people: [{ name: "A", relation: "b", archived: true }] });
+    const out = withoutArchived(c);
+    expect(out.events.map((e) => e.slug)).toEqual(["kept"]);
+    expect(out.people).toEqual([]);
+    expect(out.music).toHaveLength(FIXTURES.music.length);
   });
 });
