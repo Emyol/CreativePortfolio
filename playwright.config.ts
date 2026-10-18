@@ -4,6 +4,9 @@ export default defineConfig({
   testDir: "e2e",
   globalSetup: "./e2e/global-setup.ts",
   timeout: 30_000,
+  // The dev server compiles on demand and the holds scroll whole pages: more than two browsers
+  // at once starve this machine and turn timing into timeouts.
+  workers: process.env.CI ? undefined : 2,
   use: { baseURL: "http://localhost:3100", trace: "retain-on-failure" },
   projects: [{ name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
   webServer: {

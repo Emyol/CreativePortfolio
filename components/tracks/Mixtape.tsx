@@ -4,6 +4,7 @@ import type { MixtapeSong } from "@/lib/content/schema";
 import { getPlayback, getServerPlayback, resetPlayback, setPlayback, subscribePlayback } from "@/lib/playback";
 import { loadSpotifyApi, spotifyUri, type EmbedController, type PlaybackUpdate } from "@/lib/spotify";
 import { formatTrackNumber } from "@/lib/tape";
+import { CueRow } from "./CueRow";
 import styles from "./Mixtape.module.css";
 
 // If play() hasn't produced playback by then, the browser blocked it (Safari autoplay).
@@ -162,7 +163,7 @@ export function Mixtape({ songs }: { songs: MixtapeSong[] }) {
           const isActive = active === i;
           const playing = isActive && playback.status === "playing";
           return (
-            <li key={`${s.spotify}-${i}`} className={styles.song} data-active={isActive ? "" : undefined} data-playing={playing ? "" : undefined}>
+            <CueRow key={`${s.spotify}-${i}`} title={s.title} className={styles.song} tapeClassName={styles.tape} data-active={isActive ? "" : undefined} data-playing={playing ? "" : undefined}>
               <span className={styles.number} aria-hidden="true">
                 {playing ? (
                   <span className={styles.bars}>
@@ -184,14 +185,14 @@ export function Mixtape({ songs }: { songs: MixtapeSong[] }) {
                 <span className={styles.glyph} aria-hidden="true" />
               </button>
               <div className={styles.text}>
-                <p className={styles.title}>{s.title}</p>
+                <p className={styles.title} data-print>{s.title}</p>
                 <p className={styles.artist}>{s.artist}</p>
                 {s.note && <p className={styles.note}>{s.note}</p>}
               </div>
               <a href={s.spotify} className={styles.open} aria-label={`Open in Spotify: ${s.title}`} target="_blank" rel="noopener">
                 Open in Spotify
               </a>
-            </li>
+            </CueRow>
           );
         })}
       </ol>

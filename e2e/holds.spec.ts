@@ -66,6 +66,7 @@ async function lowestOpacity(page: Page, selector: string) {
 }
 
 test("a section holds still until its arrival has finished", async ({ page }) => {
+  test.setTimeout(90_000); // the whole page in small wheel steps
   await gotoReady(page, "/#top");
   const mixtape = holds(await scrollThrough(page, 120, 60)).get("mixtape")!;
   expect(mixtape.tops.length).toBeGreaterThan(2);
@@ -75,6 +76,7 @@ test("a section holds still until its arrival has finished", async ({ page }) =>
 
 for (const [step, wait, speed] of [[120, 60, "2000"], [400, 80, "5000"]] as const) {
   test(`every section is complete when it lets go, at about ${speed} px/s`, async ({ page }) => {
+    test.setTimeout(90_000); // the whole page in wheel steps
     await gotoReady(page, "/#top");
     const all = holds(await scrollThrough(page, step, wait));
     expect([...all.keys()].sort()).toEqual(["about", "events", "made", "mixtape", "on-rotation", "people"]);
@@ -166,5 +168,13 @@ test.describe("reduced motion", () => {
     await gotoReady(page, "/");
     await expect(page.locator(".pin-spacer")).toHaveCount(0);
     await expect(page.locator("[data-arrival]")).toHaveCount(0);
+  });
+
+  test("every event card is visible and opens with a click", async ({ page }) => {
+    await gotoReady(page, "/#events");
+    const clips = await page.locator("#events li").evaluateAll((lis) => lis.map((li) => getComputedStyle(li).clipPath));
+    expect(clips.every((c) => c === "none")).toBe(true);
+    await page.locator("#events").getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/events\//, { timeout: 15_000 });
   });
 });

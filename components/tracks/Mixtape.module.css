@@ -18,7 +18,21 @@
   border-radius: 8px;
   border-bottom: 1px solid var(--panel-rule);
   transition: background-color 200ms var(--ease-out);
+  position: relative;
 }
+/* Cued: the song's cassette slides out from behind the row, like a tape from its case. */
+.tape {
+  position: absolute;
+  left: -4.2rem;
+  top: 50%;
+  width: 4rem;
+  margin-top: -1.35rem;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.55));
+}
+.tape img { width: 100%; height: auto; }
+@media (max-width: 767px), (pointer: coarse) { .tape { display: none; } }
 .song:last-child { border-bottom-color: transparent; }
 .song[data-active] { background: rgb(255 255 255 / 0.04); border-bottom-color: transparent; }
 
@@ -40,10 +54,10 @@
   background: var(--oled-text);
   box-shadow: 0 0 6px rgb(255 90 31 / 0.6);
   transform-origin: bottom;
-  animation: meter 900ms var(--ease-in-out) infinite alternate;
+  animation: meter 240ms var(--ease-in-out) infinite alternate;
 }
-.bars i:nth-child(2) { animation-duration: 640ms; animation-delay: -200ms; }
-.bars i:nth-child(3) { animation-duration: 760ms; animation-delay: -420ms; }
+.bars i:nth-child(2) { animation-duration: 200ms; animation-delay: -90ms; }
+.bars i:nth-child(3) { animation-duration: 300ms; animation-delay: -160ms; }
 @keyframes meter { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
 
 /* Play: a round key with a printed glyph; it sinks when pressed. */
@@ -76,6 +90,8 @@
 
 .text { min-width: 0; }
 .title {
+  width: fit-content;
+  max-width: 100%;
   margin: 0;
   font-weight: 600;
   font-stretch: 108%;

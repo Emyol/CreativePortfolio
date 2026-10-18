@@ -51,7 +51,10 @@ test("leaving for an event page stops the tape; coming back, the reels are still
   await headingAtTop(page, "mixtape");
   await page.getByRole("button", { name: "Play Fixture song 1 on Spotify" }).click();
   await expect(page.locator("[data-dock] [data-screen]")).toContainText("Fixture song 1");
-  await page.locator("#events").getByRole("link").first().click();
+  // Keyboard, like a visitor tabbing back: focus finishes the events hold, then Enter opens it.
+  // (A pointer click on a card the REC playhead hasn't reached yet can't land: it's clipped away.)
+  await page.locator("#events").getByRole("link").first().focus();
+  await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/events\//, { timeout: 15_000 });
   await page.goBack();
   await expect(page.locator("#mixtape")).toBeVisible({ timeout: 15_000 });
@@ -107,4 +110,41 @@ test("reduced motion switched on mid-song freezes the reels, but the song and it
   await expect(page.locator("[data-fake-embed]")).toBeVisible();
   await expect(page.getByRole("button", { name: "Pause Fixture song 1" })).toBeVisible();
   await expect(page.locator("[data-hero] [data-led][data-on]")).toHaveCount(1);
+});
+
+test.describe("cueing", () => {
+  test.use({ reducedMotion: "no-preference" });
+  test("hovering a song cues it on the dock, and leaving clears it", async ({ page }) => {
+    await gotoReady(page, "/#mixtape");
+    await headingAtTop(page, "mixtape");
+    const dock = page.locator("[data-dock] [data-screen]");
+    await page.locator("#mixtape li").nth(1).hover();
+    await expect(dock).toContainText("CUE Fixture song 2");
+    await page.mouse.move(5, 5);
+    await expect(dock).not.toContainText("CUE");
+  });
+
+  test("the titles print in as the mixtape arrives, and are whole once it has", async ({ page }) => {
+    await gotoReady(page, "/#mixtape");
+    await headingAtTop(page, "mixtape");
+    const clip = await page.locator("#mixtape [data-print]").first().evaluate((el) => getComputedStyle(el).clipPath);
+    expect(clip === "none" || /inset\(0px 0% 0px 0px\)|inset\(0px\)/.test(clip)).toBe(true);
+    await expect(page.locator("#mixtape [data-print]").first()).toHaveText("Fixture song 1");
+  });
+});
+
+test.describe("printing", () => {
+  test.use({ reducedMotion: "no-preference" });
+  test("partway through the hold, the later titles are still being printed", async ({ page }) => {
+    await gotoReady(page, "/#events");
+    await page.mouse.move(1400, 450);
+    for (let i = 0; i < 80; i++) {
+      await page.mouse.wheel(0, 80);
+      await page.waitForTimeout(60);
+      const a = Number(await page.locator("#mixtape").getAttribute("data-arrival"));
+      if (a > 0.25 && a < 0.5) break;
+    }
+    const right = await page.locator("#mixtape [data-print]").last().evaluate((el) => /inset\(\S+ (\S+)%/.exec(getComputedStyle(el).clipPath)?.[1]);
+    expect(Number(right)).toBeGreaterThan(0);
+  });
 });

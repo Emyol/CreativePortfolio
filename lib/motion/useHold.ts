@@ -18,8 +18,9 @@ export type Arrival = {
   distance: number;
   /** The section's repeating items, if its arrival is per item. */
   items?: string;
-  hold: (tl: gsap.core.Timeline, ctx: ArrivalContext) => void;
-  enter?: (tl: gsap.core.Timeline, item: HTMLElement) => void;
+  /** May return a cleanup for anything it set outside GSAP (GSAP's own tweens revert themselves). */
+  hold: (tl: gsap.core.Timeline, ctx: ArrivalContext) => void | (() => void);
+  enter?: (tl: gsap.core.Timeline, item: HTMLElement) => void | (() => void);
 };
 
 const write = (root: HTMLElement, progress: number) => root.setAttribute("data-arrival", progress.toFixed(2));
@@ -45,6 +46,9 @@ export function useHold(ref: RefObject<HTMLElement | null>, arrival: Arrival, id
       const rootTop = root.getBoundingClientRect().top;
       const held = tall ? items.filter((it) => it.getBoundingClientRect().top - rootTop + 10 + it.offsetHeight / 2 < innerHeight) : items;
 
+      // Pinning moves the section into a spacer, which drops focus: put it back (a deep link
+      // or "Back to events" may have focused the heading just before the hold is made).
+      const focused = root.contains(document.activeElement) ? (document.activeElement as HTMLElement) : null;
       const tl = gsap.timeline({
         defaults: { ease: "none" },
         scrollTrigger: {
@@ -60,13 +64,16 @@ export function useHold(ref: RefObject<HTMLElement | null>, arrival: Arrival, id
           onRefresh: (st) => write(root, st.progress),
         },
       });
-      arrival.hold(tl, { root, held, tier });
+      if (focused && document.activeElement !== focused) focused.focus({ preventScroll: true });
+      const cleanups: (() => void)[] = [];
+      const keep = (c: void | (() => void)) => c && cleanups.push(c);
+      keep(arrival.hold(tl, { root, held, tier }));
       tl.to({}, { duration: Math.max(0.15, tl.duration() * REST) });
 
       // Items inside the pinned section: pinnedContainer accounts for the hold's scroll.
       if (arrival.enter) {
         for (const item of items.filter((it) => !held.includes(it))) {
-          arrival.enter(gsap.timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: item, pinnedContainer: root, start: "top 90%", end: "top 60%", scrub: true } }), item);
+          keep(arrival.enter(gsap.timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: item, pinnedContainer: root, start: "top 90%", end: "top 60%", scrub: true } }), item));
         }
       }
 
@@ -82,6 +89,7 @@ export function useHold(ref: RefObject<HTMLElement | null>, arrival: Arrival, id
       return () => {
         root.removeEventListener("focusin", finish);
         root.removeAttribute("data-arrival");
+        cleanups.forEach((c) => c());
       };
     },
     { scope: ref, dependencies: [tier], revertOnUpdate: true },

@@ -1,5 +1,6 @@
 /* The REC playhead: a red line that sweeps across the prints as the track arrives. */
-.recorder { position: relative; }
+/* overflow-x: clip keeps the swept-off playhead from widening the page; the label above stays. */
+.recorder { position: relative; overflow-x: clip; }
 .rec {
   position: absolute;
   z-index: 2;

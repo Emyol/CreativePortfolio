@@ -2,6 +2,7 @@
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useActiveTrack } from "@/components/motion/ActiveTrack";
 import { clock } from "@/components/tracks/Mixtape";
+import { getCue, getServerCue, subscribeCue } from "@/lib/cue";
 import { getPlayback, getServerPlayback, subscribePlayback } from "@/lib/playback";
 import { installSoundUnlock } from "@/lib/sound";
 import { sideOf, type Track } from "@/lib/tape";
@@ -42,6 +43,9 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   const nowPlaying = song ? [song.title, `${song.artist}  ${clock(playback.position)}`] : undefined;
   const progress = song ? (playback.duration > 0 ? playback.position / playback.duration : 0) : undefined;
   const lit = playback.status === "playing";
+  // Hovering a song in the mixtape cues it on both screens; a song playing still wins.
+  const cue = useSyncExternalStore(subscribeCue, getCue, getServerCue);
+  const cued = cue ? [`SIDE ${side.toUpperCase()}`, `CUE ${cue}`] : undefined;
   const power = usePowerOn();
 
   // The flip's clunk is scroll-driven, not a gesture; wake audio on the first tap or key.
@@ -54,10 +58,10 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   return (
     <>
       <header data-hero id="top" className={styles.hero}>
-        <Device tracks={tracks} side={side} current={current} interactive={heroInView} screen={power.lines ?? nowPlaying} progress={power.lines ? undefined : progress} led={lit || power.on} className={styles.device} />
+        <Device tracks={tracks} side={side} current={current} interactive={heroInView} screen={power.lines ?? nowPlaying ?? cued} progress={power.lines || !nowPlaying ? undefined : progress} led={lit || power.on} className={styles.device} />
       </header>
       {children}
-      <Dock tracks={tracks} side={side} current={current} visible={!heroInView} screen={nowPlaying} progress={progress} />
+      <Dock tracks={tracks} side={side} current={current} visible={!heroInView} screen={nowPlaying ?? cued} progress={nowPlaying ? progress : undefined} />
     </>
   );
 }
