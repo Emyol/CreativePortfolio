@@ -20,8 +20,10 @@ test("things can be thrown around the table and tidied", async ({ page }) => {
   await page.waitForTimeout(1500);
   const b = (await thing.boundingBox())!;
   expect(Math.abs(b.x - a.x)).toBeGreaterThan(150);
-  expect(b.x).toBeGreaterThanOrEqual(table!.x - 2);
-  expect(b.x + b.width).toBeLessThanOrEqual(table!.x + table!.width + 2);
+  // Stays on the table. Draggable bounds the untilted card, so its tilted corners may poke
+  // out by a few px: allow for that.
+  expect(b.x).toBeGreaterThanOrEqual(table!.x - 12);
+  expect(b.x + b.width).toBeLessThanOrEqual(table!.x + table!.width + 12);
   // Compare on the page, not the screen: reaching the button may scroll.
   const onPage = async () => thing.evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.x + scrollX, y: r.y + scrollY }; });
   await page.getByRole("button", { name: "Tidy up" }).click();
