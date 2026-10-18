@@ -1,8 +1,11 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useActiveTrack } from "@/components/motion/ActiveTrack";
 import { clock } from "@/components/tracks/Mixtape";
 import { getCue, getServerCue, subscribeCue } from "@/lib/cue";
+import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
+import { setHeroScroll } from "@/lib/motion/heroScroll";
+import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { getPlayback, getServerPlayback, subscribePlayback } from "@/lib/playback";
 import { installSoundUnlock } from "@/lib/sound";
 import { sideOf, type Track } from "@/lib/tape";
@@ -26,6 +29,37 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   const current = useActiveTrack();
   const side = sideOf(tracks, current);
   const [heroInView, setHeroInView] = useState(true);
+  const hero = useRef<HTMLElement>(null);
+  const tier = useMotionTier();
+
+  // Leaving the hero, the device leans back and sinks into the table and the dock rises, in
+  // step with the scroll (full motion). Phones and reduced motion keep the dock's rise-in.
+  useGSAP(
+    () => {
+      const el = hero.current;
+      const device = el?.querySelector<HTMLElement>("[data-device]");
+      const dock = document.querySelector<HTMLElement>("[data-dock]");
+      if (!el || !device || !dock || tier !== "full") return;
+      gsap.fromTo(
+        device,
+        { rotateX: 0, scale: 1, yPercent: 0, opacity: 1 },
+        { rotateX: 32, scale: 0.72, yPercent: 18, opacity: 0.15, transformPerspective: 1400, transformOrigin: "50% 70%", ease: "none", scrollTrigger: { trigger: el, start: "top top", end: "bottom top", scrub: true } },
+      );
+      const write = (p: number) => {
+        setHeroScroll(p);
+        dock.style.setProperty("--rise", String(1 - gsap.utils.clamp(0, 1, (p - 0.45) / 0.4)));
+      };
+      dock.setAttribute("data-scrubbed", "");
+      const st = ScrollTrigger.create({ trigger: el, start: "top top", end: "bottom top", onUpdate: (s) => write(s.progress), onRefresh: (s) => write(s.progress) });
+      return () => {
+        st.kill();
+        dock.removeAttribute("data-scrubbed");
+        dock.style.removeProperty("--rise");
+        setHeroScroll(0);
+      };
+    },
+    { scope: hero, dependencies: [tier], revertOnUpdate: true },
+  );
 
   useEffect(() => {
     const hero = document.querySelector("[data-hero]");
@@ -57,7 +91,7 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
 
   return (
     <>
-      <header data-hero id="top" className={styles.hero}>
+      <header ref={hero} data-hero id="top" className={styles.hero}>
         <Device tracks={tracks} side={side} current={current} interactive={heroInView} screen={power.lines ?? nowPlaying ?? cued} progress={power.lines || !nowPlaying ? undefined : progress} led={lit || power.on} className={styles.device} />
       </header>
       {children}

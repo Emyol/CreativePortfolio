@@ -32,6 +32,12 @@
   transform: translateY(0);
   transition: transform 240ms var(--ease-out);
 }
+/* On the home page at full motion the dock rises in step with the scroll out of the hero
+   (--rise: 1 sunk, 0 up), set by HomeTape; no transition, it follows the scroll. */
+.dock[data-scrubbed] {
+  transform: translateY(calc((100% + 28px) * var(--rise, 1))) scale(calc(1 - 0.08 * var(--rise, 1)));
+  transition: none;
+}
 
 /* The small tape window: the cassette sits in a recess. */
 .window {
