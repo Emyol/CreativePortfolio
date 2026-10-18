@@ -1,5 +1,7 @@
 /* A dark table the things are set down on; the grid is each thing's home on it. */
-.table { display: grid; gap: 1rem; }
+/* overflow-x: clip: things waiting to be dropped (scaled up) and tilted corners never widen
+   the page; the vertical axis stays open for the drop from above. */
+.table { display: grid; gap: 1rem; overflow-x: clip; }
 
 .grid {
   display: grid;
