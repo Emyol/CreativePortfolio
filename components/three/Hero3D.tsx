@@ -11,7 +11,8 @@ import { entranceDecision, getHero, setHero, type HeroApi } from "@/lib/three/he
 import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
 import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
-import { drawScreen, SCREEN_H, SCREEN_W } from "./screenTexture";
+import { addScreenPlane } from "./screenPlane";
+import { drawScreen } from "./screenTexture";
 import { makeTable } from "./table";
 import styles from "./Hero3D.module.css";
 
@@ -112,24 +113,10 @@ export function Hero3D(props: Props) {
       lens.forEach((m) => (m.material = led));
 
       // The screen: live text on a canvas, laid just over the OLED glass.
-      root.updateMatrixWorld(true);
-      const gbox = new three.Box3().setFromObject(node("OLEDGlass"));
-      const gsize = gbox.getSize(new three.Vector3());
-      const gcentre = gbox.getCenter(new three.Vector3());
-      const canvas = Object.assign(document.createElement("canvas"), { width: SCREEN_W, height: SCREEN_H });
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("no 2D canvas");
-      const tex = new three.CanvasTexture(canvas);
-      tex.colorSpace = three.SRGBColorSpace;
-      tex.anisotropy = 8;
-      const screenGeo = new three.PlaneGeometry(gsize.x * 0.94, gsize.z * 0.9);
-      const screenMat = new three.MeshBasicMaterial({ map: tex, toneMapped: false });
-      const screen = new three.Mesh(screenGeo, screenMat);
-      screen.rotation.x = -Math.PI / 2;
-      screen.position.set(gcentre.x, gbox.max.y + 0.002, gcentre.z);
-      root.add(screen);
+      const { mesh: screen, geometry: screenGeo, ctx, update: screenChanged, dispose: disposeScreen } = addScreenPlane(three, root);
       undo.push(() => {
-        [screenGeo, screenMat, tex, led].forEach((d) => d.dispose());
+        disposeScreen();
+        led.dispose();
         disposeTable();
         gsap.killTweensOf([cassette.position, cassette.rotation, mark.rotation, light.position, led, ...keys.map((k) => k.position)]);
       });
@@ -140,7 +127,7 @@ export function Hero3D(props: Props) {
       let flicker: gsap.core.Timeline | null = null;
       const paint = (dim = 1, lines = shown) => {
         drawScreen(ctx, lines, { dim, progress: shownProgress, family });
-        tex.needsUpdate = true;
+        screenChanged();
       };
       undo.push(() => flicker?.kill());
 

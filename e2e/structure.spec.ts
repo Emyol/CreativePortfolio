@@ -44,3 +44,55 @@ test("home has no axe violations at WCAG 2.1 AA", async ({ page }) => {
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   expect(results.violations).toEqual([]);
 });
+
+test.describe("the footer, in 3D", () => {
+  test.use({ reducedMotion: "no-preference" });
+
+  test("the footer turns the device over and the links land on the door", async ({ page }) => {
+    await gotoReady(page, "/#made");
+    const device = page.locator("footer [data-underside]");
+    // Every link and toolbox item is there and focusable from the start.
+    const links = page.locator("footer [data-anchor='door'] a");
+    await expect(links.first()).toBeAttached();
+    expect(await page.locator("footer [data-anchor='sticker'] li").count()).toBeGreaterThan(0);
+    expect(await links.evaluateAll((els) => els.every((a) => (a as HTMLElement).tabIndex >= 0))).toBe(true);
+    // Scroll to it: once in 3D, it holds still while it turns, then lets go.
+    await device.scrollIntoViewIfNeeded();
+    await expect(device).toHaveAttribute("data-3d", "", { timeout: 20_000 });
+    const top = () => device.evaluate((el) => Math.round(el.getBoundingClientRect().top));
+    await page.mouse.move(720, 300);
+    let held: number | undefined;
+    for (let i = 0; i < 40; i++) {
+      await page.mouse.wheel(0, 120);
+      await page.waitForTimeout(60);
+      const a = Number(await device.getAttribute("data-arrival"));
+      if (a > 0.1 && a < 0.9) {
+        held ??= await top();
+        expect(Math.abs((await top()) - held)).toBeLessThanOrEqual(2);
+      }
+      if (a >= 1) break;
+    }
+    expect(held).toBeDefined();
+    await expect(device).toHaveAttribute("data-arrival", "1.00");
+    await expect(device).toHaveAttribute("data-turn", "1.00");
+    // The links sit on the door as the model projects it.
+    const door = page.locator("footer [data-anchor='door']");
+    await expect(door).toHaveAttribute("data-placed", "");
+    const [rect, boxes] = await Promise.all([door.evaluate((el) => el.getBoundingClientRect().toJSON()), links.evaluateAll((els) => els.map((a) => a.getBoundingClientRect().toJSON()))]);
+    for (const b of boxes) {
+      expect(b.left).toBeGreaterThanOrEqual(rect.left - 6);
+      expect(b.right).toBeLessThanOrEqual(rect.right + 6);
+      expect(b.top).toBeGreaterThanOrEqual(rect.top - 6);
+      expect(b.bottom).toBeLessThanOrEqual(rect.bottom + 6);
+    }
+    // …and the door is where the model's door projects (recorded in the device box).
+    const [dx, dy] = await door.evaluate((el) => {
+      const [x, y] = (el as HTMLElement).dataset.rect!.split(",").map(Number);
+      const d = el.getBoundingClientRect();
+      const o = el.closest("[data-underside]")!.getBoundingClientRect();
+      return [d.left - o.left - x, d.top - o.top - y];
+    });
+    expect(Math.abs(dx)).toBeLessThan(2);
+    expect(Math.abs(dy)).toBeLessThan(2);
+  });
+});
