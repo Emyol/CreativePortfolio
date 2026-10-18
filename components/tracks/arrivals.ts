@@ -20,6 +20,12 @@ function unrecord(li: HTMLElement) {
   if (media) media.style.filter = "";
 }
 
+/** A thing dropped onto the table from above: big and soft-shadowed, then set down. (The li moves; the thing inside is what's thrown.) */
+function drop(tl: gsap.core.Timeline, li: HTMLElement, at: number) {
+  tl.fromTo(li, { opacity: 0, scale: 1.35, yPercent: -30, rotate: (li.dataset.photo === undefined ? 1 : -1) * 6 }, { opacity: 1, scale: 1, yPercent: 0, rotate: 0, ease: "power3.in", duration: 0.35 }, at)
+    .fromTo(li, { scaleY: 0.97 }, { scaleY: 1, ease: "back.out(4)", duration: 0.12 }, at + 0.35);
+}
+
 /** A print recorded in to `share` (0 to 1): revealed from the left, dark and grey to full colour. */
 function record(li: HTMLElement, share: number) {
   const f = gsap.utils.clamp(0, 1, share);
@@ -101,6 +107,12 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
       tl.fromTo(li, { y: 60, opacity: 0 }, { y: 0, opacity: 1, ease: "power2.out", duration: 1 });
     },
   },
-  made: { distance: 850, hold: () => {} },
+  // Things are dropped onto the table one by one, landing with a small squash.
+  made: {
+    distance: 850,
+    items: "li",
+    hold: (tl, { held }) => held.forEach((li, i) => drop(tl, li, i * 0.16)),
+    enter: (tl, li) => drop(tl, li, 0),
+  },
   "on-rotation": { distance: 700, hold: () => {} },
 };

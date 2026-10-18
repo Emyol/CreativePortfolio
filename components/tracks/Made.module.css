@@ -1,3 +1,6 @@
+/* A dark table the things are set down on; the grid is each thing's home on it. */
+.table { display: grid; gap: 1rem; }
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
@@ -11,7 +14,37 @@
 .item[data-photo] { grid-column: span 2; }
 @media (max-width: 720px) { .item[data-photo] { grid-column: auto; } }
 
-.item { min-width: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+.item { min-width: 0; }
+
+/* Each thing is an object on the table: picked up with a mouse, tapped on a touch screen. */
+.thing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  height: 100%;
+  padding: 0.9rem;
+  border-radius: 10px;
+  background: #15161a;
+  box-shadow: 0 0 0 1px var(--panel-rule), 0 18px 30px -16px rgb(0 0 0 / 0.9);
+  touch-action: pan-y;
+}
+@media (pointer: fine) { .thing { cursor: grab; } .thing:active { cursor: grabbing; } }
+html[data-tier="none"] .thing { cursor: auto; }
+
+.tidy {
+  justify-self: end;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--panel-rule);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--panel-text);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.tidy:hover { border-color: var(--panel-muted); }
 
 .photo {
   width: 100%;
