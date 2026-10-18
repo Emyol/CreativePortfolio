@@ -89,3 +89,65 @@ test.describe("reduced motion", () => {
     expect(results.violations).toEqual([]);
   });
 });
+
+test.describe("the write-in", () => {
+  test.use({ reducedMotion: "no-preference" });
+
+  test("after the morph, the page writes in", async ({ page }) => {
+    // Every frame, note whether the title and a gallery photo are off their place.
+    await page.addInitScript(() => {
+      const seen: Record<string, boolean> = {};
+      (window as unknown as { __moved: Record<string, boolean> }).__moved = seen;
+      const moved = (el: Element | null) => !!el && new DOMMatrix(getComputedStyle(el).transform).isIdentity === false;
+      const tick = () => {
+        if (moved(document.querySelector("main h1"))) seen.title = true;
+        if (moved(document.querySelector("main ul li"))) seen.gallery = true;
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await gotoReady(page, "/#events");
+    await page.locator("#events").getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/events\/fixture-event-6$/, { timeout: 15_000 });
+    const transform = (sel: string) => page.locator(sel).first().evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).isIdentity);
+    await expect.poll(() => transform("main h1"), { timeout: 5_000 }).toBe(true);
+    await expect.poll(() => transform("main ul li"), { timeout: 5_000 }).toBe(true);
+    const moved = await page.evaluate(() => (window as unknown as { __moved: Record<string, boolean> }).__moved);
+    expect(moved).toEqual({ title: true, gallery: true });
+  });
+
+  test("a direct visit shows the page as it is", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as unknown as { __moved: boolean }).__moved = false;
+      const tick = () => {
+        const h1 = document.querySelector("main h1");
+        if (h1 && !new DOMMatrix(getComputedStyle(h1).transform).isIdentity) (window as unknown as { __moved: boolean }).__moved = true;
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await gotoReady(page, "/events/fixture-event-3");
+    await page.waitForTimeout(1200);
+    expect(await page.evaluate(() => (window as unknown as { __moved: boolean }).__moved)).toBe(false);
+  });
+
+  test("going to an event and back leaves one canvas and working holds", async ({ page }) => {
+    await gotoReady(page, "/#events");
+    await page.locator("#events").getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/events\//, { timeout: 15_000 });
+    await page.waitForFunction(() => !document.documentElement.matches(":active-view-transition"));
+    await page.goBack();
+    await expect(page).toHaveURL(/\/#events$/, { timeout: 15_000 });
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 15_000 });
+    await expect(page.locator("html")).not.toHaveAttribute("data-boot");
+    // The holds still work: scrolling on, the mixtape is held in place for a while.
+    await page.mouse.move(1380, 450);
+    let held = false;
+    for (let i = 0; i < 80 && !held; i++) {
+      await page.mouse.wheel(0, 120);
+      await page.waitForTimeout(50);
+      held = await page.locator("#mixtape").evaluate((el) => getComputedStyle(el).position === "fixed");
+    }
+    expect(held).toBe(true);
+  });
+});
