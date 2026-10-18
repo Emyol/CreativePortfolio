@@ -114,5 +114,17 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
     hold: (tl, { held }) => held.forEach((li, i) => drop(tl, li, i * 0.16)),
     enter: (tl, li) => drop(tl, li, 0),
   },
-  "on-rotation": { distance: 700, hold: () => {} },
+  // Cassette spines drop into the rack one by one, with a bounce.
+  "on-rotation": {
+    distance: 700,
+    items: "li",
+    hold: (tl, { held }) => {
+      const spines = held.map((li) => li.querySelector("[data-spine]")).filter((el): el is HTMLElement => el !== null);
+      if (spines.length) tl.fromTo(spines, { yPercent: -130, opacity: 0 }, { yPercent: 0, opacity: 1, ease: "bounce.out", duration: 0.4, stagger: 0.08 }, 0);
+    },
+    enter: (tl, li) => {
+      const spine = li.querySelector("[data-spine]");
+      if (spine) tl.fromTo(spine, { yPercent: -130, opacity: 0 }, { yPercent: 0, opacity: 1, ease: "bounce.out", duration: 1 });
+    },
+  },
 };
