@@ -14,6 +14,9 @@ live. Until the first publish the site shows `lib/content/seed.json` (only the t
 empty tracks stay hidden everywhere. `npm run dev:fixtures` shows the site and the admin with
 clearly fake fixtures (production builds refuse them).
 
+- Motion and the 3D player are built (spec: `docs/superpowers/specs/2026-10-18-motion-design.md`,
+  plan: `docs/superpowers/plans/2026-10-18-motion.md`). `npm run device:glb` exports the model.
+  Playwright runs Chromium on the GPU: headless software WebGL would rightly get the sprites.
 - Commands: `npm run dev`, `npm run dev:fixtures`, `npm run typecheck`, `npm test`
   (Vitest), `npm run test:e2e` (Playwright, against a fixtures dev server on port 3100),
   `npm run build`, `npm run device:render` (headless Blender) then `npm run device:encode`
@@ -34,9 +37,9 @@ clearly fake fixtures (production builds refuse them).
 | Decomposition | 1) public site (Side A), 2) content store + admin (one spec, built after the site) |
 | Content store | The professional site's Supabase project, shared under `tape_` names (free plan's two-project limit); photos uploaded in the admin into the private `tape-assets` bucket, shrunk in the browser first, published ones cached by the CDN; a daily Vercel Cron keep-alive |
 | World and site shape | **Side A**: the site is a pocket tape player Miel built. Hero is the device top down; its control strip becomes a dock; six tracks over two sides with a flip between; a page per event ("live recording"); plain index at `/tracklist`. See the spec |
-| Device art | Rendered in Blender (`art/blender/side-a/device.py`) as layered top-down sprites plus `public/device/layout.json`; no WebGL. Live text wherever the device prints or lights something |
+| Device art | One Blender model (`art/blender/side-a/device.py`): a real-time three.js player for the hero, the flip and the footer (`public/device/device.glb`, one shared renderer, loaded after first paint, full motion with a GPU), and layered top-down sprites plus `public/device/layout.json` as the poster and fallback (phones' flip and footer, reduced motion, no GPU). Live text wherever the device prints or lights something |
 | Music | A mixtape of songs Miel loves (max 12), played in the page through Spotify's iFrame API, loaded only on the first press. **No generated music** |
-| Motion | Reels turn with scroll velocity and at tape speed while a song plays; tape packs trade area as you read; keys sink and latch; knob points at the track; screen flicker; power-on once per session; the flip. One signature move per component, live reduced motion |
+| Motion | Spec `docs/superpowers/specs/2026-10-18-motion-design.md`. Once per session the page opens on the player's screen and the tape loads; the hero leans back into the dock as you scroll; each section holds while the scroll plays its own arrival, with a toy to play with; the tape turns over in 3D between sides; the footer turns the player over; an event page writes itself in after its photo morphs. Reels, packs, keys, knob and screen as before. Reduced motion works live: no entrance, holds or canvas |
 | Priority | Desktop first, one to four weeks |
 
 ## Still open
