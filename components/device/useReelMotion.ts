@@ -8,6 +8,14 @@ import { stepReel, type ReelState } from "@/lib/motion/reels";
 import { getPlayback, isPlaying } from "@/lib/playback";
 import { packDiameters, sideTracks, type Track } from "@/lib/tape";
 
+// Extra reel speed on top of the scroll's, for the entrance spinning the tape up.
+let boost = 0;
+
+/** Spins the reels as if scrolling at `v` more (0 to stop boosting). */
+export function boostReels(v: number): void {
+  boost = v;
+}
+
 /**
  * Drives every reel and tape pack on the page (hero and dock) outside React: reels turn on
  * the GSAP ticker from Lenis's scroll velocity, or at tape speed while a song plays; packs
@@ -25,7 +33,7 @@ export function useReelMotion(tracks: Track[]): void {
     let last = NaN;
     const tick = (_time: number, deltaMs: number) => {
       const next = stepReel(reel.current, deltaMs / 1000, {
-        velocity: getLenis()?.velocity ?? 0,
+        velocity: (getLenis()?.velocity ?? 0) + boost,
         playing: isPlaying(getPlayback()),
         tier,
       });

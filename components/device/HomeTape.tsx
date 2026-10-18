@@ -11,7 +11,7 @@ import { installSoundUnlock } from "@/lib/sound";
 import { sideOf, type Track } from "@/lib/tape";
 import { Device } from "./Device";
 import { Dock } from "./Dock";
-import { usePowerOn } from "./usePowerOn";
+import { useEntrance } from "./Entrance";
 import { useReelMotion } from "./useReelMotion";
 import { useKeyPress, useTrackKeys } from "./useTrackKeys";
 import styles from "./HomeTape.module.css";
@@ -80,7 +80,7 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   // Hovering a song in the mixtape cues it on both screens; a song playing still wins.
   const cue = useSyncExternalStore(subscribeCue, getCue, getServerCue);
   const cued = cue ? [`SIDE ${side.toUpperCase()}`, `CUE ${cue}`] : undefined;
-  const power = usePowerOn();
+  const entrance = useEntrance();
 
   // The flip's clunk is scroll-driven, not a gesture; wake audio on the first tap or key.
   useEffect(() => installSoundUnlock(), []);
@@ -92,8 +92,9 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   return (
     <>
       <header ref={hero} data-hero id="top" className={styles.hero}>
-        <Device tracks={tracks} side={side} current={current} interactive={heroInView} screen={power.lines ?? nowPlaying ?? cued} progress={power.lines || !nowPlaying ? undefined : progress} led={lit || power.on} className={styles.device} />
+        <Device tracks={tracks} side={side} current={current} interactive={heroInView} screen={entrance.lines ?? nowPlaying ?? cued} progress={entrance.lines || !nowPlaying ? undefined : progress} led={lit || entrance.led} className={styles.device} />
       </header>
+      {entrance.overlay}
       {children}
       <Dock tracks={tracks} side={side} current={current} visible={!heroInView} screen={nowPlaying ?? cued} progress={nowPlaying ? progress : undefined} />
     </>
