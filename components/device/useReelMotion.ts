@@ -10,6 +10,14 @@ import { packDiameters, sideTracks, type Track } from "@/lib/tape";
 
 // Extra reel speed on top of the scroll's, for the entrance spinning the tape up.
 let boost = 0;
+// The reels' angle (degrees, as the sprites turn) and the packs' scales, for the 3D player.
+let angleNow = 0;
+let packsNow = { left: 1, right: 1 };
+
+/** The reels' current angle in degrees (the sprites turn by minus this). */
+export const reelAngle = (): number => angleNow;
+/** The tape packs' current scale, as a share of a full pack. */
+export const packScales = (): { left: number; right: number } => packsNow;
 
 /** Spins the reels as if scrolling at `v` more (0 to stop boosting). */
 export function boostReels(v: number): void {
@@ -38,6 +46,7 @@ export function useReelMotion(tracks: Track[]): void {
         tier,
       });
       reel.current = next;
+      angleNow = next.angle;
       if (next.angle === last) return;
       last = next.angle;
       // Tape runs left to right along the bottom of the cassette: both hubs turn anticlockwise.
@@ -67,6 +76,7 @@ export function useReelMotion(tracks: Track[]): void {
     function write() {
       const progress = b && b.progress > 0 ? b.progress : (a?.progress ?? 0);
       const d = packDiameters(progress, DEVICE.pack);
+      packsNow = { left: d.left / DEVICE.pack.max, right: d.right / DEVICE.pack.max };
       document.querySelectorAll<HTMLElement>("[data-pack]").forEach((el) => {
         el.style.scale = String((el.dataset.pack === "left" ? d.left : d.right) / DEVICE.pack.max);
       });

@@ -99,10 +99,21 @@ test.describe("hero to dock", () => {
 
   test("the device leans back and sinks as you leave it", async ({ page }) => {
     await gotoReady(page, "/#top");
+    // Let the 3D finish taking over (its crossfade included) so the check can't race it.
+    await page.waitForSelector("[data-hero][data-3d]", { timeout: 15_000 }).catch(() => {});
+    await page.waitForTimeout(700);
     const heroH = await page.locator("[data-hero]").evaluate((el) => (el as HTMLElement).offsetHeight);
     await page.evaluate((y) => window.scrollTo(0, y), Math.round(heroH * 0.5));
     await page.waitForTimeout(500);
-    const m = await page.locator("[data-hero] [data-device]").evaluate((el) => new DOMMatrix(getComputedStyle(el).transform));
-    expect(m.isIdentity).toBe(false);
+    // The 3D player (when it has taken over) leans and sinks in its own scene and fades as
+    // it goes; the sprite device leans by its transform.
+    if (await page.locator("[data-hero][data-3d]").count()) {
+      const opacity = await page.locator("canvas[data-stage]").evaluate((el) => Number(getComputedStyle(el).opacity));
+      expect(opacity).toBeLessThan(1);
+      expect(opacity).toBeGreaterThan(0.15);
+    } else {
+      const m = await page.locator("[data-hero] [data-device]").evaluate((el) => new DOMMatrix(getComputedStyle(el).transform));
+      expect(m.isIdentity).toBe(false);
+    }
   });
 });

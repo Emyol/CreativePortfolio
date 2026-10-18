@@ -1,0 +1,7 @@
+/* The hero's box, where the shared stage draws the 3D player (the canvas is behind the
+   page). Pointer input goes to the hero itself. */
+.view {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}

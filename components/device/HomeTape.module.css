@@ -13,3 +13,24 @@
 @media (max-width: 767px) {
   .hero { min-height: 0; padding-block: 3.5rem 1rem; }
 }
+
+/* The 3D player takes over (components/three/Hero3D.tsx): the sprite device stays as the
+   poster underneath, unseen but still in the page, with its keys as the real links over the
+   3D keys and their printed labels showing. */
+.hero { position: relative; }
+.hero[data-3d] [data-device] {
+  transform: none !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+.hero[data-3d] [data-device] img,
+.hero[data-3d] [data-device] > :not(picture, [data-tape-keys]) { opacity: var(--sprite, 0) !important; }
+.hero[data-3d] [data-tape-keys] img { opacity: 0 !important; }
+.hero[data-3d] [data-key-index] { pointer-events: auto; }
+/* The labels print on lit aluminium in 3D, not the sprite's shaded edge: the dark ink. */
+.hero[data-3d] [data-key-index] > span {
+  opacity: var(--fade3d, 1);
+  color: var(--device-ink);
+  text-shadow: none;
+}
+.hero[data-3d] [data-blank-key] { pointer-events: none; }

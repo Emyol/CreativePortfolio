@@ -55,7 +55,6 @@ async function create(tier: MotionTier): Promise<Stage> {
   canvas.setAttribute("aria-hidden", "true");
   canvas.setAttribute("data-stage", "");
   Object.assign(canvas.style, { position: "fixed", inset: "0", width: "100vw", height: "100vh", zIndex: "-1", pointerEvents: "none" });
-  document.body.prepend(canvas);
 
   const pmrem = new three.PMREMGenerator(renderer);
   const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -102,11 +101,17 @@ async function create(tier: MotionTier): Promise<Stage> {
     renderer,
     environment,
     add(view) {
+      // The canvas is in the page only while some view uses it (none under reduced motion).
+      if (!canvas.isConnected) document.body.prepend(canvas);
       views.add(view);
       run();
       return () => {
         views.delete(view);
         run();
+        // The loop may have stopped: don't leave the view's last frame on the canvas.
+        renderer.setScissorTest(false);
+        renderer.clear();
+        if (!views.size) canvas.remove();
       };
     },
     onLost(cb) {

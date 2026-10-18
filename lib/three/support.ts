@@ -15,12 +15,25 @@ export function scissorFor(rect: DOMRect, canvasHeight: number): [number, number
   return [rect.left, canvasHeight - rect.top - rect.height, rect.width, rect.height];
 }
 
-/** Whether this browser can make a WebGL2 context (checked once). */
+/**
+ * Whether a WebGL renderer draws in software (no GPU, or hardware acceleration off). Such a
+ * browser draws the 3D at a few frames a second, so it keeps the sprite device.
+ */
+export function isSoftwareRenderer(name: string): boolean {
+  return /swiftshader|llvmpipe|softpipe|basic render|software/i.test(name);
+}
+
+/** Whether this browser can make a WebGL2 context on a real GPU (checked once). */
 let gl: boolean | undefined;
-export function hasWebGL(): boolean {
+export function hasGpuWebGL(): boolean {
   if (gl !== undefined) return gl;
+  if (typeof WebGL2RenderingContext === "undefined") return (gl = false);
   try {
-    gl = !!document.createElement("canvas").getContext("webgl2");
+    const ctx = document.createElement("canvas").getContext("webgl2");
+    if (!ctx) return (gl = false);
+    const info = ctx.getExtension("WEBGL_debug_renderer_info");
+    gl = !isSoftwareRenderer(String(ctx.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : ctx.RENDERER)));
+    ctx.getExtension("WEBGL_lose_context")?.loseContext();
   } catch {
     gl = false;
   }

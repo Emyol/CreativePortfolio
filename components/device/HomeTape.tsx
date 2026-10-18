@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useActiveTrack } from "@/components/motion/ActiveTrack";
+import { Hero3D } from "@/components/three/Hero3D";
 import { clock } from "@/components/tracks/Mixtape";
 import { getCue, getServerCue, subscribeCue } from "@/lib/cue";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
@@ -92,6 +93,7 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   return (
     <>
       <header ref={hero} data-hero id="top" className={styles.hero}>
+        {tier !== "none" && <Hero3D key={tier} tracks={tracks} side={side} current={current} screen={entrance.lines ?? nowPlaying ?? cued} progress={entrance.lines || !nowPlaying ? undefined : progress} led={lit || entrance.led} />}
         <Device tracks={tracks} side={side} current={current} interactive={heroInView} screen={entrance.lines ?? nowPlaying ?? cued} progress={entrance.lines || !nowPlaying ? undefined : progress} led={lit || entrance.led} className={styles.device} />
       </header>
       {entrance.overlay}

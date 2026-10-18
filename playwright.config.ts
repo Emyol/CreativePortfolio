@@ -8,7 +8,18 @@ export default defineConfig({
   // at once starve this machine and turn timing into timeouts.
   workers: process.env.CI ? undefined : 2,
   use: { baseURL: "http://localhost:3100", trace: "retain-on-failure" },
-  projects: [{ name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
+  // On the machine's GPU: headless Chromium otherwise draws WebGL in software, where the
+  // site rightly keeps the sprite device instead of the 3D hero.
+  projects: [
+    {
+      name: "desktop",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+        launchOptions: { args: ["--use-angle=d3d11", "--enable-gpu", "--ignore-gpu-blocklist"] },
+      },
+    },
+  ],
   webServer: {
     command: "npx next dev -p 3100",
     url: "http://localhost:3100",

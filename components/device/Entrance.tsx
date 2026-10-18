@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { gsap, useGSAP } from "@/lib/motion/gsap";
 import { writeStorage } from "@/lib/motion/storage";
 import { POWER_KEY } from "@/lib/powerOn";
-import { getHero } from "@/lib/three/heroReady";
+import { decideEntrance, getHero, resetEntranceDecision } from "@/lib/three/heroReady";
 import { boostReels } from "./useReelMotion";
 import styles from "./Entrance.module.css";
 
@@ -60,6 +60,7 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
           knob.style.rotate = knobAngle;
           knob.style.transition = knobTransition;
         }
+        resetEntranceDecision();
         writeStorage("session", POWER_KEY, "1");
         delete html.dataset.boot;
         setLines(undefined);
@@ -83,10 +84,10 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
           overlay.style.visibility = "hidden";
         }, undefined, 1.96);
 
+      // As the dark starts to shrink, the 3D player takes the tape load if it's ready by
+      // now; otherwise the sprites do (it never waits for the 3D to download).
       const drop = 1.85;
-      const hero3d = getHero();
-      if (hero3d) hero3d.entrance(tl, drop);
-      else {
+      const spriteMoves = () => {
         // The tape drops in and the deck takes its weight.
         if (cassette) tl.fromTo(cassette, { yPercent: -70, rotate: -4, scale: 1.05, opacity: 0 }, { yPercent: 0, rotate: 0, scale: 1, opacity: 1, duration: 0.6, ease: "power3.in" }, drop);
         tl.to(device, { y: "1.2%", duration: 0.08, ease: "power2.out" }, drop + 0.6).to(device, { y: 0, duration: 0.5, ease: "elastic.out(1, 0.45)" }, drop + 0.68);
@@ -102,11 +103,21 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
           turn();
           tl.to(dial, { a: Number.parseFloat(knobAngle) || -135, duration: 0.9, ease: "back.out(1.3)", onUpdate: turn }, drop + 0.8);
         }
-      }
+      };
+      let decided = false;
+      const decide = () => {
+        if (decided) return;
+        decided = true;
+        const hero3d = decideEntrance();
+        if (hero3d) hero3d.entrance(tl, drop);
+        else spriteMoves();
+      };
+      tl.call(decide, undefined, 1.05);
       for (let i = 1; i <= TEXT.length; i++) tl.call(() => setLines(["SIDE A", TEXT.slice(0, i)]), undefined, drop + 0.9 + i * 0.035);
 
       // Never in the way: any input finishes it at once.
       const skip = () => {
+        decide(); // so the jump to the end lands every move, whichever device plays them
         if (tl.progress() < 1) tl.progress(1);
         finish();
       };
