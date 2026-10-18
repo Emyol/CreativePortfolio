@@ -53,6 +53,9 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 body { background: var(--table); overflow-x: clip; }
+/* The 3D stage's canvas sits behind the page (z-index -1): body lets it show through, and
+   html, the same colour, stays the background. */
+body:has(> canvas[data-stage]) { background: transparent; }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
 }
