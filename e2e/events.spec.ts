@@ -67,7 +67,8 @@ test("long unbroken names don't overflow their card", async ({ page }) => {
 });
 
 test("browser Back from an event page returns to where you were", async ({ page }) => {
-  await gotoReady(page, "/#about");
+  // From the settled track: mid-hold, a print the REC playhead hasn't reached is clipped away.
+  await gotoReady(page, "/#events");
   const card = page.locator("#events li").nth(4);
   await card.scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);

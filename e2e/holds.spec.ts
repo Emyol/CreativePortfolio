@@ -124,6 +124,42 @@ test("resizing mid-hold keeps the section in view", async ({ page }) => {
   expect(fitsAboveDock || box.top === 10).toBe(true);
 });
 
+test.describe("a short screen", () => {
+  test.use({ viewport: { width: 1440, height: 600 } });
+  test("a tall section holds its top and reveals later rows on entry", async ({ page }) => {
+    await gotoReady(page, "/#top");
+    await page.mouse.move(1380, 300);
+    const frames: { held: boolean; top: number; lastTop: number; lastRevealed: number }[] = [];
+    for (let i = 0; i < 90; i++) {
+      await page.mouse.wheel(0, 100);
+      await page.waitForTimeout(60);
+      frames.push(
+        await page.locator("#events").evaluate((el) => {
+          const last = [...el.querySelectorAll("li")].at(-1)!;
+          // How much of the last card is recorded in: 1 - its clip-path's right inset.
+          const right = /inset\(\S+ (\S+)%/.exec(getComputedStyle(last).clipPath)?.[1];
+          return {
+            held: getComputedStyle(el).position === "fixed",
+            top: Math.round(el.getBoundingClientRect().top),
+            lastTop: Math.round(last.getBoundingClientRect().top),
+            lastRevealed: right === undefined ? 1 : 1 - Number(right) / 100,
+          };
+        }),
+      );
+      if (frames.length > 3 && frames.at(-1)!.lastTop < -100) break;
+    }
+    const held = frames.filter((f) => f.held);
+    expect(held.length).toBeGreaterThan(2);
+    expect(held.every((f) => f.top === 10)).toBe(true);
+    // The last row is below the screen while the section holds: it waits until it enters,
+    // and is fully recorded by the time it passes 60% of the screen.
+    for (const f of frames) if (f.lastTop > 600 * 0.9) expect(f.lastRevealed).toBe(0);
+    const passed = frames.filter((f) => f.lastTop < 600 * 0.6 - 20);
+    expect(passed.length).toBeGreaterThan(0);
+    expect(passed.every((f) => f.lastRevealed === 1)).toBe(true);
+  });
+});
+
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
   test("no pins, nothing hidden", async ({ page }) => {

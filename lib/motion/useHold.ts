@@ -40,9 +40,10 @@ export function useHold(ref: RefObject<HTMLElement | null>, arrival: Arrival, id
       if (!root || tier === "none") return;
       const items = arrival.items ? [...root.querySelectorAll<HTMLElement>(arrival.items)] : [];
       const tall = isTall(root.offsetHeight, innerHeight);
-      // A tall section holds with its top 10 px down: what fits on screen then is held.
+      // A tall section holds with its top 10 px down: an item is held if at least half of
+      // it is on screen then; the rest arrive as they scroll in, so none plays out of sight.
       const rootTop = root.getBoundingClientRect().top;
-      const held = tall ? items.filter((it) => it.getBoundingClientRect().top - rootTop + 10 < innerHeight - 40) : items;
+      const held = tall ? items.filter((it) => it.getBoundingClientRect().top - rootTop + 10 + it.offsetHeight / 2 < innerHeight) : items;
 
       const tl = gsap.timeline({
         defaults: { ease: "none" },
@@ -62,9 +63,10 @@ export function useHold(ref: RefObject<HTMLElement | null>, arrival: Arrival, id
       arrival.hold(tl, { root, held, tier });
       tl.to({}, { duration: Math.max(0.15, tl.duration() * REST) });
 
+      // Items inside the pinned section: pinnedContainer accounts for the hold's scroll.
       if (arrival.enter) {
         for (const item of items.filter((it) => !held.includes(it))) {
-          arrival.enter(gsap.timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: item, start: "top 90%", end: "top 60%", scrub: true } }), item);
+          arrival.enter(gsap.timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: item, pinnedContainer: root, start: "top 90%", end: "top 60%", scrub: true } }), item);
         }
       }
 
