@@ -30,6 +30,8 @@
 }
 /* The poster frame shows until the canvas has drawn its first frame. */
 .img:has(+ .canvas[data-ready]) { visibility: hidden; }
+/* …or until the 3D cassette has (components/three/Flip3D.tsx). */
+.flip[data-3d] .img { visibility: hidden; }
 
 /* "side a" gives way to "side b" as the tape lands. */
 .caption {

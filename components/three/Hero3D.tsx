@@ -12,6 +12,7 @@ import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
 import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
 import { drawScreen, SCREEN_H, SCREEN_W } from "./screenTexture";
+import { makeTable } from "./table";
 import styles from "./Hero3D.module.css";
 
 type Props = {
@@ -76,27 +77,8 @@ export function Hero3D(props: Props) {
       if (dead) return;
       window.clearTimeout(timer);
 
-      // The table: a key light that casts the contact shadow, the room's reflections.
-      const scene = new three.Scene();
-      scene.environment = environment;
-      scene.environmentIntensity = 0.9;
+      const { scene, light, dispose: disposeTable } = makeTable(three, environment, tier);
       const camera = new three.PerspectiveCamera(28, 1, 0.1, 100);
-      const light = new three.DirectionalLight("#ffffff", 2.4);
-      light.position.set(-5, 12, 6);
-      light.castShadow = true;
-      light.shadow.mapSize.setScalar(tier === "full" ? 2048 : 1024);
-      Object.assign(light.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
-      light.shadow.camera.updateProjectionMatrix();
-      light.shadow.radius = 6;
-      light.shadow.bias = -0.0004;
-      light.shadow.normalBias = 0.03;
-      scene.add(light, new three.AmbientLight("#ffffff", 0.35));
-      const groundGeo = new three.PlaneGeometry(60, 60);
-      const groundMat = new three.ShadowMaterial({ opacity: 0.22 });
-      const ground = new three.Mesh(groundGeo, groundMat);
-      ground.rotation.x = -Math.PI / 2;
-      ground.receiveShadow = true;
-      scene.add(ground);
 
       // The device: `lift` sinks it (scroll, the entrance's dip), `turner` tilts and turns it.
       const root = model.clone();
@@ -147,7 +129,8 @@ export function Hero3D(props: Props) {
       screen.position.set(gcentre.x, gbox.max.y + 0.002, gcentre.z);
       root.add(screen);
       undo.push(() => {
-        [groundGeo, groundMat, screenGeo, screenMat, tex, led].forEach((d) => d.dispose());
+        [screenGeo, screenMat, tex, led].forEach((d) => d.dispose());
+        disposeTable();
         gsap.killTweensOf([cassette.position, cassette.rotation, mark.rotation, light.position, led, ...keys.map((k) => k.position)]);
       });
 

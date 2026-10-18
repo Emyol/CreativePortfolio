@@ -9,7 +9,7 @@ import type { MotionTier } from "@/lib/motion/tier";
 export function makeMaterials(three: typeof THREE, tier: MotionTier): Record<string, THREE.Material> {
   const phys = (o: THREE.MeshPhysicalMaterialParameters) => new three.MeshPhysicalMaterial(o);
   const brushed = (color: string, roughness: number) => phys({ color, metalness: 1, roughness, anisotropy: 0.5, anisotropyRotation: 0 });
-  return {
+  const materials: Record<string, THREE.Material> = {
     Aluminium: brushed("#C9CDD3", 0.3),
     AluDoor: brushed("#C3C7CD", 0.36),
     Collar: phys({ color: "#B9BDC4", metalness: 1, roughness: 0.22 }),
@@ -35,4 +35,7 @@ export function makeMaterials(three: typeof THREE, tier: MotionTier): Record<str
     Rubber: phys({ color: "#1A1B1E", roughness: 0.85 }),
     Sticker: phys({ color: "#F4F4F1", roughness: 0.8 }),
   };
+  // Named as in the GLB, so a view can find one (the flip swaps its window glass).
+  for (const [name, m] of Object.entries(materials)) m.name = name;
+  return materials;
 }
