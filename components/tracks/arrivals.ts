@@ -78,7 +78,29 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
     hold: (tl, { held }) => held.forEach((li, i) => print(tl, li, i * 0.15)),
     enter: (tl, li) => print(tl, li, 0),
   },
-  people: { distance: 1100, hold: () => {} },
+  // The credits roll up into their window from below and settle in place, the window's
+  // lower edge fading while they roll (never at rest, so no name is left half-hidden).
+  people: {
+    distance: 1100,
+    items: "li",
+    hold: (tl, { root, held }) => {
+      const win = root.querySelector<HTMLElement>("[data-credits-window]");
+      const list = win?.querySelector<HTMLElement>("ul");
+      if (!win || !list) return;
+      const fade = "linear-gradient(#000 70%, transparent)";
+      const edge = (on: boolean) => {
+        win.style.maskImage = on ? fade : "";
+        win.style.webkitMaskImage = on ? fade : "";
+      };
+      // A long list holds what fits; its later names rise in as they enter.
+      const rolled = held.length === list.children.length ? [list] : held;
+      tl.fromTo(rolled, { y: () => win.offsetHeight }, { y: 0, ease: "power2.out", duration: 1, stagger: rolled.length > 1 ? 0.04 : 0, onUpdate() { edge(this.progress() < 1); } }, 0);
+      return () => edge(false);
+    },
+    enter: (tl, li) => {
+      tl.fromTo(li, { y: 60, opacity: 0 }, { y: 0, opacity: 1, ease: "power2.out", duration: 1 });
+    },
+  },
   made: { distance: 850, hold: () => {} },
   "on-rotation": { distance: 700, hold: () => {} },
 };

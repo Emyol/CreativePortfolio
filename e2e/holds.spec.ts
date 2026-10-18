@@ -126,6 +126,29 @@ test("resizing mid-hold keeps the section in view", async ({ page }) => {
   expect(fitsAboveDock || box.top === 10).toBe(true);
 });
 
+test("the credits roll up into their window and settle in place", async ({ page }) => {
+  await gotoReady(page, "/#mixtape");
+  await page.mouse.move(1400, 450);
+  const ys: number[] = [];
+  for (let i = 0; i < 80; i++) {
+    await page.mouse.wheel(0, 80);
+    await page.waitForTimeout(60);
+    const s = await page.locator("#people").evaluate((el) => ({
+      held: getComputedStyle(el).position === "fixed",
+      y: new DOMMatrix(getComputedStyle(el.querySelector("ul")!).transform).m42,
+      arrival: Number(el.getAttribute("data-arrival")),
+    }));
+    if (s.held) ys.push(s.y);
+    if (s.arrival >= 1 && !s.held && ys.length) break;
+  }
+  expect(ys.length).toBeGreaterThan(2);
+  expect(ys[0]).toBeGreaterThan(40); // started below, out of the window
+  for (let i = 1; i < ys.length; i++) expect(ys[i]).toBeLessThanOrEqual(ys[i - 1] + 0.5);
+  // settled: every name back in its place and on screen
+  await expect.poll(() => page.locator("#people ul").evaluate((ul) => new DOMMatrix(getComputedStyle(ul).transform).m42)).toBe(0);
+  for (const name of await page.locator("#people h3").all()) await expect(name).toBeInViewport();
+});
+
 test.describe("a short screen", () => {
   test.use({ viewport: { width: 1440, height: 600 } });
   test("a tall section holds its top and reveals later rows on entry", async ({ page }) => {
