@@ -13,12 +13,15 @@ export function UndersideDevice({ className, children }: { className?: string; c
   const ref = useRef<HTMLDivElement>(null);
   const tier = useMotionTier();
   const near = useInViewOnce(ref, "100% 0px 100% 0px");
-  const [three, setThree] = useState(false);
-  useEffect(() => setThree(tier === "full" && canUse3D(tier, hasGpuWebGL())), [tier]);
+  // A failed 3D stays failed for the visit: the rendered underside shows and never swaps back.
+  const [failed, setFailed] = useState(false);
+  const [gpu, setGpu] = useState(false);
+  useEffect(() => setGpu(canUse3D(tier, hasGpuWebGL())), [tier]);
+  const three = tier === "full" && gpu && !failed;
   return (
-    <div ref={ref} className={className} data-underside>
+    <div ref={ref} className={className} data-underside data-fallback={failed ? "" : undefined}>
       {children}
-      {three && near && <Underside3D device={ref} onFail={() => setThree(false)} />}
+      {three && near && <Underside3D device={ref} onFail={() => setFailed(true)} />}
     </div>
   );
 }

@@ -28,8 +28,11 @@ export function Flip() {
   // Frames load only when the flip is within a screen of the viewport.
   const near = useInViewOnce(ref, "100% 0px 100% 0px");
   // The 3D cassette on full motion with a GPU; the frames if it can't or it fails.
-  const [three, setThree] = useState(false);
-  useEffect(() => setThree(tier === "full" && canUse3D(tier, hasGpuWebGL())), [tier]);
+  // A failed 3D stays failed for the visit: the frames take over and never swap back.
+  const [failed, setFailed] = useState(false);
+  const [gpu, setGpu] = useState(false);
+  useEffect(() => setGpu(canUse3D(tier, hasGpuWebGL())), [tier]);
+  const three = tier === "full" && gpu && !failed;
 
   useGSAP(
     () => {
@@ -87,7 +90,7 @@ export function Flip() {
   );
 
   return (
-    <section ref={ref} id="flip" aria-label="Flip to side B" className={styles.flip} data-flip>
+    <section ref={ref} id="flip" aria-label="Flip to side B" className={styles.flip} data-flip data-fallback={failed ? "" : undefined}>
       <div className={styles.stage}>
         <div className={styles.frame}>
           {tier === "none" ? (
@@ -96,7 +99,7 @@ export function Flip() {
             <>
               <img src={frame(0)} alt="" width={FW} height={FH} className={styles.img} loading="lazy" decoding="async" />
               {tier === "full" && three ? (
-                near && <Flip3D onFail={() => setThree(false)} />
+                near && <Flip3D onFail={() => setFailed(true)} />
               ) : tier === "full" ? (
                 <canvas ref={canvas} className={styles.canvas} aria-hidden="true" />
               ) : (

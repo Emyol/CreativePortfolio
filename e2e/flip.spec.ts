@@ -45,6 +45,23 @@ test.describe("in 3D", () => {
     await expect.poll(() => page.locator("[data-flip]").getAttribute("data-turn")).toBe("1.00");
   });
 
+  test("the flat frame never shows before the 3D cassette", async ({ page }) => {
+    let release = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    await page.route("**/device/device.glb", async (route) => {
+      await held;
+      await route.continue();
+    });
+    await gotoReady(page, "/#people");
+    await headingAtTop(page, "people");
+    await scrollFlip(page, 0.2);
+    await page.waitForTimeout(800);
+    const poster = page.locator("#flip img").first();
+    expect(await poster.evaluate((el) => getComputedStyle(el).visibility)).toBe("hidden");
+    release();
+    await expect(page.locator("[data-flip][data-3d]")).toHaveCount(1, { timeout: 20_000 });
+  });
+
   test("dragging spins it and it settles on a side", async ({ page }) => {
     await gotoReady(page, "/#people");
     await headingAtTop(page, "people");
