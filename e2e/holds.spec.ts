@@ -201,3 +201,41 @@ test.describe("reduced motion", () => {
     await expect(page).toHaveURL(/\/events\//, { timeout: 15_000 });
   });
 });
+
+test.describe("focus in a hold", () => {
+  test.setTimeout(90_000);
+
+  test("a mouse click inside a held section doesn't jump to the end of its hold", async ({ page }) => {
+    await gotoReady(page, "/#people");
+    await headingAtTop(page, "people");
+    await page.mouse.move(1380, 450);
+    // Scroll back up into the mixtape's hold, partway.
+    const arrival = () => page.locator("#mixtape").getAttribute("data-arrival").then(Number);
+    for (let i = 0; i < 60 && !((await arrival()) > 0.2 && (await arrival()) < 0.6); i++) {
+      await page.mouse.wheel(0, -80);
+      await page.waitForTimeout(60);
+    }
+    const before = await arrival();
+    expect(before).toBeGreaterThan(0.2);
+    expect(before).toBeLessThan(0.6);
+    await page.locator("#mixtape").getByRole("button").first().click();
+    await page.waitForTimeout(400);
+    expect(await arrival()).toBeLessThan(0.7);
+  });
+
+  for (const id of ["events", "made"]) {
+    test(`tabbing to a later row of a tall section shows it whole (${id})`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 600 });
+      await gotoReady(page, `/#${id}`);
+      await headingAtTop(page, id);
+      const rows = page.locator(`#${id} li:has(a)`);
+      const last = rows.last();
+      await rows.nth((await rows.count()) - 2).locator("a").first().focus();
+      for (let i = 0; i < 8 && !(await last.evaluate((li) => li.contains(document.activeElement))); i++) await page.keyboard.press("Tab");
+      expect(await last.evaluate((li) => li.contains(document.activeElement))).toBe(true);
+      await expect.poll(() => last.evaluate((li) => [getComputedStyle(li).clipPath, getComputedStyle(li).opacity].join(" "))).toBe("none 1");
+      const box = (await last.boundingBox())!;
+      expect(box.y + box.height / 2).toBeLessThanOrEqual(600);
+    });
+  }
+});

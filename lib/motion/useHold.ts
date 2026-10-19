@@ -1,6 +1,6 @@
 "use client";
 import type { RefObject } from "react";
-import { gsap, ScrollTrigger, useGSAP } from "./gsap";
+import { gsap, restoringFocus, ScrollTrigger, useGSAP } from "./gsap";
 import { holdDistance, holdStart, isTall, REST } from "./hold";
 import { useMotionTier } from "./MotionProvider";
 import { getLenis } from "./navigate";
@@ -77,10 +77,11 @@ export function useHold(ref: RefObject<HTMLElement | null>, arrival: Arrival, id
         }
       }
 
-      // Keyboard users never wait on a hold: focus inside finishes it.
+      // Keyboard users never wait on a hold: focus inside finishes it. Not a mouse click on a
+      // toy or a button (that would jump the page), nor focus a refresh is putting back.
       const st = tl.scrollTrigger as ScrollTrigger;
-      const finish = () => {
-        if (st.progress >= 1) return;
+      const finish = (e: FocusEvent) => {
+        if (st.progress >= 1 || restoringFocus() || !(e.target instanceof Element && e.target.matches(":focus-visible"))) return;
         const lenis = getLenis();
         if (lenis) lenis.scrollTo(st.end, { immediate: true });
         else window.scrollTo(0, st.end);
