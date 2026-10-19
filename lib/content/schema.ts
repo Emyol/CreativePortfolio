@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { formatDate } from "@/lib/dates";
+import { DOT_RANGES } from "@/lib/dotPhoto";
 
 /** From docs/reference/professional-inventory.md. The toolbox may only use these. */
 export const PROFESSIONAL_STACK = [
@@ -38,6 +39,14 @@ export const photoSchema = z.object({
   height: z.number().int().positive(),
 });
 
+const within = ({ min, max }: { min: number; max: number }) => z.number().min(min).max(max);
+/** How the About photo is drawn as dots (lib/dotPhoto.ts), as adjusted in the admin. */
+export const dotsSchema = z.object({
+  across: within(DOT_RANGES.across).int(),
+  brightness: within(DOT_RANGES.brightness),
+  contrast: within(DOT_RANGES.contrast),
+});
+
 // Songs play inside the site through Spotify's embed, so each needs a track link.
 const spotifyTrack = z.string().regex(/^https:\/\/open\.spotify\.com\/track\/[A-Za-z0-9]{22}(\?.*)?$/, "spotify must be an open.spotify.com track link");
 
@@ -58,6 +67,7 @@ export const contentSchema = z.object({
   about: z.object({
     letter: z.array(text),
     candid: photoSchema.optional(),
+    dots: dotsSchema.optional(),
     toolbox: z.array(z.enum(PROFESSIONAL_STACK)),
   }),
   events: z.array(eventSchema).superRefine((events, ctx) => {

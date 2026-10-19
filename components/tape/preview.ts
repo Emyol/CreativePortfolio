@@ -2,7 +2,7 @@ import { z } from "zod";
 import { contentSchema, photoSchema, PROFESSIONAL_STACK, UPLOADED_PHOTO, withoutArchived, type Photo, type SiteContent } from "@/lib/content/schema";
 
 /** Marks an uploaded photo as a draft: the browser loads it directly, with the owner's session. */
-const draft = (p: Photo): Photo => (UPLOADED_PHOTO.test(p.src) ? { ...p, src: `${p.src}?draft` } : p);
+export const draft = (p: Photo): Photo => (UPLOADED_PHOTO.test(p.src) ? { ...p, src: `${p.src}?draft` } : p);
 
 /**
  * The draft as visitors would get it once published: archived entries removed. Uploaded

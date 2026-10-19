@@ -17,6 +17,9 @@ class NoopIntersectionObserver {
 }
 // jsdom has no IntersectionObserver; tests that need one stub it locally.
 if (browser) globalThis.IntersectionObserver ??= NoopIntersectionObserver as unknown as typeof IntersectionObserver;
+// jsdom has no canvas either (it logs "Not implemented" for each one): no context, which
+// the dot screen and the 3D views already handle by drawing nothing.
+if (browser) HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
 
 afterEach(() => {
   if (!browser) return;

@@ -102,3 +102,25 @@ test.describe("on a phone", () => {
     expect(results.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
   });
 });
+
+test("the candid's dots can be adjusted, seen at once, saved, and reset", async ({ page }) => {
+  await stubBackend(page);
+  const saved: unknown[] = [];
+  page.on("request", (r) => r.url().endsWith("/api/admin/content") && r.method() !== "GET" && saved.push(r.postDataJSON()));
+  await gotoReady(page, "/admin");
+  const about = page.getByRole("region", { name: "about" });
+  const dots = about.getByRole("group", { name: "Dot screen" });
+  const preview = dots.getByRole("img", { name: "Fixture photo 0" });
+  await expect(preview).toHaveAttribute("data-across", "40");
+  await dots.getByLabel("Dots across").fill("24");
+  await dots.getByLabel("Brightness").fill("0.2");
+  await dots.getByLabel("Contrast").fill("1.5");
+  await expect(preview).toHaveAttribute("data-across", "24");
+  await expect(dots.getByText("+20%")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Save and publish" }).getByText("Saved", { exact: true })).toBeVisible({ timeout: 5_000 });
+  const last = JSON.stringify(saved.at(-1));
+  expect(last).toContain('"dots":{"across":24,"brightness":0.2,"contrast":1.5}');
+  await dots.getByRole("button", { name: "Reset" }).click();
+  await expect(preview).toHaveAttribute("data-across", "40");
+  await expect(dots.getByLabel("Dots across")).toHaveValue("40");
+});

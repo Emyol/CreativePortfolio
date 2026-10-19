@@ -32,7 +32,7 @@ export function LinerNotes({ about }: { about: About }) {
       {about.candid && (
         <Throwable mode="home" className={styles.throwable}>
           <figure className={styles.candid}>
-            <DotPhoto photo={about.candid} />
+            <DotPhoto photo={about.candid} dots={about.dots} />
           </figure>
         </Throwable>
       )}

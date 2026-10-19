@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { coverRect, dotLevels, rowLight, sampleSrc, STEPS } from "./dotPhoto";
+import { coverRect, DOTS, dotLevels, gridFor, rowLight, sampleSrc, STEPS } from "./dotPhoto";
+import { contentSchema } from "./content/schema";
 
 /** An RGBA buffer of grey pixels. */
 const greys = (...vs: number[]) => new Uint8ClampedArray(vs.flatMap((v) => [v, v, v, 255]));
@@ -20,6 +21,18 @@ describe("dotLevels", () => {
     const dark = Array.from({ length: 98 }, (_, i) => 20 + Math.floor(i / 2));
     const levels = [...dotLevels(greys(...dark, 255, 255))];
     expect(new Set(levels.slice(0, 98)).size).toBe(STEPS + 1);
+  });
+
+  it("brightness lifts or lowers every dot", () => {
+    const tones = greys(100, 110, 120, 130, 140);
+    expect([...dotLevels(tones, { ...DOTS, brightness: 0.25 })]).toEqual([1, 2, 3, 4, 4]);
+    expect([...dotLevels(tones, { ...DOTS, brightness: -0.25 })]).toEqual([0, 0, 1, 2, 3]);
+  });
+
+  it("contrast pushes tones apart from the middle, or draws them together", () => {
+    const tones = greys(100, 110, 120, 130, 140);
+    expect([...dotLevels(tones, { ...DOTS, contrast: 2 })]).toEqual([0, 0, 2, 4, 4]);
+    expect([...dotLevels(tones, { ...DOTS, contrast: 0.5 })]).toEqual([1, 1, 2, 3, 3]);
   });
 
   it("lights nothing on a flat photo rather than dividing by zero", () => {
@@ -74,5 +87,32 @@ describe("sampleSrc", () => {
   it("takes fixture data: URIs and admin drafts as they are (the optimiser can't read them)", () => {
     expect(sampleSrc("data:image/svg+xml,abc")).toBe("data:image/svg+xml,abc");
     expect(sampleSrc("/api/media/ab12.jpg?draft")).toBe("/api/media/ab12.jpg?draft");
+  });
+});
+
+describe("gridFor", () => {
+  it("keeps the screen's 4:5 shape for any number of dots across", () => {
+    expect(gridFor(40)).toEqual({ cols: 40, rows: 50 });
+    expect(gridFor(24)).toEqual({ cols: 24, rows: 30 });
+    expect(gridFor(64)).toEqual({ cols: 64, rows: 80 });
+  });
+});
+
+describe("the dot settings in the content", () => {
+  const about = { letter: ["Hi."], toolbox: [] };
+  const parse = (dots: unknown) => contentSchema.shape.about.safeParse({ ...about, dots }).success;
+
+  it("are optional, and take the admin's ranges", () => {
+    expect(contentSchema.shape.about.safeParse(about).success).toBe(true);
+    expect(parse({ across: 40, brightness: 0, contrast: 1 })).toBe(true);
+    expect(parse({ across: 24, brightness: -0.5, contrast: 0.5 })).toBe(true);
+    expect(parse({ across: 64, brightness: 0.5, contrast: 2 })).toBe(true);
+  });
+
+  it("refuse values the screen can't draw", () => {
+    expect(parse({ across: 8, brightness: 0, contrast: 1 })).toBe(false);
+    expect(parse({ across: 40.5, brightness: 0, contrast: 1 })).toBe(false);
+    expect(parse({ across: 40, brightness: 2, contrast: 1 })).toBe(false);
+    expect(parse({ across: 40, brightness: 0, contrast: 0 })).toBe(false);
   });
 });

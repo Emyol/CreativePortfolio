@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { PROFESSIONAL_STACK } from "@/lib/content/schema";
+import { DotPhoto } from "@/components/tracks/DotPhoto";
+import { draft } from "@/components/tape/preview";
+import { PROFESSIONAL_STACK, type Photo } from "@/lib/content/schema";
+import { DOT_RANGES, DOTS, type DotSettings } from "@/lib/dotPhoto";
 import type { FieldSpec } from "@/lib/admin/sections";
 import { fieldId, useEditor, type Path } from "./editorContext";
 import { PhotoList } from "./PhotoList";
@@ -224,6 +227,46 @@ function ToolboxField({ spec, path }: { spec: FieldSpec; path: Path }) {
   );
 }
 
+const DOT_SLIDERS: { key: keyof DotSettings; label: string; show: (v: number) => string }[] = [
+  { key: "across", label: "Dots across", show: (v) => String(v) },
+  { key: "brightness", label: "Brightness", show: (v) => `${v > 0 ? "+" : ""}${Math.round(v * 100)}%` },
+  { key: "contrast", label: "Contrast", show: (v) => `×${v.toFixed(2)}` },
+];
+
+/**
+ * How the candid is drawn as dots on the tape: how fine, how bright, how much contrast,
+ * with the candid drawn beside them exactly as the tape will. Left as it is, nothing is saved.
+ */
+function DotsField({ spec, path }: { spec: FieldSpec; path: Path }) {
+  const { get, set } = useEditor();
+  const candid = get([...path.slice(0, -1), "candid"]) as Photo | undefined;
+  const dots: DotSettings = { ...DOTS, ...(get(path) as DotSettings | undefined) };
+  const untouched = DOT_SLIDERS.every(({ key }) => dots[key] === DOTS[key]);
+  const change = (key: keyof DotSettings, value: number) => {
+    const next = { ...dots, [key]: Number(value.toFixed(2)) };
+    set(path, DOT_SLIDERS.every(({ key: k }) => next[k] === DOTS[k]) ? undefined : next);
+  };
+  return (
+    <FieldFrame path={path} label={spec.label} hint={spec.hint} group>
+      {({ id }) => (
+        <div className={styles.dots}>
+          <div className={styles.dotControls}>
+            {DOT_SLIDERS.map(({ key, label, show }) => (
+              <label key={key} className={styles.slider}>
+                <span className={styles.sliderLabel}>{label}</span>
+                <input id={`${id}-${key}`} type="range" {...DOT_RANGES[key]} value={dots[key]} onChange={(e) => change(key, Number(e.target.value))} aria-valuetext={show(dots[key])} />
+                <output htmlFor={`${id}-${key}`} className={styles.sliderValue}>{show(dots[key])}</output>
+              </label>
+            ))}
+            <button type="button" className={styles.tool} onClick={() => set(path, undefined)} disabled={untouched}>Reset</button>
+          </div>
+          {candid ? <DotPhoto photo={draft(candid)} dots={dots} className={styles.dotPreview} /> : <p className={styles.hint}>Add a candid photo to see it in dots.</p>}
+        </div>
+      )}
+    </FieldFrame>
+  );
+}
+
 export function Field({ spec, path }: { spec: FieldSpec; path: Path }) {
   switch (spec.kind) {
     case "text":
@@ -247,5 +290,7 @@ export function Field({ spec, path }: { spec: FieldSpec; path: Path }) {
       return <PhotoList path={path} label={spec.label} hint={spec.hint} />;
     case "photo":
       return <PhotoList path={path} label={spec.label} hint={spec.hint} single />;
+    case "dots":
+      return <DotsField spec={spec} path={path} />;
   }
 }

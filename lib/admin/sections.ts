@@ -2,7 +2,7 @@ import type { SiteContent } from "@/lib/content/schema";
 
 export type FieldKind =
   | "text" | "longtext" | "paragraphs" | "select" | "date" | "slug"
-  | "spotify" | "photo" | "photos" | "toolbox" | "url";
+  | "spotify" | "photo" | "photos" | "toolbox" | "url" | "dots";
 
 export type FieldSpec = {
   key: string;
@@ -44,6 +44,7 @@ export const SECTIONS: SectionSpec[] = [
     fields: [
       { key: "letter", label: "Liner notes", kind: "paragraphs", hint: "Leave a blank line between paragraphs." },
       { key: "candid", label: "Candid photo", kind: "photo", optional: true },
+      { key: "dots", label: "Dot screen", kind: "dots", optional: true, hint: "The tape draws your candid as dots. Adjust how fine they are and how it's lit; the preview here is what the tape shows." },
       { key: "toolbox", label: "Toolbox", kind: "toolbox", hint: "Printed on the spec sticker on the back of the device." },
     ],
   },
