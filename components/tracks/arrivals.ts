@@ -1,4 +1,4 @@
-import { gsap } from "@/lib/motion/gsap";
+import { gsap, ScrollTrigger } from "@/lib/motion/gsap";
 import type { Arrival } from "@/lib/motion/useHold";
 import type { TrackId } from "@/lib/tape";
 import { flickerDots, revealDots } from "./DotPhoto";
@@ -77,14 +77,25 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
       };
       paint();
       tl.to(head, { at: 1, duration: 1, onUpdate: paint }, 0);
+      // A refresh (a resize) rewinds the hold and puts it back without updates: paint what it
+      // put back, or every print stays clipped away.
+      ScrollTrigger.addEventListener("refresh", paint);
       // record() writes styles directly, which GSAP's revert can't undo.
-      return () => root.querySelectorAll<HTMLElement>("li").forEach(unrecord);
+      return () => {
+        ScrollTrigger.removeEventListener("refresh", paint);
+        root.querySelectorAll<HTMLElement>("li").forEach(unrecord);
+      };
     },
     enter: (tl, li) => {
       const row = { at: 0 };
+      const show = () => record(li, row.at);
       record(li, 0);
-      tl.to(row, { at: 1, duration: 1, onUpdate: () => record(li, row.at) });
-      return () => unrecord(li);
+      tl.to(row, { at: 1, duration: 1, onUpdate: show });
+      ScrollTrigger.addEventListener("refresh", show); // as in the hold
+      return () => {
+        ScrollTrigger.removeEventListener("refresh", show);
+        unrecord(li);
+      };
     },
   },
   // Each title prints out like a label maker, a character at a time, and its number punches in.
