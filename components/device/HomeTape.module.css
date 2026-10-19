@@ -24,10 +24,21 @@
   pointer-events: none;
 }
 .hero[data-3d] [data-device] img,
-.hero[data-3d] [data-device] > :not(picture, [data-tape-keys]) { opacity: var(--sprite, 0) !important; }
+.hero[data-3d] [data-device] > :not(picture, [data-tape-keys]) { opacity: 0 !important; }
 .hero[data-3d] [data-tape-keys] img { opacity: 0 !important; }
 .hero[data-3d] [data-key-index] { pointer-events: auto; }
 /* In 3D the labels are printed on the plate itself (components/three/keyLabels.ts): the
    page's labels stay as the links' names for screen readers, unseen. */
 .hero[data-3d] [data-key-index] > span { opacity: 0; }
 .hero[data-3d] [data-blank-key] { pointer-events: none; }
+
+/* While the 3D player is expected (html[data-gl], set before first paint) the flat device is
+   never shown, so the 3D appears alone rather than replacing it. It shows only where the 3D
+   gave up (data-fallback), or after a failsafe if the page's script never runs. */
+:global(html[data-gl="pending"]) .hero:not([data-3d], [data-fallback]) [data-device] img,
+:global(html[data-gl="pending"]) .hero:not([data-3d], [data-fallback]) [data-device] > :not(picture, [data-tape-keys]),
+:global(html[data-gl="pending"]) .hero:not([data-3d], [data-fallback]) [data-key-index] > span {
+  opacity: 0;
+  animation: gl-failsafe 0s 10s forwards;
+}
+@keyframes gl-failsafe { to { opacity: 1; } }

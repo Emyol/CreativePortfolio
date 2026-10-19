@@ -10,7 +10,8 @@ import { keySlots, knobAngle, type SideId, type Track, type TrackId } from "@/li
 import { entranceDecision, getHero, setHero, type HeroApi } from "@/lib/three/heroReady";
 import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
-import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
+import { hasGpuWebGL } from "@/lib/three/support";
+import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
 import { addKeyLabels } from "./keyLabels";
 import { addScreenPlane } from "./screenPlane";
 import { drawScreen } from "./screenTexture";
@@ -52,8 +53,16 @@ export function Hero3D(props: Props) {
     const el = view.current;
     const hero = el?.closest<HTMLElement>("[data-hero]");
     const device = hero?.querySelector<HTMLElement>("[data-device]");
-    if (!el || !hero || !device || !canUse3D(tier, hasGpuWebGL())) return;
+    if (!el || !hero || !device) return;
     const html = document.documentElement;
+    // No 3D on this machine at all: the flat device it is, for every view.
+    if (!hasGpuWebGL()) {
+      delete html.dataset.gl;
+      return;
+    }
+    // Hydration renders with the "full" tier first; the right one remounts this straight after.
+    if (tier !== computeTier(matchMedia(REDUCE_QUERY).matches, matchMedia(NARROW_QUERY).matches)) return;
+    const still = tier === "none"; // reduced motion: the player, held still
     const undo: (() => void)[] = [];
     let dead = false;
     const stop = () => {
@@ -62,14 +71,23 @@ export function Hero3D(props: Props) {
       window.clearTimeout(timer);
       undo.splice(0).reverse().forEach((f) => f());
     };
-    const timer = window.setTimeout(stop, TIMEOUT);
+    // Given up for good (timeout, failure, lost GPU): the flat device shows instead, for the
+    // rest of the visit, so it never swaps back and forth.
+    const giveUp = () => {
+      hero.setAttribute("data-fallback", "");
+      stop();
+    };
+    const timer = window.setTimeout(giveUp, TIMEOUT);
 
     (async () => {
-      // After the page has painted and settled its motion tier (it hydrates as "full").
-      await new Promise<void>((r) => {
-        const id = window.requestIdleCallback ? window.requestIdleCallback(() => r(), { timeout: 1200 }) : window.setTimeout(r, 300);
-        undo.push(() => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : window.clearTimeout(id)));
-      });
+      // During the entrance the dark screen waits for the player: load it at once. Otherwise
+      // after the page has painted.
+      if (!html.dataset.boot) {
+        await new Promise<void>((r) => {
+          const id = window.requestIdleCallback ? window.requestIdleCallback(() => r(), { timeout: 600 }) : window.setTimeout(r, 200);
+          undo.push(() => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : window.clearTimeout(id)));
+        });
+      }
       if (dead) return;
       const stage = await getStage(tier);
       if (dead) return;
@@ -149,21 +167,18 @@ export function Hero3D(props: Props) {
       let knobShown = knobAngle(props.tracks, props.side, props.current);
       mark.rotation.y = -deg(knobShown);
 
-      // How strongly the 3D hero shows: faded in as it takes over, out as the page scrolls on
-      // (the stage fades this view alone; its key labels follow). The sprites fade out as the
-      // 3D fades in, except in a 3D entrance, where they were never seen.
+      // How strongly the 3D hero shows: faded in as it appears, out as the page scrolls on (the
+      // stage fades this view alone). The flat device is never shown alongside it.
       let strength = 0;
       let label = "";
       const applyFade = () => {
         strength = fade.v * (1 - getHeroScroll() * FADE);
-        hero.style.setProperty("--sprite", entered ? "0" : (1 - fade.v).toFixed(3));
         const next = strength >= 0.999 ? "1" : strength.toFixed(3);
         if (next !== label) hero.style.setProperty("--fade3d", (label = next));
       };
       undo.push(subscribeHeroScroll(applyFade));
       undo.push(() => {
         hero.style.removeProperty("--fade3d");
-        hero.style.removeProperty("--sprite");
       });
       applyFade();
 
@@ -229,7 +244,7 @@ export function Hero3D(props: Props) {
         el,
         scene,
         camera,
-        fail: stop,
+        fail: giveUp,
         opacity: () => strength,
         frame(dt) {
           time += dt;
@@ -253,7 +268,7 @@ export function Hero3D(props: Props) {
 
           if (!driving) {
             // The latched key sits down, a pressed one deeper; the knob points at the track.
-            const ease = Math.min(1, dt * 28);
+            const ease = still ? 1 : Math.min(1, dt * 28);
             keys.forEach((k, i) => {
               const a = device.querySelector(`[data-key-index="${i}"]`);
               const sink = a?.hasAttribute("data-pressed") ? 0.07 : a?.hasAttribute("data-latched") ? 0.045 : 0;
@@ -262,7 +277,8 @@ export function Hero3D(props: Props) {
             const target = knobAngle(now.tracks, now.side, now.current);
             if (target !== knobShown) {
               knobShown = target;
-              gsap.to(mark.rotation, { y: -deg(target), duration: 0.5, ease: "back.out(1.6)", overwrite: true });
+              if (still) mark.rotation.y = -deg(target);
+              else gsap.to(mark.rotation, { y: -deg(target), duration: 0.5, ease: "back.out(1.6)", overwrite: true });
             }
             led.emissiveIntensity += ((now.led ? 2.5 : 0) - led.emissiveIntensity) * Math.min(1, dt * 20);
           }
@@ -283,7 +299,7 @@ export function Hero3D(props: Props) {
             shownKey = key;
             shownProgress = now.progress;
             flicker?.kill();
-            if (html.dataset.boot || !old.length) {
+            if (html.dataset.boot || !old.length || still) {
               shown = lines;
               paint();
             } else {
@@ -335,7 +351,8 @@ export function Hero3D(props: Props) {
         if (over) hero.style.cursor = onCassette() ? "pointer" : "grab";
       };
       const down = (e: PointerEvent) => {
-        if (!hero.hasAttribute("data-3d") || e.button !== 0 || (e.target as Element).closest("a, button")) return;
+        // Held still under reduced motion: no turning, no popping the cassette.
+        if (still || !hero.hasAttribute("data-3d") || e.button !== 0 || (e.target as Element).closest("a, button")) return;
         drag = { x: e.clientX, turns: tier === "full" && e.pointerType !== "touch" };
         dragStart = turn.y;
         gsap.killTweensOf(turn);
@@ -408,7 +425,7 @@ export function Hero3D(props: Props) {
       if (dead) return;
       undo.push(stage.add(v));
       window.clearTimeout(timer); // on the stage: the timeout covered loading and compiling
-      undo.push(stage.onLost(stop));
+      undo.push(stage.onLost(giveUp));
       // Draw it unseen first (shaders compile, the screen paints), then take over.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (dead) return;
@@ -418,6 +435,9 @@ export function Hero3D(props: Props) {
         hero.setAttribute("data-3d", "");
         // A short crossfade, unless an entrance is about to play it in (its own fade-in).
         if (html.dataset.boot) {
+          fade.v = 1;
+          applyFade();
+        } else if (still) {
           fade.v = 1;
           applyFade();
         } else gsap.to(fade, { v: 1, duration: 0.5, ease: "power1.inOut", onUpdate: applyFade });
@@ -439,7 +459,7 @@ export function Hero3D(props: Props) {
       } else activate();
     })().catch((e) => {
       console.warn("[3D] the hero kept its fallback:", e);
-      stop();
+      giveUp();
     });
 
     return stop;

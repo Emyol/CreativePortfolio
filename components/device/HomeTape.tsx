@@ -95,7 +95,7 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   return (
     <>
       <header ref={hero} data-hero id="top" className={styles.hero}>
-        {tier !== "none" && <Hero3D key={tier} tracks={tracks} side={side} current={current} screen={entrance.lines ?? nowPlaying ?? cued} progress={entrance.lines || !nowPlaying ? undefined : progress} led={lit || entrance.led} />}
+        <Hero3D key={tier} tracks={tracks} side={side} current={current} screen={entrance.lines ?? nowPlaying ?? cued} progress={entrance.lines || !nowPlaying ? undefined : progress} led={lit || entrance.led} />
         <Device tracks={tracks} side={side} current={current} interactive={heroInView} screen={entrance.lines ?? nowPlaying ?? cued} progress={entrance.lines || !nowPlaying ? undefined : progress} led={lit || entrance.led} className={styles.device} />
       </header>
       {entrance.overlay}
