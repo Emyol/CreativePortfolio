@@ -95,4 +95,39 @@ test.describe("the footer, in 3D", () => {
     expect(Math.abs(dx)).toBeLessThan(2);
     expect(Math.abs(dy)).toBeLessThan(2);
   });
+
+  test("on a tall screen there is room to finish the turn", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1600 });
+    await gotoReady(page, "/#on-rotation");
+    const device = page.locator("footer [data-underside]");
+    await device.scrollIntoViewIfNeeded();
+    await expect(device).toHaveAttribute("data-3d", "", { timeout: 20_000 });
+    await page.mouse.move(720, 300);
+    let last = -1;
+    for (let i = 0; i < 80; i++) {
+      await page.mouse.wheel(0, 200);
+      await page.waitForTimeout(60);
+      const y = await page.evaluate(() => Math.round(scrollY));
+      if (y === last && i > 5) break;
+      last = y;
+    }
+    await expect(device).toHaveAttribute("data-turn", "1.00");
+    await expect(device).toHaveAttribute("data-landed", "");
+  });
+
+  test("the footer holds only once the 3D has taken over", async ({ page }) => {
+    // A slow model: the footer comes into view long before the player can turn over.
+    await page.route("**/device/device.glb", async (route) => {
+      await new Promise((r) => setTimeout(r, 4000));
+      await route.continue();
+    });
+    await gotoReady(page, "/#on-rotation");
+    const device = page.locator("footer [data-underside]");
+    await device.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1500);
+    await expect(device).not.toHaveAttribute("data-3d");
+    await expect(device).not.toHaveAttribute("data-arrival");
+    await expect(device).toHaveAttribute("data-3d", "", { timeout: 20_000 });
+    await expect(device).toHaveAttribute("data-arrival", /\d\.\d\d/);
+  });
 });

@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { packScales } from "@/components/device/useReelMotion";
-import { gsap } from "@/lib/motion/gsap";
+import { gsap, ScrollTrigger } from "@/lib/motion/gsap";
+import { DOCK_RESERVE } from "@/lib/motion/hold";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { useHold, type Arrival } from "@/lib/motion/useHold";
 import { loadDevice } from "@/lib/three/loadDevice";
@@ -36,8 +37,8 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
     fail.current = onFail;
   });
   const turn = useRef({ t: 0 }).current;
-  const arrival = useMemo<Arrival>(() => ({ distance: 1000, hold: (tl) => void tl.fromTo(turn, { t: 0 }, { t: 1, duration: 1 }) }), [turn]);
-  useHold(device, arrival, "underside");
+  // The hold comes with the 3D: a rendered underside has nothing to turn.
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const el = view.current;
@@ -191,11 +192,55 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (dead) return;
       box.setAttribute("data-3d", "");
-      undo.push(() => box.removeAttribute("data-3d"));
+      setReady(true);
+      undo.push(() => {
+        box.removeAttribute("data-3d");
+        setReady(false);
+      });
     })().catch(giveUp);
 
     return stop;
   }, [tier, device, turn]);
 
-  return <div ref={view} className={styles.view} aria-hidden="true" data-underside-view />;
+  return (
+    <>
+      <div ref={view} className={styles.view} aria-hidden="true" data-underside-view />
+      {ready && <UndersideHold device={device} turn={turn} />}
+    </>
+  );
+}
+
+/**
+ * Holds the footer's device box while the scroll turns it. The footer ends soon after the
+ * box, so on a tall screen the page would run out before the hold's end: it gets just enough
+ * room below first (measured from the box and the footer's own content, not the pin).
+ */
+function UndersideHold({ device, turn }: { device: RefObject<HTMLDivElement | null>; turn: { t: number } }) {
+  useLayoutEffect(() => {
+    const box = device.current;
+    const footer = box?.closest("footer");
+    const meta = footer?.lastElementChild as HTMLElement | null;
+    if (!box || !footer || !meta || meta.contains(box)) return;
+    const own = footer.style.paddingBottom;
+    const room = () => {
+      footer.style.paddingBottom = own;
+      const vh = window.innerHeight;
+      const h = box.offsetHeight;
+      const above = vh - DOCK_RESERVE;
+      const bottom = h <= above ? (above + h) / 2 : 10 + h; // the box's bottom while held (holdStart)
+      const style = getComputedStyle(footer);
+      const after = meta.offsetHeight + parseFloat(style.rowGap || "0") + parseFloat(style.paddingBottom);
+      const short = Math.ceil(vh - bottom - after);
+      if (short > 0) footer.style.paddingBottom = `${parseFloat(style.paddingBottom) + short}px`;
+    };
+    room();
+    ScrollTrigger.addEventListener("refreshInit", room);
+    return () => {
+      ScrollTrigger.removeEventListener("refreshInit", room);
+      footer.style.paddingBottom = own;
+    };
+  }, [device]);
+  const arrival = useMemo<Arrival>(() => ({ distance: 1000, hold: (tl) => void tl.fromTo(turn, { t: 0 }, { t: 1, duration: 1 }) }), [turn]);
+  useHold(device, arrival, "underside");
+  return null;
 }
