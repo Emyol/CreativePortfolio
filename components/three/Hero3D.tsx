@@ -28,18 +28,21 @@ type Props = {
   led: boolean;
 };
 
-const TIMEOUT = 8000; // without the model by then, the sprite device stays
+const TIMEOUT = 8000; // without the model by then, the sprite device shows instead
 const FADE = 0.85; // scrolled away, the device fades toward 0.15
 const MAX_TURN = 0.61; // a drag turns it up to about 35°
 const deg = (d: number) => (d * Math.PI) / 180;
+// Whether a hero has been drawn in this page already: a remount (the motion setting changed)
+// then draws at once, since the player was just on screen.
+let shownBefore = false;
 
 /**
  * The hero as the real player in 3D (docs/superpowers/specs/2026-10-18-motion-design.md,
- * "The hero: a real 3D player"), drawn by the shared stage into the hero's box. The sprite
- * device stays underneath as the poster and the fallback: its keys stay the real links,
- * moved over the 3D keys each frame, and all its text stays in the page. Until the model is
- * loaded and drawn, nothing changes; on failure, a timeout or a lost context it gives up and
- * the sprites show again.
+ * "The hero: a real 3D player"), drawn by the shared stage into the hero's box; under reduced
+ * motion it is held still. It is the hero's only look: the sprite device stays in the page
+ * unseen, its keys the real links moved over the 3D keys each frame, its labels printed on
+ * the 3D plate. Until the model is loaded and drawn the hero is empty; on failure, a timeout
+ * or a lost context it gives up and the sprites show instead, for the rest of the visit.
  */
 export function Hero3D(props: Props) {
   const tier = useMotionTier();
@@ -55,11 +58,9 @@ export function Hero3D(props: Props) {
     const device = hero?.querySelector<HTMLElement>("[data-device]");
     if (!el || !hero || !device) return;
     const html = document.documentElement;
-    // No 3D on this machine at all: the flat device it is, for every view.
-    if (!hasGpuWebGL()) {
-      delete html.dataset.gl;
-      return;
-    }
+    // No 3D on this machine at all (settleGl has cleared html[data-gl]), or given up already
+    // this visit: the flat device it is.
+    if (!hasGpuWebGL() || hero.hasAttribute("data-fallback")) return;
     // Hydration renders with the "full" tier first; the right one remounts this straight after.
     if (tier !== computeTier(matchMedia(REDUCE_QUERY).matches, matchMedia(NARROW_QUERY).matches)) return;
     const still = tier === "none"; // reduced motion: the player, held still
@@ -80,9 +81,9 @@ export function Hero3D(props: Props) {
     const timer = window.setTimeout(giveUp, TIMEOUT);
 
     (async () => {
-      // During the entrance the dark screen waits for the player: load it at once. Otherwise
-      // after the page has painted.
-      if (!html.dataset.boot) {
+      // During the entrance the dark screen waits for the player, and a remount replaces one
+      // just shown: both load at once. Otherwise after the page has painted.
+      if (!html.dataset.boot && !shownBefore) {
         await new Promise<void>((r) => {
           const id = window.requestIdleCallback ? window.requestIdleCallback(() => r(), { timeout: 600 }) : window.setTimeout(r, 200);
           undo.push(() => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : window.clearTimeout(id)));
@@ -163,7 +164,7 @@ export function Hero3D(props: Props) {
       const tilt = { x: 0, z: 0 };
       const turn = { y: 0 };
       const dip = { y: 0 };
-      const fade = { v: 0 }; // drawn unseen until it takes over from the sprites
+      const fade = { v: 0 }; // drawn unseen until it takes over
       let entered = false; // the entrance is playing in 3D: it drives keys, knob and LED
       let knobShown = knobAngle(props.tracks, props.side, props.current);
       mark.rotation.y = -deg(knobShown);
@@ -329,7 +330,7 @@ export function Hero3D(props: Props) {
 
           scene.updateMatrixWorld();
           camera.updateMatrixWorld();
-          if (hero.hasAttribute("data-3d")) placeKeys(); // not while the sprites still show
+          if (hero.hasAttribute("data-3d")) placeKeys(); // not before it takes over
         },
       };
 
@@ -444,12 +445,12 @@ export function Hero3D(props: Props) {
       const activate = () => {
         if (dead) return;
         applyFade();
+        const back = shownBefore; // a remount: the player was just on screen
         hero.setAttribute("data-3d", "");
-        // A short crossfade, unless an entrance is about to play it in (its own fade-in).
-        if (html.dataset.boot) {
-          fade.v = 1;
-          applyFade();
-        } else if (still) {
+        shownBefore = true;
+        // A short fade-in, unless an entrance is about to play it in (its own fade-in), it is
+        // held still, or it takes the place of the player that was just there.
+        if (html.dataset.boot || still || back) {
           fade.v = 1;
           applyFade();
         } else gsap.to(fade, { v: 1, duration: 0.5, ease: "power1.inOut", onUpdate: applyFade });

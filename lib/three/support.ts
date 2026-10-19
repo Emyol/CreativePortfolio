@@ -5,7 +5,10 @@ export function dprFor(tier: MotionTier, dpr: number): number {
   return Math.min(dpr, tier === "lite" ? 1.5 : 2);
 }
 
-/** Whether the real-time 3D player is used: never under reduced motion, never without WebGL. */
+/**
+ * Whether the flip and the footer turn in 3D: not under reduced motion (they show the turned
+ * drawing), never without WebGL. The hero is 3D under reduced motion too, held still (Hero3D).
+ */
 export function canUse3D(tier: MotionTier, gl: boolean): boolean {
   return tier !== "none" && gl;
 }
@@ -38,4 +41,18 @@ export function hasGpuWebGL(): boolean {
     gl = false;
   }
   return gl;
+}
+
+/**
+ * Once the page's script runs: html[data-gl] goes from "pending" (set before first paint
+ * wherever WebGL2 exists, lib/powerOn.ts) to "on" where a real GPU will draw the 3D, or away
+ * where it can't, so the flat drawing shows at once on every page. The CSS failsafes cover
+ * only "pending", a script that never ran; from "on", each 3D view's own timeout hands its
+ * box to the flat drawing.
+ */
+export function settleGl(): void {
+  const html = document.documentElement;
+  if (!html.dataset.gl) return;
+  if (hasGpuWebGL()) html.dataset.gl = "on";
+  else delete html.dataset.gl;
 }

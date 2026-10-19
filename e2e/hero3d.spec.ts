@@ -142,9 +142,24 @@ test("without WebGL the sprite device and the entrance still work", async ({ pag
       return (get as (...a: unknown[]) => unknown).call(this, type, ...rest);
     } as typeof HTMLCanvasElement.prototype.getContext;
   });
+  // What the dark screen reads, every frame it changes.
+  await page.addInitScript(() => {
+    const seen: string[] = ((window as unknown as { __boot: string[] }).__boot = []);
+    const tick = () => {
+      const t = document.querySelector("[data-boot-screen]")?.textContent;
+      if (t && t !== seen.at(-1)) seen.push(t);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
   await page.goto("/");
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 3_000 });
   await expect(page.locator("[data-boot-screen]")).toHaveCount(0, { timeout: 8_000 });
   await expect(page.locator("[data-hero] [data-screen]")).toContainText("01 about");
+  // It lands on SIDE A and stays there: the counter never writes over it.
+  const boot = await page.evaluate(() => (window as unknown as { __boot: string[] }).__boot);
+  expect(boot).toContain("SIDE A");
+  expect(boot.slice(boot.indexOf("SIDE A"))).toEqual(["SIDE A"]);
   await page.waitForTimeout(1500);
   await expect(page.locator("[data-hero][data-3d]")).toHaveCount(0);
   // The flat device is the one shown, since 3D can't run here.
@@ -163,4 +178,104 @@ test.describe("reduced motion", () => {
     await expect(page.locator("canvas[data-stage]")).toHaveCount(1);
     expect(await flatSeen(page)).toBe(false);
   });
+});
+
+/** Makes WebGL2 report a software renderer, as with hardware acceleration off or over RDP. */
+const softwareGL = (page: import("@playwright/test").Page) =>
+  page.addInitScript(() => {
+    const get = WebGL2RenderingContext.prototype.getParameter;
+    WebGL2RenderingContext.prototype.getParameter = function (this: WebGL2RenderingContext, p: number) {
+      if (p === 0x9246 || p === 0x1f01) return "Google SwiftShader";
+      return get.call(this, p);
+    } as typeof WebGL2RenderingContext.prototype.getParameter;
+  });
+const footerShown = (page: import("@playwright/test").Page) =>
+  page.locator("footer [data-underside]").evaluate((box) => [getComputedStyle(box.querySelector("img")!).visibility, getComputedStyle(box.querySelector("[data-anchor='door']")!).opacity]);
+
+test("on a software renderer an event page shows its footer at once", async ({ page }) => {
+  await softwareGL(page);
+  await gotoReady(page, "/events/fixture-event-1");
+  await expect(page.locator("html")).not.toHaveAttribute("data-gl");
+  await page.locator("footer [data-underside]").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
+  expect(await footerShown(page)).toEqual(["visible", "1"]);
+});
+
+test("a footer reached after 10 s still never shows flat before its 3D", async ({ page }) => {
+  test.setTimeout(60_000);
+  const release = await holdModel(page);
+  await gotoReady(page, "/#top");
+  await page.waitForTimeout(10_500);
+  const device = page.locator("footer [data-underside]");
+  await device.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(800);
+  expect((await footerShown(page))[0]).toBe("hidden");
+  release();
+  await expect(device).toHaveAttribute("data-3d", "", { timeout: READY });
+});
+
+test("while the 3D loads, a key reached from the keyboard shows its name", async ({ page }) => {
+  const release = await holdModel(page);
+  await gotoReady(page, "/#top");
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press("Tab");
+    if (await page.evaluate(() => !!document.activeElement?.closest("[data-hero] [data-key-index]"))) break;
+  }
+  const [opacity, bg] = await page.evaluate(() => {
+    const span = document.activeElement!.closest("[data-key-index]")!.querySelector("span")!;
+    const s = getComputedStyle(span);
+    return [s.opacity, s.backgroundColor];
+  });
+  expect(opacity).toBe("1");
+  expect(bg).not.toBe("rgba(0, 0, 0, 0)");
+  release();
+});
+
+test("a footer link focused before its 3D arrives keeps the flat footer for the visit", async ({ page }) => {
+  const release = await holdModel(page);
+  await gotoReady(page, "/#on-rotation");
+  const device = page.locator("footer [data-underside]");
+  await device.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(600);
+  await device.locator("[data-anchor='door'] a").first().focus();
+  await expect(device).toHaveAttribute("data-fallback", "");
+  expect(await footerShown(page)).toEqual(["visible", "1"]);
+  release();
+  await page.waitForTimeout(2500);
+  await expect(device).not.toHaveAttribute("data-3d");
+});
+
+test("crossing to phone width doesn't leave the hero empty or fading in again", async ({ page }) => {
+  await gotoReady(page, "/#top");
+  await expect(page.locator("[data-hero][data-3d]")).toHaveCount(1, { timeout: READY });
+  await page.evaluate(() => {
+    const w = window as unknown as { __gap: number; __back: string };
+    w.__gap = 0;
+    let from = 0;
+    const tick = (t: number) => {
+      const on = document.querySelector<HTMLElement>("[data-hero][data-3d]");
+      if (!on && !from) from = t;
+      if (on && from) {
+        w.__gap = Math.max(w.__gap, t - from);
+        w.__back = on.style.getPropertyValue("--fade3d"); // how strongly it shows as it comes back
+        from = 0;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await page.setViewportSize({ width: 700, height: 900 });
+  await expect(page.locator("html")).toHaveAttribute("data-tier", "lite");
+  await page.waitForTimeout(300);
+  await expect(page.locator("[data-hero][data-3d]")).toHaveCount(1, { timeout: READY });
+  await page.waitForTimeout(300);
+  const { gap, back } = await page.evaluate(() => {
+    const w = window as unknown as { __gap: number; __back: string };
+    return { gap: w.__gap, back: w.__back };
+  });
+  // Gone only while it compiles and draws unseen (a new tier can mean new shaders), not left empty…
+  expect(gap).toBeGreaterThan(0);
+  expect(gap).toBeLessThan(2500);
+  // …and it comes back at full strength, not fading in again.
+  expect(back).toBe("1");
 });

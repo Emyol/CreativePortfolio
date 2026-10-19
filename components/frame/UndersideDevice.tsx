@@ -7,7 +7,8 @@ import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
 
 /**
  * The footer's device box. On full motion with a GPU it holds while the 3D player turns over
- * into it (Underside3D); otherwise, or if that fails, it is the rendered underside.
+ * into it (Underside3D); otherwise, if that fails, or if the keyboard gets there first, it is
+ * the rendered underside.
  */
 export function UndersideDevice({ className, children }: { className?: string; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -18,6 +19,17 @@ export function UndersideDevice({ className, children }: { className?: string; c
   const [gpu, setGpu] = useState(false);
   useEffect(() => setGpu(canUse3D(tier, hasGpuWebGL())), [tier]);
   const three = tier === "full" && gpu && !failed;
+  // A link reached from the keyboard before the 3D has taken over can't wait for it: the
+  // rendered underside shows instead, for the visit, so focus never lands on unseen text.
+  useEffect(() => {
+    const box = ref.current;
+    if (!box || !three) return;
+    const focus = (e: FocusEvent) => {
+      if (!box.hasAttribute("data-3d") && (e.target as Element).matches(":focus-visible")) setFailed(true);
+    };
+    box.addEventListener("focusin", focus);
+    return () => box.removeEventListener("focusin", focus);
+  }, [three]);
   return (
     <div ref={ref} className={className} data-underside data-fallback={failed ? "" : undefined}>
       {children}

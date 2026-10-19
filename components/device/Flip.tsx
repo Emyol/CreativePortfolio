@@ -30,9 +30,10 @@ export function Flip() {
   // The 3D cassette on full motion with a GPU; the frames if it can't or it fails.
   // A failed 3D stays failed for the visit: the frames take over and never swap back.
   const [failed, setFailed] = useState(false);
-  const [gpu, setGpu] = useState(false);
+  // Unknown until mounted: no frames load before it's known they're wanted.
+  const [gpu, setGpu] = useState<boolean>();
   useEffect(() => setGpu(canUse3D(tier, hasGpuWebGL())), [tier]);
-  const three = tier === "full" && gpu && !failed;
+  const three = tier === "full" && gpu === true && !failed;
 
   useGSAP(
     () => {
@@ -59,7 +60,7 @@ export function Flip() {
         c.dataset.ready = "";
       };
 
-      if (tier === "full" && near && !three) {
+      if (tier === "full" && near && gpu !== undefined && !three) {
         for (let i = 0; i < N; i++) {
           const img = new Image();
           img.decoding = "async";
@@ -86,7 +87,7 @@ export function Flip() {
       });
       return () => st.kill();
     },
-    { scope: ref, dependencies: [tier, near, three], revertOnUpdate: true },
+    { scope: ref, dependencies: [tier, near, gpu, three], revertOnUpdate: true },
   );
 
   return (
