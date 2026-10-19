@@ -180,11 +180,13 @@ export function Hero3D(props: Props) {
       const corner = new three.Vector3();
       const saved = new Map<HTMLElement, string>();
       const placeKeys = () => {
+        // Every read before any write, and sizes written only when they change: a write
+        // between reads forced a layout per key, every frame.
         const r = el.getBoundingClientRect();
         const d = device.getBoundingClientRect();
-        keys.forEach((k, i) => {
+        const placed = keys.map((k, i) => {
           const a = device.querySelector<HTMLElement>(`[data-key-index="${i}"]`);
-          if (!a) return;
+          if (!a) return null;
           if (!saved.has(a)) saved.set(a, a.style.cssText);
           box.setFromObject(k);
           let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
@@ -192,11 +194,18 @@ export function Hero3D(props: Props) {
             const { x, y } = toViewport(corner.set(cx, box.max.y, cz), r);
             [x0, y0, x1, y1] = [Math.min(x0, x), Math.min(y0, y), Math.max(x1, x), Math.max(y1, y)];
           }
+          return { a, x0, y0, x1, y1, left: a.offsetLeft, top: a.offsetTop, w: a.offsetWidth, h: a.offsetHeight };
+        });
+        for (const p of placed) {
+          if (!p) continue;
+          const { a, x0, y0, x1, y1 } = p;
           // Moved by translate from where the page laid it out, so nothing counts as a shift.
-          Object.assign(a.style, { translate: `${x0 - d.left - a.offsetLeft}px ${y0 - d.top - a.offsetTop}px`, width: `${x1 - x0}px`, height: `${y1 - y0}px` });
+          a.style.translate = `${x0 - d.left - p.left}px ${y0 - d.top - p.top}px`;
+          if (Math.abs(x1 - x0 - p.w) >= 0.5) a.style.width = `${x1 - x0}px`;
+          if (Math.abs(y1 - y0 - p.h) >= 0.5) a.style.height = `${y1 - y0}px`;
           a.dataset.keyX = String(Math.round((x0 + x1) / 2));
           a.dataset.keyY = String(Math.round((y0 + y1) / 2));
-        });
+        }
       };
       undo.push(() =>
         saved.forEach((css, a) => {
