@@ -65,7 +65,6 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
       const family = getComputedStyle(document.documentElement).getPropertyValue("--font-dot").trim() || "Doto";
       const [model] = await Promise.all([loadDevice(three, tier), document.fonts.load(`900 150px ${family}`).catch(() => [])]);
       if (dead) return;
-      window.clearTimeout(timer);
 
       const { scene, dispose } = makeTable(three, environment, tier);
       undo.push(dispose);
@@ -155,6 +154,7 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
         el,
         scene,
         camera,
+        fail: giveUp,
         frame() {
           const vr = el.getBoundingClientRect();
           const br = box.getBoundingClientRect();
@@ -190,6 +190,7 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
       await stage.prepare(v);
       if (dead) return;
       undo.push(stage.add(v));
+      window.clearTimeout(timer); // on the stage: the timeout covered loading and compiling
       undo.push(stage.onLost(giveUp));
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (dead) return;
@@ -199,7 +200,10 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
         box.removeAttribute("data-3d");
         setReady(false);
       });
-    })().catch(giveUp);
+    })().catch((e) => {
+      console.warn("[3D] the footer kept its fallback:", e);
+      giveUp();
+    });
 
     return stop;
   }, [tier, device, turn]);

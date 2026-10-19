@@ -12,6 +12,8 @@ export type View = {
   frame?: (dt: number) => void;
   /** How strongly the view shows, 0 to 1 (1 if left out). Fades this view alone. */
   opacity?: () => number;
+  /** Called if the view throws while drawing: it is taken off the stage, to fall back. */
+  fail?: () => void;
 };
 
 export type Stage = {
@@ -71,9 +73,12 @@ async function create(tier: MotionTier): Promise<Stage> {
   const veil = new three.Mesh(new three.PlaneGeometry(2, 2), new three.MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
   const veilScene = new three.Scene().add(veil);
   const veilCamera = new three.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const pageColour = () => (veil.material.color.setStyle(getComputedStyle(document.documentElement).backgroundColor), undefined);
+  const pageColour = () => {
+    veil.material.color.setStyle(getComputedStyle(document.documentElement).backgroundColor);
+  };
   pageColour();
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", pageColour);
+  const scheme = window.matchMedia("(prefers-color-scheme: dark)");
+  scheme.addEventListener("change", pageColour);
 
   const views = new Set<View>();
   const lost = new Set<() => void>();
@@ -90,20 +95,31 @@ async function create(tier: MotionTier): Promise<Stage> {
     for (const view of views) {
       const rect = view.el.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > h || rect.width === 0 || rect.height === 0) continue;
-      view.frame?.(dt);
-      const [x, y, w, hh] = scissorFor(rect, h);
-      renderer.setViewport(x, y, w, hh);
-      renderer.setScissor(x, y, w, hh);
-      if (view.camera.aspect !== w / hh) {
-        view.camera.aspect = w / hh;
-        view.camera.updateProjectionMatrix();
+      try {
+        drawView(view, rect, h, dt);
+      } catch (e) {
+        // One view's error must not blank the others every frame: it leaves, to fall back.
+        console.warn("[3D] a view failed while drawing and fell back:", e);
+        views.delete(view);
+        run();
+        view.fail?.();
       }
-      renderer.render(view.scene, view.camera);
-      const shown = view.opacity?.() ?? 1;
-      if (shown < 1) {
-        veil.material.opacity = 1 - Math.max(0, shown);
-        renderer.render(veilScene, veilCamera);
-      }
+    }
+  };
+  const drawView = (view: View, rect: DOMRect, h: number, dt: number) => {
+    view.frame?.(dt);
+    const [x, y, w, hh] = scissorFor(rect, h);
+    renderer.setViewport(x, y, w, hh);
+    renderer.setScissor(x, y, w, hh);
+    if (view.camera.aspect !== w / hh) {
+      view.camera.aspect = w / hh;
+      view.camera.updateProjectionMatrix();
+    }
+    renderer.render(view.scene, view.camera);
+    const shown = view.opacity?.() ?? 1;
+    if (shown < 1) {
+      veil.material.opacity = 1 - Math.max(0, shown);
+      renderer.render(veilScene, veilCamera);
     }
   };
 
@@ -112,27 +128,48 @@ async function create(tier: MotionTier): Promise<Stage> {
   document.addEventListener("visibilitychange", run);
   const resize = () => renderer.setSize(window.innerWidth, window.innerHeight);
   window.addEventListener("resize", resize);
-  // A lost context ends this stage: its views fall back, and the next view to ask makes a
-  // fresh one (a dead renderer kept in the cache would take views and draw nothing).
+  // A lost context, or a shader this GPU can't compile, ends this stage: its views fall back,
+  // and the next view to ask makes a fresh one (a dead renderer kept in the cache would take
+  // views and draw nothing).
   let dead = false;
   const created = stage;
+  const end = (why: string) => {
+    if (dead) return;
+    dead = true;
+    console.warn(`[3D] the stage ended (${why}); the views fall back`);
+    if (stage === created) stage = null;
+    renderer.setAnimationLoop(null);
+    document.removeEventListener("visibilitychange", run);
+    window.removeEventListener("resize", resize);
+    scheme.removeEventListener("change", pageColour);
+    try {
+      for (const cb of lost) {
+        try {
+          cb();
+        } catch (e) {
+          console.warn("[3D] a view's fallback threw:", e);
+        }
+      }
+    } finally {
+      lost.clear();
+      views.clear();
+      canvas.remove();
+      veil.geometry.dispose();
+      veil.material.dispose();
+      environment.dispose();
+      renderer.dispose();
+    }
+  };
   canvas.addEventListener(
     "webglcontextlost",
     (e) => {
       e.preventDefault();
-      dead = true;
-      if (stage === created) stage = null;
-      renderer.setAnimationLoop(null);
-      document.removeEventListener("visibilitychange", run);
-      window.removeEventListener("resize", resize);
-      lost.forEach((cb) => cb());
-      lost.clear();
-      views.clear();
-      canvas.remove();
-      renderer.dispose();
+      end("its GPU context was lost");
     },
     { once: true },
   );
+  // Without this, a failed program draws as nothing while its view has hidden the fallback.
+  renderer.debug.onShaderError = () => end("a shader didn't compile on this GPU");
   const alive = () => {
     if (dead) throw new Error("the 3D stage lost its GPU context");
   };

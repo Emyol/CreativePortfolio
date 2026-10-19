@@ -55,7 +55,6 @@ export function Flip3D({ onFail }: { onFail: () => void }) {
       const { THREE: three, environment } = stage;
       const model = await loadDevice(three, tier);
       if (dead) return;
-      window.clearTimeout(timer);
 
       const { scene, dispose } = makeTable(three, environment, tier, -0.6);
       // Seen from straight above, every glossy flat mirrors the room's ceiling light; less of
@@ -114,6 +113,7 @@ export function Flip3D({ onFail }: { onFail: () => void }) {
         el,
         scene,
         camera,
+        fail: giveUp,
         frame() {
           const t = turn.scroll + turn.spin;
           const whole = Math.floor(t);
@@ -168,6 +168,7 @@ export function Flip3D({ onFail }: { onFail: () => void }) {
       await stage.prepare(v);
       if (dead) return;
       undo.push(stage.add(v));
+      window.clearTimeout(timer); // on the stage: the timeout covered loading and compiling
       undo.push(stage.onLost(giveUp));
       // Drawn once unseen, then it takes over from the poster frame.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -177,7 +178,10 @@ export function Flip3D({ onFail }: { onFail: () => void }) {
         flip.removeAttribute("data-3d");
         delete flip.dataset.turn;
       });
-    })().catch(giveUp);
+    })().catch((e) => {
+      console.warn("[3D] the flip kept its fallback:", e);
+      giveUp();
+    });
 
     return stop;
   }, [tier]);

@@ -76,7 +76,6 @@ export function Hero3D(props: Props) {
       const family = getComputedStyle(html).getPropertyValue("--font-dot").trim() || "Doto";
       const [model] = await Promise.all([loadDevice(three, tier), document.fonts.load(`900 150px ${family}`).catch(() => [])]);
       if (dead) return;
-      window.clearTimeout(timer);
 
       const { scene, light, dispose: disposeTable } = makeTable(three, environment, tier);
       const camera = new three.PerspectiveCamera(28, 1, 0.1, 100);
@@ -220,6 +219,7 @@ export function Hero3D(props: Props) {
         el,
         scene,
         camera,
+        fail: stop,
         opacity: () => strength,
         frame(dt) {
           time += dt;
@@ -389,6 +389,7 @@ export function Hero3D(props: Props) {
       await stage.prepare(v);
       if (dead) return;
       undo.push(stage.add(v));
+      window.clearTimeout(timer); // on the stage: the timeout covered loading and compiling
       undo.push(stage.onLost(stop));
       // Draw it unseen first (shaders compile, the screen paints), then take over.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -418,7 +419,10 @@ export function Hero3D(props: Props) {
         mo.observe(html, { attributes: true, attributeFilter: ["data-boot"] });
         undo.push(() => mo.disconnect());
       } else activate();
-    })().catch(stop);
+    })().catch((e) => {
+      console.warn("[3D] the hero kept its fallback:", e);
+      stop();
+    });
 
     return stop;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- set up once per tier; props are read live
