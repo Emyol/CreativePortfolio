@@ -41,13 +41,14 @@
 .credit:focus-within .name { color: var(--oled-text); letter-spacing: 0.04em; }
 .name a { text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
 
-/* With a pointer, a note opens with its name; touch screens show every note. */
+/* With a pointer, a note opens with its linked name (hover or keyboard focus); a name with
+   no link can't take focus, so its note always shows, as every note does on touch screens. */
 .noteBox { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 300ms var(--ease-out); }
 .noteBox > .note { overflow: hidden; min-height: 0; }
 @media (hover: hover) and (pointer: fine) {
-  .noteBox { grid-template-rows: 0fr; }
-  .credit:hover .noteBox,
-  .credit:focus-within .noteBox { grid-template-rows: 1fr; }
+  .credit[data-linked] .noteBox { grid-template-rows: 0fr; }
+  .credit[data-linked]:hover .noteBox,
+  .credit[data-linked]:focus-within .noteBox { grid-template-rows: 1fr; }
 }
 html[data-tier="none"] .name,
 html[data-tier="none"] .noteBox { transition: none; }

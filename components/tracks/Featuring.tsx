@@ -11,7 +11,7 @@ export function Featuring({ people }: { people: Person[] }) {
     <div className={styles.window} data-credits-window>
       <ul className={styles.credits}>
         {people.map((p, i) => (
-          <li key={`${p.name}-${i}`} className={styles.credit}>
+          <li key={`${p.name}-${i}`} className={styles.credit} data-linked={p.link ? "" : undefined}>
             <span className={styles.relation}>{p.relation}</span>
             <h3 className={styles.name}>{p.link ? <a href={p.link}>{p.name}</a> : p.name}</h3>
             {p.note && (
