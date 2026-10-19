@@ -1,8 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { gsap, useGSAP } from "@/lib/motion/gsap";
-import { writeStorage } from "@/lib/motion/storage";
-import { POWER_KEY } from "@/lib/powerOn";
 import { decideEntrance, getHero, resetEntranceDecision } from "@/lib/three/heroReady";
 import { boostReels } from "./useReelMotion";
 import styles from "./Entrance.module.css";
@@ -12,14 +10,14 @@ const SKIP = ["wheel", "keydown", "pointerdown", "touchstart"] as const;
 const WAIT = 5000; // ms the dark waits for the 3D player before going on without it
 
 /**
- * Once per session, the page opens as the player's dark screen: a tape counter runs up, and
+ * On every load of the home page, the page opens as the player's dark screen: a tape counter runs up, and
  * keeps winding while the 3D player loads (up to WAIT), then lands on SIDE A. The dark
  * shrinks into the player's own screen while the player appears
  * around it with its window empty, then the cassette drops in, the deck takes its weight,
  * the reels spin up, the keys rise, the knob swings to the first track and "01 about" types
  * out (docs/superpowers/specs/2026-10-18-motion-design.md, "The entrance"). The page works
  * throughout and any input finishes it at once. It never plays under reduced motion, at a
- * deep link, or coming back (the prepaint gate in lib/powerOn.ts).
+ * deep link, or coming back within the site (the prepaint gate in lib/powerOn.ts).
  *
  * Returns what the hero screen shows meanwhile, whether the LED is on, and the overlay.
  */
@@ -63,7 +61,6 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
           knob.style.transition = knobTransition;
         }
         resetEntranceDecision();
-        writeStorage("session", POWER_KEY, "1");
         delete html.dataset.boot;
         setLines(undefined);
         setLed(false);

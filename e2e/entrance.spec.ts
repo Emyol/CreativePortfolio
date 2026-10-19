@@ -21,11 +21,19 @@ test("the first visit plays the entrance once and settles", async ({ page }) => 
   expect(seen.at(-1)).toBeNull();
   await expect(screen(page)).toContainText("SIDE A");
   await expect(screen(page)).toContainText("01 about");
-  // Once per session.
-  await page.reload();
-  await page.waitForSelector("html[data-tier]", { state: "attached" });
+});
+
+test("a reload plays it again, from the top", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 3_000 });
+  await page.keyboard.press("Escape"); // skip it
   await expect(page.locator("[data-boot-screen]")).toHaveCount(0);
-  await expect(page.locator("html")).not.toHaveAttribute("data-boot");
+  await page.mouse.wheel(0, 1500);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(500);
+  await page.reload();
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 3_000 });
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+  await expect(page.locator("[data-boot-screen]")).toHaveCount(0, { timeout: 12_000 });
 });
 
 test("any input skips it", async ({ page }) => {
