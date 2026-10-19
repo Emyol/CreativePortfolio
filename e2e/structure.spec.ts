@@ -116,9 +116,11 @@ test.describe("the footer, in 3D", () => {
   });
 
   test("the footer holds only once the 3D has taken over", async ({ page }) => {
-    // A slow model: the footer comes into view long before the player can turn over.
+    // A slow model: held back until the footer has been in view a while.
+    let release = () => {};
+    const held = new Promise<void>((r) => (release = r));
     await page.route("**/device/device.glb", async (route) => {
-      await new Promise((r) => setTimeout(r, 4000));
+      await held;
       await route.continue();
     });
     await gotoReady(page, "/#on-rotation");
@@ -127,6 +129,7 @@ test.describe("the footer, in 3D", () => {
     await page.waitForTimeout(1500);
     await expect(device).not.toHaveAttribute("data-3d");
     await expect(device).not.toHaveAttribute("data-arrival");
+    release();
     await expect(device).toHaveAttribute("data-3d", "", { timeout: 20_000 });
     await expect(device).toHaveAttribute("data-arrival", /\d\.\d\d/);
   });
