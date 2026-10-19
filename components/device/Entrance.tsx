@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { gsap, useGSAP } from "@/lib/motion/gsap";
+import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { decideEntrance, getHero, resetEntranceDecision } from "@/lib/three/heroReady";
 import { boostReels } from "./useReelMotion";
 import styles from "./Entrance.module.css";
@@ -16,8 +17,8 @@ const WAIT = 5000; // ms the dark waits for the 3D player before going on withou
  * around it with its window empty, then the cassette drops in, the deck takes its weight,
  * the reels spin up, the keys rise, the knob swings to the first track and "01 about" types
  * out (docs/superpowers/specs/2026-10-18-motion-design.md, "The entrance"). The page works
- * throughout and any input finishes it at once. It never plays under reduced motion, at a
- * deep link, or coming back within the site (the prepaint gate in lib/powerOn.ts).
+ * throughout; any input, or reduced motion switched on, finishes it at once. It never plays
+ * under reduced motion, at a deep link, or coming back (the prepaint gate in lib/powerOn.ts).
  *
  * Returns what the hero screen shows meanwhile, whether the LED is on, and the overlay.
  */
@@ -27,6 +28,8 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
   const [led, setLed] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const label = useRef<HTMLSpanElement>(null);
+  const skipNow = useRef<() => void>(undefined);
+  const tier = useMotionTier();
 
   useEffect(() => {
     if (document.documentElement.dataset.boot === "pending") setRunning(true);
@@ -77,7 +80,7 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
       const began = performance.now();
       const tl = gsap.timeline({ paused: true, onComplete: finish });
       const winding = window.setInterval(() => {
-        if (intro.isActive()) return;
+        if (intro.progress() < 1) return; // the counter runs in first (isActive is false during its delay)
         if (getHero() || flat() || performance.now() - began > WAIT) {
           window.clearInterval(winding);
           tl.play();
@@ -145,7 +148,9 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
         finish();
       };
       SKIP.forEach((e) => window.addEventListener(e, skip, { capture: true, passive: true }));
+      skipNow.current = skip;
       return () => {
+        skipNow.current = undefined;
         SKIP.forEach((e) => window.removeEventListener(e, skip, { capture: true }));
         window.clearInterval(winding);
         intro.kill();
@@ -154,6 +159,10 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
     },
     { dependencies: [running], revertOnUpdate: true },
   );
+  // Reduced motion switched on mid-entrance: it ends there, as any input would end it.
+  useEffect(() => {
+    if (tier === "none") skipNow.current?.();
+  }, [tier]);
 
   const overlay = running ? (
     <div ref={box} className={styles.boot} aria-hidden="true" data-boot-screen>

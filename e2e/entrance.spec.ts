@@ -68,3 +68,44 @@ test.describe("reduced motion", () => {
     await expect(screen(page)).toContainText("SIDE A");
   });
 });
+
+test("coming back from another site doesn't replay it or lose the place", async ({ page }) => {
+  await page.addInitScript(() => window.addEventListener("unload", () => {})); // no back/forward cache: a real reload
+  await page.goto("/");
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 3_000 });
+  await page.keyboard.press("Escape");
+  await expect(page.locator("[data-boot-screen]")).toHaveCount(0);
+  await page.mouse.wheel(0, 1500);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(500);
+  await page.waitForTimeout(600);
+  await page.evaluate(() => ((window as unknown as { __mark: number }).__mark = 1));
+  await page.goto("about:blank");
+  await page.goBack();
+  await page.waitForSelector("html[data-tier]", { state: "attached" });
+  expect(await page.evaluate(() => (window as unknown as { __mark?: number }).__mark)).toBeUndefined();
+  await expect(page.locator("html")).not.toHaveAttribute("data-boot");
+  await expect(page.locator("[data-boot-screen]")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(300);
+});
+
+test("switching on reduced motion mid-entrance ends it", async ({ page }) => {
+  // A slow model keeps the dark winding, so there is time to switch.
+  await page.route("**/device/device.glb", () => {});
+  await page.goto("/");
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 3_000 });
+  await page.waitForTimeout(1200);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator("[data-boot-screen]")).toHaveCount(0, { timeout: 1_000 });
+  await expect(page.locator("html")).not.toHaveAttribute("data-boot");
+  await expect(screen(page)).toContainText("SIDE A");
+});
+
+test("pages reached from home keep the browser's own scroll restoration", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 3_000 });
+  await page.keyboard.press("Escape");
+  expect(await page.evaluate(() => history.scrollRestoration)).toBe("manual");
+  await page.locator("a[href^='/events/']").first().evaluate((a) => (a as HTMLAnchorElement).click());
+  await expect(page).toHaveURL(/\/events\//);
+  await expect.poll(() => page.evaluate(() => history.scrollRestoration)).toBe("auto");
+});
