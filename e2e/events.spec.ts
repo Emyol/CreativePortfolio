@@ -151,3 +151,14 @@ test.describe("the write-in", () => {
     expect(held).toBe(true);
   });
 });
+
+test.describe("after the arrival", () => {
+  test.use({ reducedMotion: "no-preference" });
+
+  test("arrived cards clip nothing, so their focus ring shows", async ({ page }) => {
+    await gotoReady(page, "/#events");
+    await headingAtTop(page, "events");
+    const clips = await page.locator("#events li").evaluateAll((lis) => lis.slice(0, 3).map((li) => getComputedStyle(li).clipPath));
+    expect(clips).toEqual(["none", "none", "none"]);
+  });
+});

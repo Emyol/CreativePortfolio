@@ -29,7 +29,8 @@ function drop(tl: gsap.core.Timeline, li: HTMLElement, at: number) {
 /** A print recorded in to `share` (0 to 1): revealed from the left, dark and grey to full colour. */
 function record(li: HTMLElement, share: number) {
   const f = gsap.utils.clamp(0, 1, share);
-  li.style.clipPath = `inset(0 ${((1 - f) * 100).toFixed(1)}% 0 0)`;
+  // Recorded in full, it clips nothing: an inset left in place would clip the focus ring.
+  li.style.clipPath = f >= 1 ? "" : `inset(0 ${((1 - f) * 100).toFixed(1)}% 0 0)`;
   const media = li.querySelector<HTMLElement>("[data-media]");
   if (media) media.style.filter = f >= 1 ? "" : `brightness(${(0.35 + 0.65 * f).toFixed(3)}) saturate(${f.toFixed(3)})`;
 }
