@@ -148,9 +148,13 @@ export function useEntrance(): { lines: string[] | undefined; led: boolean; over
         finish();
       };
       SKIP.forEach((e) => window.addEventListener(e, skip, { capture: true, passive: true }));
+      // Left mid-entrance and brought back from the back/forward cache: no replay, it ends.
+      const restored = (e: PageTransitionEvent) => e.persisted && skip();
+      window.addEventListener("pageshow", restored);
       skipNow.current = skip;
       return () => {
         skipNow.current = undefined;
+        window.removeEventListener("pageshow", restored);
         SKIP.forEach((e) => window.removeEventListener(e, skip, { capture: true }));
         window.clearInterval(winding);
         intro.kill();

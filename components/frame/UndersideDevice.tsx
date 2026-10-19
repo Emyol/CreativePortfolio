@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Underside3D } from "@/components/three/Underside3D";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { useInViewOnce } from "@/lib/motion/useInViewOnce";
-import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
+import { canUse3D, canDraw3D } from "@/lib/three/support";
 
 /**
  * The footer's device box. On full motion with a GPU it holds while the 3D player turns over
@@ -14,13 +14,13 @@ export function UndersideDevice({ className, children }: { className?: string; c
   const ref = useRef<HTMLDivElement>(null);
   const tier = useMotionTier();
   const near = useInViewOnce(ref, "100% 0px 100% 0px");
-  // A failed 3D stays failed for the visit: the rendered underside shows and never swaps back.
+  // A failed 3D stays failed on this page: the rendered underside shows and never swaps back.
   const [failed, setFailed] = useState(false);
   const [gpu, setGpu] = useState(false);
-  useEffect(() => setGpu(canUse3D(tier, hasGpuWebGL())), [tier]);
+  useEffect(() => setGpu(canUse3D(tier, canDraw3D())), [tier]);
   const three = tier === "full" && gpu && !failed;
   // A link reached from the keyboard before the 3D has taken over can't wait for it: the
-  // rendered underside shows instead, for the visit, so focus never lands on unseen text.
+  // rendered underside shows instead, for this page, so focus never lands on unseen text.
   useEffect(() => {
     const box = ref.current;
     if (!box || !three) return;

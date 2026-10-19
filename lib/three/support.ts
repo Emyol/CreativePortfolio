@@ -43,16 +43,31 @@ export function hasGpuWebGL(): boolean {
   return gl;
 }
 
+/** When the CSS failsafes show the flat drawing if the page's script hasn't run yet (the
+ * gl-failsafe animations in HomeTape, Flip and Underside's CSS). */
+export const GL_FAILSAFE = 10_000;
+
+/**
+ * Whether this page load draws the 3D: a real GPU, and the script arrived before the
+ * failsafe showed the flat drawing (past that the drawing stays, never swapped for the 3D).
+ * Decided at the first call, at hydration, so later pages of the visit agree.
+ */
+let late: boolean | undefined;
+export function canDraw3D(): boolean {
+  late ??= performance.now() >= GL_FAILSAFE;
+  return !late && hasGpuWebGL();
+}
+
 /**
  * Once the page's script runs: html[data-gl] goes from "pending" (set before first paint
- * wherever WebGL2 exists, lib/powerOn.ts) to "on" where a real GPU will draw the 3D, or away
- * where it can't, so the flat drawing shows at once on every page. The CSS failsafes cover
- * only "pending", a script that never ran; from "on", each 3D view's own timeout hands its
- * box to the flat drawing.
+ * wherever WebGL2 exists, lib/powerOn.ts) to "on" where the 3D will draw, or away where it
+ * won't, so the flat drawing shows at once on every page. The CSS failsafes cover only
+ * "pending", a script that never ran; from "on", each 3D view's own timeout hands its box
+ * to the flat drawing.
  */
 export function settleGl(): void {
   const html = document.documentElement;
   if (!html.dataset.gl) return;
-  if (hasGpuWebGL()) html.dataset.gl = "on";
+  if (canDraw3D()) html.dataset.gl = "on";
   else delete html.dataset.gl;
 }

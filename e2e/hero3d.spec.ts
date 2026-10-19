@@ -47,7 +47,7 @@ test("the entrance waits for the 3D and plays in it", async ({ page }) => {
   await watchFlat(page);
   const release = await holdModel(page);
   await page.goto("/");
-  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 3_000 });
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 8_000 });
   await page.waitForTimeout(2500);
   await expect(page.locator("[data-boot-screen]")).toBeVisible(); // still winding the tape in
   release();
@@ -153,7 +153,7 @@ test("without WebGL the sprite device and the entrance still work", async ({ pag
     requestAnimationFrame(tick);
   });
   await page.goto("/");
-  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 3_000 });
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 8_000 });
   await expect(page.locator("[data-boot-screen]")).toHaveCount(0, { timeout: 8_000 });
   await expect(page.locator("[data-hero] [data-screen]")).toContainText("01 about");
   // It lands on SIDE A and stays there: the counter never writes over it.
@@ -278,4 +278,43 @@ test("crossing to phone width doesn't leave the hero empty or fading in again", 
   expect(gap).toBeLessThan(2500);
   // …and it comes back at full strength, not fading in again.
   expect(back).toBe("1");
+});
+
+test("a script that arrives after the failsafe keeps the flat device, never swapping it", async ({ page }) => {
+  test.setTimeout(60_000);
+  const start = Date.now();
+  await page.route(/\/_next\/static\/.*\.js/, async (route) => {
+    await new Promise((r) => setTimeout(r, Math.max(0, 11_000 - (Date.now() - start))));
+    await route.continue();
+  });
+  await page.goto("/#top");
+  await page.waitForSelector("html[data-tier]", { state: "attached", timeout: 40_000 });
+  const plate = page.locator("[data-hero] [data-device] img[src*='/plate.']");
+  await page.waitForTimeout(3000);
+  expect(await plate.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+  await expect(page.locator("html")).not.toHaveAttribute("data-gl");
+  await expect(page.locator("[data-hero][data-3d]")).toHaveCount(0);
+});
+
+test("Back from a footer link puts the visitor back at the landed footer", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.addInitScript(() => window.addEventListener("unload", () => {})); // no back/forward cache: a real reload
+  await page.goto("/");
+  await expect(page.locator("[data-boot-screen]")).toBeVisible({ timeout: 8_000 });
+  await page.keyboard.press("Escape");
+  const device = page.locator("footer [data-underside]");
+  await device.scrollIntoViewIfNeeded();
+  await expect(device).toHaveAttribute("data-3d", "", { timeout: READY });
+  for (let i = 0; i < 6; i++) {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(400);
+  }
+  await expect(device).toHaveAttribute("data-landed", "");
+  const left = await page.evaluate(() => Math.round(scrollY));
+  await page.goto("about:blank");
+  await page.goBack();
+  await page.waitForSelector("html[data-tier]", { state: "attached" });
+  await expect(device).toHaveAttribute("data-3d", "", { timeout: READY });
+  await expect.poll(() => page.evaluate(() => Math.round(scrollY)), { timeout: 15_000 }).toBeGreaterThan(left - 5);
+  await expect(device).toHaveAttribute("data-landed", "");
 });

@@ -10,7 +10,7 @@ import { keySlots, knobAngle, type SideId, type Track, type TrackId } from "@/li
 import { entranceDecision, getHero, setHero, type HeroApi } from "@/lib/three/heroReady";
 import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
-import { hasGpuWebGL } from "@/lib/three/support";
+import { canDraw3D } from "@/lib/three/support";
 import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
 import { addKeyLabels, PLANE_H, PLANE_W } from "./keyLabels";
 import { addScreenPlane } from "./screenPlane";
@@ -32,9 +32,6 @@ const TIMEOUT = 8000; // without the model by then, the sprite device shows inst
 const FADE = 0.85; // scrolled away, the device fades toward 0.15
 const MAX_TURN = 0.61; // a drag turns it up to about 35°
 const deg = (d: number) => (d * Math.PI) / 180;
-// Whether a hero has been drawn in this page already: a remount (the motion setting changed)
-// then draws at once, since the player was just on screen.
-let shownBefore = false;
 
 /**
  * The hero as the real player in 3D (docs/superpowers/specs/2026-10-18-motion-design.md,
@@ -42,7 +39,7 @@ let shownBefore = false;
  * motion it is held still. It is the hero's only look: the sprite device stays in the page
  * unseen, its keys the real links moved over the 3D keys each frame, its labels printed on
  * the 3D plate. Until the model is loaded and drawn the hero is empty; on failure, a timeout
- * or a lost context it gives up and the sprites show instead, for the rest of the visit.
+ * or a lost context it gives up and the sprites show instead, for the rest of this page.
  */
 export function Hero3D(props: Props) {
   const tier = useMotionTier();
@@ -58,9 +55,9 @@ export function Hero3D(props: Props) {
     const device = hero?.querySelector<HTMLElement>("[data-device]");
     if (!el || !hero || !device) return;
     const html = document.documentElement;
-    // No 3D on this machine at all (settleGl has cleared html[data-gl]), or given up already
-    // this visit: the flat device it is.
-    if (!hasGpuWebGL() || hero.hasAttribute("data-fallback")) return;
+    // No 3D here (no GPU, or the page's script came after the failsafe; settleGl clears
+    // html[data-gl]), or given up already on this page: the flat device it is.
+    if (!canDraw3D() || hero.hasAttribute("data-fallback")) return;
     // Hydration renders with the "full" tier first; the right one remounts this straight after.
     if (tier !== computeTier(matchMedia(REDUCE_QUERY).matches, matchMedia(NARROW_QUERY).matches)) return;
     const still = tier === "none"; // reduced motion: the player, held still
@@ -73,7 +70,7 @@ export function Hero3D(props: Props) {
       undo.splice(0).reverse().forEach((f) => f());
     };
     // Given up for good (timeout, failure, lost GPU): the flat device shows instead, for the
-    // rest of the visit, so it never swaps back and forth.
+    // rest of this page (a remount keeps it), so it never swaps back and forth.
     const giveUp = () => {
       hero.setAttribute("data-fallback", "");
       stop();
@@ -83,7 +80,7 @@ export function Hero3D(props: Props) {
     (async () => {
       // During the entrance the dark screen waits for the player, and a remount replaces one
       // just shown: both load at once. Otherwise after the page has painted.
-      if (!html.dataset.boot && !shownBefore) {
+      if (!html.dataset.boot && !hero.hasAttribute("data-shown")) {
         await new Promise<void>((r) => {
           const id = window.requestIdleCallback ? window.requestIdleCallback(() => r(), { timeout: 600 }) : window.setTimeout(r, 200);
           undo.push(() => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : window.clearTimeout(id)));
@@ -445,9 +442,11 @@ export function Hero3D(props: Props) {
       const activate = () => {
         if (dead) return;
         applyFade();
-        const back = shownBefore; // a remount: the player was just on screen
+        // A remount (the motion tier changed) keeps the hero element, and its mark: the player
+        // was just on screen. A new visit to the page starts afresh.
+        const back = hero.hasAttribute("data-shown");
         hero.setAttribute("data-3d", "");
-        shownBefore = true;
+        hero.setAttribute("data-shown", "");
         // A short fade-in, unless an entrance is about to play it in (its own fade-in), it is
         // held still, or it takes the place of the player that was just there.
         if (html.dataset.boot || still || back) {

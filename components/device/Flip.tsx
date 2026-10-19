@@ -6,7 +6,7 @@ import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { useInViewOnce } from "@/lib/motion/useInViewOnce";
 import { playClunk } from "@/lib/sound";
-import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
+import { canUse3D, canDraw3D } from "@/lib/three/support";
 import styles from "./Flip.module.css";
 
 const N = DEVICE.flipFrames;
@@ -28,11 +28,11 @@ export function Flip() {
   // Frames load only when the flip is within a screen of the viewport.
   const near = useInViewOnce(ref, "100% 0px 100% 0px");
   // The 3D cassette on full motion with a GPU; the frames if it can't or it fails.
-  // A failed 3D stays failed for the visit: the frames take over and never swap back.
+  // A failed 3D stays failed on this page: the frames take over and never swap back.
   const [failed, setFailed] = useState(false);
   // Unknown until mounted: no frames load before it's known they're wanted.
   const [gpu, setGpu] = useState<boolean>();
-  useEffect(() => setGpu(canUse3D(tier, hasGpuWebGL())), [tier]);
+  useEffect(() => setGpu(canUse3D(tier, canDraw3D())), [tier]);
   const three = tier === "full" && gpu === true && !failed;
 
   useGSAP(

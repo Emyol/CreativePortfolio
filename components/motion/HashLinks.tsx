@@ -1,6 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { ScrollTrigger } from "@/lib/motion/gsap";
 import { getLenis, scrollToId } from "@/lib/motion/navigate";
 import { readStorage, writeStorage } from "@/lib/motion/storage";
 
@@ -14,6 +15,48 @@ const coldTraversal = () => {
   const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   return !coldRestored && nav?.type === "back_forward" && history.scrollRestoration === "manual";
 };
+
+const SETTLE = 10_000; // ms a restore keeps at it
+const MOVES = ["wheel", "keydown", "pointerdown", "touchstart"] as const;
+
+/**
+ * Puts the visitor back at `y`, two frames in (after Next's own hash scroll). Holds made
+ * late (the footer's, once its 3D is ready, and its padding) lengthen the page and can move
+ * the scroll after that, so it puts them back whenever the page grows or ScrollTrigger
+ * refreshes, until the visitor moves or SETTLE passes.
+ */
+function restore(y: number, placed: () => void): () => void {
+  let raf = 0;
+  const grows = new ResizeObserver(() => put());
+  const put = () => {
+    if (Math.abs(window.scrollY - y) < 2) return;
+    const lenis = getLenis();
+    if (lenis) {
+      lenis.resize();
+      lenis.scrollTo(y, { immediate: true });
+    } else {
+      window.scrollTo(0, y);
+    }
+  };
+  const stop = () => {
+    cancelAnimationFrame(raf);
+    window.clearTimeout(timer);
+    ScrollTrigger.removeEventListener("refresh", put);
+    grows.disconnect();
+    MOVES.forEach((e) => window.removeEventListener(e, stop, { capture: true }));
+  };
+  const timer = window.setTimeout(stop, SETTLE);
+  raf = requestAnimationFrame(() => {
+    raf = requestAnimationFrame(() => {
+      placed();
+      ScrollTrigger.addEventListener("refresh", put);
+      grows.observe(document.body);
+      put();
+    });
+  });
+  MOVES.forEach((e) => window.addEventListener(e, stop, { capture: true, passive: true }));
+  return stop;
+}
 
 export function HashLinks() {
   const pathname = usePathname();
@@ -58,20 +101,7 @@ export function HashLinks() {
       traversing.current = false;
       const saved = Number(readStorage("session", scrollKey()));
       if (!Number.isFinite(saved) || saved <= 0) return;
-      // Two frames: after Next's own hash scroll, then put the visitor back.
-      let raf = requestAnimationFrame(() => {
-        raf = requestAnimationFrame(() => {
-          coldRestored = true;
-          const lenis = getLenis();
-          if (lenis) {
-            lenis.resize();
-            lenis.scrollTo(saved, { immediate: true });
-          } else {
-            window.scrollTo(0, saved);
-          }
-        });
-      });
-      return () => cancelAnimationFrame(raf);
+      return restore(saved, () => (coldRestored = true));
     }
     // Cold deep links and arrivals from other pages by link (e.g. "Back to Events").
     const id = idFromHash(location.hash);
