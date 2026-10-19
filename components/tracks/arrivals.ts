@@ -1,6 +1,7 @@
-import { gsap } from "@/lib/motion/gsap";
+import { gsap, ScrollTrigger } from "@/lib/motion/gsap";
 import type { Arrival } from "@/lib/motion/useHold";
 import type { TrackId } from "@/lib/tape";
+import { flickerDots, revealDots } from "./DotPhoto";
 
 /** A mixtape row printed in: its title revealed a character's width at a time (visual only; the text is always there). */
 function print(tl: gsap.core.Timeline, li: HTMLElement, at: number) {
@@ -40,7 +41,8 @@ function record(li: HTMLElement, share: number) {
  * Distances are the desktop hold lengths measured in the mockups.
  */
 export const ARRIVALS: Record<TrackId, Arrival> = {
-  // The letter unfolds like a folded J-card insert: the lower fold swings down and open.
+  // The letter unfolds like a folded J-card insert: the lower fold swings down and open,
+  // while the candid's screen powers on, a scanline lighting it row by row, then flickers.
   about: {
     distance: 650,
     hold: (tl, { root }) => {
@@ -48,6 +50,33 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
       const bottom = root.querySelector("[data-fold=bottom]");
       if (top) tl.fromTo(top, { opacity: 0.4 }, { opacity: 1, duration: 0.3 }, 0);
       if (bottom) tl.fromTo(bottom, { rotateX: -178, transformPerspective: 1400, transformOrigin: "50% 0%" }, { rotateX: 0, ease: "power2.inOut", duration: 1 }, 0.1);
+      const screen = root.querySelector("[data-dot-photo]");
+      if (!screen) return;
+      const power = { on: 0 };
+      // It flickers once as it comes fully on, and again only after going fully dark.
+      let flickered = false;
+      const show = () => {
+        revealDots(screen, power.on);
+        if (power.on <= 0) flickered = false;
+        else if (power.on >= 1 && !flickered) {
+          flickered = true;
+          flickerDots(screen);
+        }
+      };
+      revealDots(screen, 0);
+      tl.to(power, { on: 1, ease: "none", duration: 0.8, onUpdate: show }, 0.15);
+      // A refresh (a resize) rewinds the hold and puts it back without updates: draw what it
+      // put back, without a flicker.
+      const sync = () => {
+        revealDots(screen, power.on);
+        flickered = power.on > 0;
+      };
+      ScrollTrigger.addEventListener("refresh", sync);
+      // Without the hold (reduced motion, or torn down), the screen is simply on.
+      return () => {
+        ScrollTrigger.removeEventListener("refresh", sync);
+        revealDots(screen, 1);
+      };
     },
   },
   // A red REC playhead sweeps across and records each print in as it passes.
@@ -68,14 +97,25 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
       };
       paint();
       tl.to(head, { at: 1, duration: 1, onUpdate: paint }, 0);
+      // A refresh (a resize) rewinds the hold and puts it back without updates: paint what it
+      // put back, or every print stays clipped away.
+      ScrollTrigger.addEventListener("refresh", paint);
       // record() writes styles directly, which GSAP's revert can't undo.
-      return () => root.querySelectorAll<HTMLElement>("li").forEach(unrecord);
+      return () => {
+        ScrollTrigger.removeEventListener("refresh", paint);
+        root.querySelectorAll<HTMLElement>("li").forEach(unrecord);
+      };
     },
     enter: (tl, li) => {
       const row = { at: 0 };
+      const show = () => record(li, row.at);
       record(li, 0);
-      tl.to(row, { at: 1, duration: 1, onUpdate: () => record(li, row.at) });
-      return () => unrecord(li);
+      tl.to(row, { at: 1, duration: 1, onUpdate: show });
+      ScrollTrigger.addEventListener("refresh", show); // as in the hold
+      return () => {
+        ScrollTrigger.removeEventListener("refresh", show);
+        unrecord(li);
+      };
     },
   },
   // Each title prints out like a label maker, a character at a time, and its number punches in.

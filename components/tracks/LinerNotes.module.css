@@ -29,7 +29,7 @@
   background: repeating-linear-gradient(0deg, #15161a 0 31px, #1d1f24 31px 32px);
 }
 
-/* The candid can be picked up: a grab cursor where it can be dragged. */
+/* The candid's screen can be picked up: a grab cursor where it can be dragged. */
 .throwable { touch-action: pan-y; }
 @media (pointer: fine) { .throwable { cursor: grab; } .throwable:active { cursor: grabbing; } }
 html[data-tier="none"] .throwable { cursor: auto; }
@@ -41,29 +41,8 @@ html[data-tier="none"] .throwable { cursor: auto; }
   color: var(--panel-muted);
 }
 
-/* The candid is a print taped onto the inside of the case. */
-.candid {
-  position: relative;
-  margin: 0.75rem 0 0;
-  padding: 0.6rem 0.6rem 2.2rem;
-  background: #f1efea;
-  rotate: 2.2deg;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.2), 0 18px 30px -12px rgb(0 0 0 / 0.7);
-}
-.photo { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; }
-.tape {
-  position: absolute;
-  top: -0.8rem;
-  left: 50%;
-  width: 5.5rem;
-  height: 1.6rem;
-  translate: -50% 0;
-  rotate: -4deg;
-  background: rgb(233 230 220 / 0.72);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
-  -webkit-mask: linear-gradient(90deg, transparent 0 2px, #000 2px calc(100% - 2px), transparent 0) ;
-  mask: linear-gradient(90deg, transparent 0 2px, #000 2px calc(100% - 2px), transparent 0);
-}
+/* The candid, on its little screen (DotPhoto). */
+.candid { margin: 0.75rem 0 0; }
 
 @media (max-width: 767px) {
   .notes[data-has-photo] { grid-template-columns: 1fr; }

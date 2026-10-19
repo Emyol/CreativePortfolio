@@ -161,4 +161,13 @@ test.describe("after the arrival", () => {
     const clips = await page.locator("#events li").evaluateAll((lis) => lis.slice(0, 3).map((li) => getComputedStyle(li).clipPath));
     expect(clips).toEqual(["none", "none", "none"]);
   });
+
+  test("a resize after they've arrived leaves every print shown", async ({ page }) => {
+    await gotoReady(page, "/#events");
+    await headingAtTop(page, "events");
+    await page.setViewportSize({ width: 1300, height: 860 });
+    await page.waitForTimeout(800);
+    const clips = await page.locator("#events li").evaluateAll((lis) => lis.slice(0, 3).map((li) => getComputedStyle(li).clipPath));
+    expect(clips).toEqual(["none", "none", "none"]);
+  });
 });
