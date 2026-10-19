@@ -14,7 +14,9 @@ export function Spine({ item, noteId, expanded, onExpand }: Props) {
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || tier === "none") return;
+    if (!el) return;
+    // Reduced motion: the rack stands still, so nothing stays raised from before.
+    if (tier === "none") return void gsap.set(el, { clearProps: "transform", overwrite: true });
     gsap.to(el, expanded ? { y: -46, duration: 0.35, ease: "back.out(2)", overwrite: "auto" } : { y: 0, duration: 0.3, ease: "power2.out", overwrite: "auto" });
   }, [expanded, tier]);
 

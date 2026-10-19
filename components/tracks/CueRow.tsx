@@ -1,5 +1,5 @@
 "use client";
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Sprite } from "@/components/device/Sprite";
 import { setCue } from "@/lib/cue";
 import { gsap } from "@/lib/motion/gsap";
@@ -15,6 +15,10 @@ export function CueRow({ title, className, tapeClassName, children, ...data }: P
   const tier = useMotionTier();
   const tape = useRef<HTMLSpanElement>(null);
   const still = tier === "none";
+  // Reduced motion switched on mid-cue: the tape goes back in its row at once.
+  useEffect(() => {
+    if (still && tape.current) gsap.set(tape.current, { clearProps: "transform,opacity", overwrite: true });
+  }, [still]);
   const cue = () => {
     setCue(title);
     if (!still && tape.current) gsap.to(tape.current, { x: 30, opacity: 1, rotate: -6, duration: 0.45, ease: "back.out(1.6)", overwrite: true });
