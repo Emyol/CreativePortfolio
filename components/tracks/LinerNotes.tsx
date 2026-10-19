@@ -1,12 +1,13 @@
 import { Throwable } from "@/components/motion/Throwable";
-import { Photo } from "@/components/Photo";
 import type { About } from "@/lib/content/schema";
+import { DotPhoto } from "./DotPhoto";
 import styles from "./LinerNotes.module.css";
 
 /**
- * About, set like the liner notes folded into a cassette case, with a candid taped in. The
- * letter is folded in two: as the track arrives the lower fold swings down and open
- * (arrivals.ts), and the candid can be picked up and thrown, springing back to its tape.
+ * About, set like the liner notes folded into a cassette case, with the candid shown on a
+ * small dot-matrix screen (DotPhoto). The letter is folded in two: as the track arrives the
+ * lower fold swings down and open while the screen powers on (arrivals.ts), and the screen
+ * can be picked up and thrown, springing back to its place.
  */
 export function LinerNotes({ about }: { about: About }) {
   const [first, ...rest] = about.letter;
@@ -31,8 +32,7 @@ export function LinerNotes({ about }: { about: About }) {
       {about.candid && (
         <Throwable mode="home" className={styles.throwable}>
           <figure className={styles.candid}>
-            <span className={styles.tape} aria-hidden="true" />
-            <Photo photo={about.candid} sizes="(min-width: 900px) 320px, 70vw" className={styles.photo} />
+            <DotPhoto photo={about.candid} />
           </figure>
         </Throwable>
       )}

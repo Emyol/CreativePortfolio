@@ -9,7 +9,9 @@ async function expectSettled(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("data-tier", "none");
   await expect(page.locator("html")).not.toHaveClass(/lenis/);
   // The 3D player stays, held still (the owner chose 3D as the only look); nothing else draws.
-  await expect(page.locator("canvas:not([data-stage])")).toHaveCount(0);
+  // (The About photo's dot screen is a still drawing, fully lit: it stays too.)
+  await expect(page.locator("canvas:not([data-stage], [data-dot-photo])")).toHaveCount(0);
+  await expect(page.locator("[data-dot-photo]")).toHaveAttribute("data-reveal", "1.00");
   const hidden = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>("[style]")].filter((el) => el.style.opacity === "0" || el.style.visibility === "hidden").map((el) => el.outerHTML.slice(0, 120)),
   );

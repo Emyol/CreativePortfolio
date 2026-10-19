@@ -1,6 +1,7 @@
 import { gsap } from "@/lib/motion/gsap";
 import type { Arrival } from "@/lib/motion/useHold";
 import type { TrackId } from "@/lib/tape";
+import { flickerDots, revealDots } from "./DotPhoto";
 
 /** A mixtape row printed in: its title revealed a character's width at a time (visual only; the text is always there). */
 function print(tl: gsap.core.Timeline, li: HTMLElement, at: number) {
@@ -40,7 +41,8 @@ function record(li: HTMLElement, share: number) {
  * Distances are the desktop hold lengths measured in the mockups.
  */
 export const ARRIVALS: Record<TrackId, Arrival> = {
-  // The letter unfolds like a folded J-card insert: the lower fold swings down and open.
+  // The letter unfolds like a folded J-card insert: the lower fold swings down and open,
+  // while the candid's screen powers on, a scanline lighting it row by row, then flickers.
   about: {
     distance: 650,
     hold: (tl, { root }) => {
@@ -48,6 +50,13 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
       const bottom = root.querySelector("[data-fold=bottom]");
       if (top) tl.fromTo(top, { opacity: 0.4 }, { opacity: 1, duration: 0.3 }, 0);
       if (bottom) tl.fromTo(bottom, { rotateX: -178, transformPerspective: 1400, transformOrigin: "50% 0%" }, { rotateX: 0, ease: "power2.inOut", duration: 1 }, 0.1);
+      const screen = root.querySelector("[data-dot-photo]");
+      if (!screen) return;
+      const power = { on: 0 };
+      revealDots(screen, 0);
+      tl.to(power, { on: 1, ease: "none", duration: 0.8, onUpdate: () => revealDots(screen, power.on) }, 0.15).call(() => flickerDots(screen), undefined, 0.98);
+      // Without the hold (reduced motion, or torn down), the screen is simply on.
+      return () => revealDots(screen, 1);
     },
   },
   // A red REC playhead sweeps across and records each print in as it passes.
