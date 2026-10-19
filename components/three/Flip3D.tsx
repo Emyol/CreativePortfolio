@@ -165,6 +165,8 @@ export function Flip3D({ onFail }: { onFail: () => void }) {
         el.removeEventListener("pointercancel", up);
       });
 
+      await stage.prepare(v);
+      if (dead) return;
       undo.push(stage.add(v));
       undo.push(stage.onLost(giveUp));
       // Drawn once unseen, then it takes over from the poster frame.

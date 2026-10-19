@@ -108,9 +108,12 @@ test.describe("hero to dock", () => {
     // The 3D player (when it has taken over) leans and sinks in its own scene and fades as
     // it goes; the sprite device leans by its transform.
     if (await page.locator("[data-hero][data-3d]").count()) {
-      const opacity = await page.locator("canvas[data-stage]").evaluate((el) => Number(getComputedStyle(el).opacity));
-      expect(opacity).toBeLessThan(1);
-      expect(opacity).toBeGreaterThan(0.15);
+      // Only the hero fades: the canvas is shared with the flip and the footer, which may be
+      // on screen at the same time (a short tape), so it stays at full strength.
+      const fade = await page.locator("[data-hero]").evaluate((el) => Number(getComputedStyle(el).getPropertyValue("--fade3d")));
+      expect(fade).toBeLessThan(1);
+      expect(fade).toBeGreaterThan(0.15);
+      expect(await page.locator("canvas[data-stage]").evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
     } else {
       const m = await page.locator("[data-hero] [data-device]").evaluate((el) => new DOMMatrix(getComputedStyle(el).transform));
       expect(m.isIdentity).toBe(false);

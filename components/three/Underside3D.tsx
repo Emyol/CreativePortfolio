@@ -187,6 +187,8 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
         gsap.killTweensOf(turn);
       });
 
+      await stage.prepare(v);
+      if (dead) return;
       undo.push(stage.add(v));
       undo.push(stage.onLost(giveUp));
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));

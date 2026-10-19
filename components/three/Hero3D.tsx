@@ -72,7 +72,7 @@ export function Hero3D(props: Props) {
       if (dead) return;
       const stage = await getStage(tier);
       if (dead) return;
-      const { THREE: three, renderer, environment } = stage;
+      const { THREE: three, environment } = stage;
       const family = getComputedStyle(html).getPropertyValue("--font-dot").trim() || "Doto";
       const [model] = await Promise.all([loadDevice(three, tier), document.fonts.load(`900 150px ${family}`).catch(() => [])]);
       if (dead) return;
@@ -140,22 +140,19 @@ export function Hero3D(props: Props) {
       let knobShown = knobAngle(props.tracks, props.side, props.current);
       mark.rotation.y = -deg(knobShown);
 
-      // The canvas is fixed behind the page; while the hero is on screen it is the hero's.
-      // The sprites fade out as the 3D fades in (not in a 3D entrance: they were never seen).
-      let opacity = "";
+      // How strongly the 3D hero shows: faded in as it takes over, out as the page scrolls on
+      // (the stage fades this view alone; its key labels follow). The sprites fade out as the
+      // 3D fades in, except in a 3D entrance, where they were never seen.
+      let strength = 0;
+      let label = "";
       const applyFade = () => {
-        const p = getHeroScroll();
-        const o = p >= 1 ? 1 : fade.v * (1 - p * FADE);
+        strength = fade.v * (1 - getHeroScroll() * FADE);
         hero.style.setProperty("--sprite", entered ? "0" : (1 - fade.v).toFixed(3));
-        const next = o >= 0.999 ? "" : o.toFixed(3);
-        if (next === opacity) return;
-        opacity = next;
-        renderer.domElement.style.opacity = next;
-        hero.style.setProperty("--fade3d", next || "1");
+        const next = strength >= 0.999 ? "1" : strength.toFixed(3);
+        if (next !== label) hero.style.setProperty("--fade3d", (label = next));
       };
       undo.push(subscribeHeroScroll(applyFade));
       undo.push(() => {
-        renderer.domElement.style.opacity = "";
         hero.style.removeProperty("--fade3d");
         hero.style.removeProperty("--sprite");
       });
@@ -214,6 +211,7 @@ export function Hero3D(props: Props) {
         el,
         scene,
         camera,
+        opacity: () => strength,
         frame(dt) {
           time += dt;
           const now = latest.current;
@@ -379,6 +377,8 @@ export function Hero3D(props: Props) {
         },
       };
 
+      await stage.prepare(v);
+      if (dead) return;
       undo.push(stage.add(v));
       undo.push(stage.onLost(stop));
       // Draw it unseen first (shaders compile, the screen paints), then take over.

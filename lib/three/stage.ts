@@ -10,6 +10,8 @@ export type View = {
   camera: THREE.PerspectiveCamera;
   /** Called each frame the view is on screen, before it renders (seconds since last frame). */
   frame?: (dt: number) => void;
+  /** How strongly the view shows, 0 to 1 (1 if left out). Fades this view alone. */
+  opacity?: () => number;
 };
 
 export type Stage = {
@@ -17,6 +19,8 @@ export type Stage = {
   renderer: THREE.WebGLRenderer;
   /** The room-light environment map every view's scene can use. */
   environment: THREE.Texture;
+  /** Compiles a view's shaders without blocking the page (call before `add`). */
+  prepare(view: View): Promise<void>;
   add(view: View): () => void;
   onLost(cb: () => void): () => void;
 };
@@ -60,6 +64,15 @@ async function create(tier: MotionTier): Promise<Stage> {
   const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   pmrem.dispose();
 
+  // A view fades by drawing the page's own colour over its box: the canvas sits behind the
+  // page, so that reads as the view fading, and the other views on the canvas don't.
+  const veil = new three.Mesh(new three.PlaneGeometry(2, 2), new three.MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
+  const veilScene = new three.Scene().add(veil);
+  const veilCamera = new three.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const pageColour = () => (veil.material.color.setStyle(getComputedStyle(document.documentElement).backgroundColor), undefined);
+  pageColour();
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", pageColour);
+
   const views = new Set<View>();
   const lost = new Set<() => void>();
   let last = performance.now();
@@ -84,6 +97,11 @@ async function create(tier: MotionTier): Promise<Stage> {
         view.camera.updateProjectionMatrix();
       }
       renderer.render(view.scene, view.camera);
+      const shown = view.opacity?.() ?? 1;
+      if (shown < 1) {
+        veil.material.opacity = 1 - Math.max(0, shown);
+        renderer.render(veilScene, veilCamera);
+      }
     }
   };
 
@@ -100,6 +118,10 @@ async function create(tier: MotionTier): Promise<Stage> {
     THREE: three,
     renderer,
     environment,
+    async prepare(view) {
+      // Compiled on first draw, the physical materials froze the page for most of a second.
+      await renderer.compileAsync(view.scene, view.camera);
+    },
     add(view) {
       // The canvas is in the page only while some view uses it (none under reduced motion).
       if (!canvas.isConnected) document.body.prepend(canvas);
