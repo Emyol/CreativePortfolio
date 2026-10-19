@@ -17,6 +17,15 @@
 /* The 3D player turning over takes the rendered one's place (components/three/Underside3D);
    its sticker and door text show once it has landed, laid over the model's. */
 .device[data-3d] .art { visibility: hidden; }
+/* …and where it will (desktop with WebGL), the rendered underside never shows first. The
+   failsafe is for a script that never runs ("pending": lib/three/support.ts); after that,
+   Underside3D's own timeout or a keyboard focus (UndersideDevice) hands it the box. */
+:global(html[data-gl]:not([data-tier="lite"], [data-tier="none"])) .device:not([data-3d], [data-fallback]) .art { visibility: hidden; }
+:global(html[data-gl]:not([data-tier="lite"], [data-tier="none"])) .device:not([data-3d], [data-fallback]) :is(.sticker, .door) { opacity: 0; }
+:global(html[data-gl="pending"]:not([data-tier="lite"], [data-tier="none"])) .device:not([data-3d], [data-fallback]) .art { animation: gl-failsafe 0s 10s forwards; }
+:global(html[data-gl="pending"]:not([data-tier="lite"], [data-tier="none"])) .device:not([data-3d], [data-fallback]) :is(.sticker, .door) { animation: gl-failsafe-text 0s 10s forwards; }
+@keyframes gl-failsafe { to { visibility: visible; } }
+@keyframes gl-failsafe-text { to { opacity: 1; } }
 .device[data-3d] .sticker,
 .device[data-3d] .door { opacity: 0; transition: opacity 260ms var(--ease-out); }
 .device[data-3d][data-landed] .sticker,

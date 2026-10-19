@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { settleGl } from "@/lib/three/support";
 import { computeTier, NARROW_QUERY, REDUCE_QUERY, type MotionTier } from "./tier";
 
 export const MotionTierContext = createContext<MotionTier>("full");
@@ -18,6 +19,7 @@ const serverSnapshot = (): MotionTier => "full";
 
 export function MotionProvider({ children }: { children: ReactNode }) {
   const tier = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
+  useEffect(() => settleGl(), []);
   useEffect(() => {
     document.documentElement.dataset.tier = tier;
   }, [tier]);

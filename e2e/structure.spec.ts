@@ -129,6 +129,8 @@ test.describe("the footer, in 3D", () => {
     await page.waitForTimeout(1500);
     await expect(device).not.toHaveAttribute("data-3d");
     await expect(device).not.toHaveAttribute("data-arrival");
+    // …and the flat underside isn't shown while the 3D is on its way.
+    expect(await device.locator("img").first().evaluate((el) => getComputedStyle(el).visibility)).toBe("hidden");
     release();
     await expect(device).toHaveAttribute("data-3d", "", { timeout: 20_000 });
     await expect(device).toHaveAttribute("data-arrival", /\d\.\d\d/);

@@ -6,11 +6,13 @@ import { boostReels, packScales, reelAngle } from "@/components/device/useReelMo
 import { gsap } from "@/lib/motion/gsap";
 import { getHeroScroll, subscribeHeroScroll } from "@/lib/motion/heroScroll";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
-import { knobAngle, type SideId, type Track, type TrackId } from "@/lib/tape";
+import { keySlots, knobAngle, type SideId, type Track, type TrackId } from "@/lib/tape";
 import { entranceDecision, getHero, setHero, type HeroApi } from "@/lib/three/heroReady";
 import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
-import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
+import { canDraw3D } from "@/lib/three/support";
+import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
+import { addKeyLabels, PLANE_H, PLANE_W } from "./keyLabels";
 import { addScreenPlane } from "./screenPlane";
 import { drawScreen } from "./screenTexture";
 import { makeTable } from "./table";
@@ -26,18 +28,18 @@ type Props = {
   led: boolean;
 };
 
-const TIMEOUT = 8000; // without the model by then, the sprite device stays
+const TIMEOUT = 8000; // without the model by then, the sprite device shows instead
 const FADE = 0.85; // scrolled away, the device fades toward 0.15
 const MAX_TURN = 0.61; // a drag turns it up to about 35°
 const deg = (d: number) => (d * Math.PI) / 180;
 
 /**
  * The hero as the real player in 3D (docs/superpowers/specs/2026-10-18-motion-design.md,
- * "The hero: a real 3D player"), drawn by the shared stage into the hero's box. The sprite
- * device stays underneath as the poster and the fallback: its keys stay the real links,
- * moved over the 3D keys each frame, and all its text stays in the page. Until the model is
- * loaded and drawn, nothing changes; on failure, a timeout or a lost context it gives up and
- * the sprites show again.
+ * "The hero: a real 3D player"), drawn by the shared stage into the hero's box; under reduced
+ * motion it is held still. It is the hero's only look: the sprite device stays in the page
+ * unseen, its keys the real links moved over the 3D keys each frame, its labels printed on
+ * the 3D plate. Until the model is loaded and drawn the hero is empty; on failure, a timeout
+ * or a lost context it gives up and the sprites show instead, for the rest of this page.
  */
 export function Hero3D(props: Props) {
   const tier = useMotionTier();
@@ -51,8 +53,14 @@ export function Hero3D(props: Props) {
     const el = view.current;
     const hero = el?.closest<HTMLElement>("[data-hero]");
     const device = hero?.querySelector<HTMLElement>("[data-device]");
-    if (!el || !hero || !device || !canUse3D(tier, hasGpuWebGL())) return;
+    if (!el || !hero || !device) return;
     const html = document.documentElement;
+    // No 3D here (no GPU, or the page's script came after the failsafe; settleGl clears
+    // html[data-gl]), or given up already on this page: the flat device it is.
+    if (!canDraw3D() || hero.hasAttribute("data-fallback")) return;
+    // Hydration renders with the "full" tier first; the right one remounts this straight after.
+    if (tier !== computeTier(matchMedia(REDUCE_QUERY).matches, matchMedia(NARROW_QUERY).matches)) return;
+    const still = tier === "none"; // reduced motion: the player, held still
     const undo: (() => void)[] = [];
     let dead = false;
     const stop = () => {
@@ -61,20 +69,34 @@ export function Hero3D(props: Props) {
       window.clearTimeout(timer);
       undo.splice(0).reverse().forEach((f) => f());
     };
-    const timer = window.setTimeout(stop, TIMEOUT);
+    // Given up for good (timeout, failure, lost GPU): the flat device shows instead, for the
+    // rest of this page (a remount keeps it), so it never swaps back and forth.
+    const giveUp = () => {
+      hero.setAttribute("data-fallback", "");
+      stop();
+    };
+    const timer = window.setTimeout(giveUp, TIMEOUT);
 
     (async () => {
-      // After the page has painted and settled its motion tier (it hydrates as "full").
-      await new Promise<void>((r) => {
-        const id = window.requestIdleCallback ? window.requestIdleCallback(() => r(), { timeout: 1200 }) : window.setTimeout(r, 300);
-        undo.push(() => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : window.clearTimeout(id)));
-      });
+      // During the entrance the dark screen waits for the player, and a remount replaces one
+      // just shown: both load at once. Otherwise after the page has painted.
+      if (!html.dataset.boot && !hero.hasAttribute("data-shown")) {
+        await new Promise<void>((r) => {
+          const id = window.requestIdleCallback ? window.requestIdleCallback(() => r(), { timeout: 600 }) : window.setTimeout(r, 200);
+          undo.push(() => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : window.clearTimeout(id)));
+        });
+      }
       if (dead) return;
       const stage = await getStage(tier);
       if (dead) return;
       const { THREE: three, environment } = stage;
       const family = getComputedStyle(html).getPropertyValue("--font-dot").trim() || "Doto";
-      const [model] = await Promise.all([loadDevice(three, tier), document.fonts.load(`900 150px ${family}`).catch(() => [])]);
+      const mono = getComputedStyle(html).getPropertyValue("--font-mono").trim() || "monospace";
+      const [model] = await Promise.all([
+        loadDevice(three, tier),
+        document.fonts.load(`900 150px ${family}`).catch(() => []),
+        document.fonts.load(`400 54px ${mono}`).catch(() => []),
+      ]);
       if (dead) return;
 
       const { scene, light, dispose: disposeTable } = makeTable(three, environment, tier);
@@ -100,10 +122,13 @@ export function Hero3D(props: Props) {
       const cassette = node("Cassette");
       const casRest = cassette.position.clone();
       const casTurn = cassette.rotation.clone();
-      // The model's printed key labels are side A's; the page prints the real ones.
-      root.traverse((o) => {
-        if (o.name.startsWith("Print_") && o.name !== "Print_miel") o.visible = false;
-      });
+      // The model's printed key labels are side A's only: the plate prints the real ones,
+      // live, in their place.
+      const prints = ["about", "events", "mixtape", "people"].map((n) => node(`Print_${n}`));
+      prints.forEach((p) => (p.visible = false));
+      // Phones print the labels larger: the whole player is small there.
+      const printed = addKeyLabels(three, root, keys, prints, mono, matchMedia(NARROW_QUERY).matches ? 1.5 : 1);
+      let printedKey = "";
       // This LED lights alone: the other views share the model's materials.
       const lens: THREE.Mesh[] = [];
       node("LEDLens").traverse((o) => (o as THREE.Mesh).isMesh && lens.push(o as THREE.Mesh));
@@ -115,6 +140,8 @@ export function Hero3D(props: Props) {
       const { mesh: screen, geometry: screenGeo, ctx, update: screenChanged, dispose: disposeScreen } = addScreenPlane(three, root);
       undo.push(() => {
         disposeScreen();
+        printed.dispose();
+        delete hero.dataset.printed;
         led.dispose();
         disposeTable();
         gsap.killTweensOf([cassette.position, cassette.rotation, mark.rotation, light.position, led, ...keys.map((k) => k.position)]);
@@ -134,26 +161,23 @@ export function Hero3D(props: Props) {
       const tilt = { x: 0, z: 0 };
       const turn = { y: 0 };
       const dip = { y: 0 };
-      const fade = { v: 0 }; // drawn unseen until it takes over from the sprites
+      const fade = { v: 0 }; // drawn unseen until it takes over
       let entered = false; // the entrance is playing in 3D: it drives keys, knob and LED
       let knobShown = knobAngle(props.tracks, props.side, props.current);
       mark.rotation.y = -deg(knobShown);
 
-      // How strongly the 3D hero shows: faded in as it takes over, out as the page scrolls on
-      // (the stage fades this view alone; its key labels follow). The sprites fade out as the
-      // 3D fades in, except in a 3D entrance, where they were never seen.
+      // How strongly the 3D hero shows: faded in as it appears, out as the page scrolls on (the
+      // stage fades this view alone). The flat device is never shown alongside it.
       let strength = 0;
       let label = "";
       const applyFade = () => {
         strength = fade.v * (1 - getHeroScroll() * FADE);
-        hero.style.setProperty("--sprite", entered ? "0" : (1 - fade.v).toFixed(3));
         const next = strength >= 0.999 ? "1" : strength.toFixed(3);
         if (next !== label) hero.style.setProperty("--fade3d", (label = next));
       };
       undo.push(subscribeHeroScroll(applyFade));
       undo.push(() => {
         hero.style.removeProperty("--fade3d");
-        hero.style.removeProperty("--sprite");
       });
       applyFade();
 
@@ -205,12 +229,23 @@ export function Hero3D(props: Props) {
           a.dataset.keyX = String(Math.round((x0 + x1) / 2));
           a.dataset.keyY = String(Math.round((y0 + y1) / 2));
         }
+        // Where each label is printed, on screen (for checks of its legibility).
+        printed.meshes.forEach((m, i) => {
+          const a = placed[i]?.a;
+          if (!a) return;
+          const pts = [[-PLANE_W / 2, -PLANE_H / 2], [PLANE_W / 2, -PLANE_H / 2], [PLANE_W / 2, PLANE_H / 2], [-PLANE_W / 2, PLANE_H / 2]].map(([x, y]) => toViewport(m.localToWorld(corner.set(x, y, 0)), r));
+          const xs = pts.map((q) => q.x);
+          const ys = pts.map((q) => q.y);
+          const rect = [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)].map((n) => Math.round(n)).join(",");
+          if (a.dataset.printRect !== rect) a.dataset.printRect = rect;
+        });
       };
       undo.push(() =>
         saved.forEach((css, a) => {
           a.style.cssText = css;
           delete a.dataset.keyX;
           delete a.dataset.keyY;
+          delete a.dataset.printRect;
         }),
       );
 
@@ -219,7 +254,7 @@ export function Hero3D(props: Props) {
         el,
         scene,
         camera,
-        fail: stop,
+        fail: giveUp,
         opacity: () => strength,
         frame(dt) {
           time += dt;
@@ -243,7 +278,7 @@ export function Hero3D(props: Props) {
 
           if (!driving) {
             // The latched key sits down, a pressed one deeper; the knob points at the track.
-            const ease = Math.min(1, dt * 28);
+            const ease = still ? 1 : Math.min(1, dt * 28);
             keys.forEach((k, i) => {
               const a = device.querySelector(`[data-key-index="${i}"]`);
               const sink = a?.hasAttribute("data-pressed") ? 0.07 : a?.hasAttribute("data-latched") ? 0.045 : 0;
@@ -252,9 +287,18 @@ export function Hero3D(props: Props) {
             const target = knobAngle(now.tracks, now.side, now.current);
             if (target !== knobShown) {
               knobShown = target;
-              gsap.to(mark.rotation, { y: -deg(target), duration: 0.5, ease: "back.out(1.6)", overwrite: true });
+              if (still) mark.rotation.y = -deg(target);
+              else gsap.to(mark.rotation, { y: -deg(target), duration: 0.5, ease: "back.out(1.6)", overwrite: true });
             }
             led.emissiveIntensity += ((now.led ? 2.5 : 0) - led.emissiveIntensity) * Math.min(1, dt * 20);
+          }
+
+          // The keys' labels, printed on the plate (the side's tracks; a blank key, none).
+          const texts = keySlots(now.tracks, now.side).map((s) => s.track?.label.toLowerCase() ?? "");
+          const labels = texts.join("|");
+          if (labels !== printedKey) {
+            printed.set(texts);
+            hero.dataset.printed = printedKey = labels;
           }
 
           // The screen flickers to new text, except while the entrance types it out.
@@ -265,7 +309,7 @@ export function Hero3D(props: Props) {
             shownKey = key;
             shownProgress = now.progress;
             flicker?.kill();
-            if (html.dataset.boot || !old.length) {
+            if (html.dataset.boot || !old.length || still) {
               shown = lines;
               paint();
             } else {
@@ -283,7 +327,7 @@ export function Hero3D(props: Props) {
 
           scene.updateMatrixWorld();
           camera.updateMatrixWorld();
-          if (hero.hasAttribute("data-3d")) placeKeys(); // not while the sprites still show
+          if (hero.hasAttribute("data-3d")) placeKeys(); // not before it takes over
         },
       };
 
@@ -317,7 +361,8 @@ export function Hero3D(props: Props) {
         if (over) hero.style.cursor = onCassette() ? "pointer" : "grab";
       };
       const down = (e: PointerEvent) => {
-        if (!hero.hasAttribute("data-3d") || e.button !== 0 || (e.target as Element).closest("a, button")) return;
+        // Held still under reduced motion: no turning, no popping the cassette.
+        if (still || !hero.hasAttribute("data-3d") || e.button !== 0 || (e.target as Element).closest("a, button")) return;
         drag = { x: e.clientX, turns: tier === "full" && e.pointerType !== "touch" };
         dragStart = turn.y;
         gsap.killTweensOf(turn);
@@ -390,16 +435,21 @@ export function Hero3D(props: Props) {
       if (dead) return;
       undo.push(stage.add(v));
       window.clearTimeout(timer); // on the stage: the timeout covered loading and compiling
-      undo.push(stage.onLost(stop));
+      undo.push(stage.onLost(giveUp));
       // Draw it unseen first (shaders compile, the screen paints), then take over.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (dead) return;
       const activate = () => {
         if (dead) return;
         applyFade();
+        // A remount (the motion tier changed) keeps the hero element, and its mark: the player
+        // was just on screen. A new visit to the page starts afresh.
+        const back = hero.hasAttribute("data-shown");
         hero.setAttribute("data-3d", "");
-        // A short crossfade, unless an entrance is about to play it in (its own fade-in).
-        if (html.dataset.boot) {
+        hero.setAttribute("data-shown", "");
+        // A short fade-in, unless an entrance is about to play it in (its own fade-in), it is
+        // held still, or it takes the place of the player that was just there.
+        if (html.dataset.boot || still || back) {
           fade.v = 1;
           applyFade();
         } else gsap.to(fade, { v: 1, duration: 0.5, ease: "power1.inOut", onUpdate: applyFade });
@@ -421,7 +471,7 @@ export function Hero3D(props: Props) {
       } else activate();
     })().catch((e) => {
       console.warn("[3D] the hero kept its fallback:", e);
-      stop();
+      giveUp();
     });
 
     return stop;

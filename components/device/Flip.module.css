@@ -56,3 +56,13 @@
 @media (max-width: 767px) {
   .flip { height: 130vh; }
 }
+
+/* Where the 3D cassette will turn (desktop with WebGL; html[data-gl] is set before first
+   paint), the rendered frame never shows first: the 3D appears alone. It shows if the 3D
+   gives up (data-fallback), or after a failsafe if the page's script never runs ("pending":
+   lib/three/support.ts). */
+:global(html[data-gl]:not([data-tier="lite"], [data-tier="none"])) .flip:not([data-3d], [data-fallback]) .img { visibility: hidden; }
+:global(html[data-gl="pending"]:not([data-tier="lite"], [data-tier="none"])) .flip:not([data-3d], [data-fallback]) .img {
+  animation: gl-failsafe 0s 10s forwards;
+}
+@keyframes gl-failsafe { to { visibility: visible; } }

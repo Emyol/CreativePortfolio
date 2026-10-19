@@ -6,7 +6,7 @@ import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { useInViewOnce } from "@/lib/motion/useInViewOnce";
 import { playClunk } from "@/lib/sound";
-import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
+import { canUse3D, canDraw3D } from "@/lib/three/support";
 import styles from "./Flip.module.css";
 
 const N = DEVICE.flipFrames;
@@ -28,8 +28,12 @@ export function Flip() {
   // Frames load only when the flip is within a screen of the viewport.
   const near = useInViewOnce(ref, "100% 0px 100% 0px");
   // The 3D cassette on full motion with a GPU; the frames if it can't or it fails.
-  const [three, setThree] = useState(false);
-  useEffect(() => setThree(tier === "full" && canUse3D(tier, hasGpuWebGL())), [tier]);
+  // A failed 3D stays failed on this page: the frames take over and never swap back.
+  const [failed, setFailed] = useState(false);
+  // Unknown until mounted: no frames load before it's known they're wanted.
+  const [gpu, setGpu] = useState<boolean>();
+  useEffect(() => setGpu(canUse3D(tier, canDraw3D())), [tier]);
+  const three = tier === "full" && gpu === true && !failed;
 
   useGSAP(
     () => {
@@ -56,7 +60,7 @@ export function Flip() {
         c.dataset.ready = "";
       };
 
-      if (tier === "full" && near && !three) {
+      if (tier === "full" && near && gpu !== undefined && !three) {
         for (let i = 0; i < N; i++) {
           const img = new Image();
           img.decoding = "async";
@@ -83,11 +87,11 @@ export function Flip() {
       });
       return () => st.kill();
     },
-    { scope: ref, dependencies: [tier, near, three], revertOnUpdate: true },
+    { scope: ref, dependencies: [tier, near, gpu, three], revertOnUpdate: true },
   );
 
   return (
-    <section ref={ref} id="flip" aria-label="Flip to side B" className={styles.flip} data-flip>
+    <section ref={ref} id="flip" aria-label="Flip to side B" className={styles.flip} data-flip data-fallback={failed ? "" : undefined}>
       <div className={styles.stage}>
         <div className={styles.frame}>
           {tier === "none" ? (
@@ -96,7 +100,7 @@ export function Flip() {
             <>
               <img src={frame(0)} alt="" width={FW} height={FH} className={styles.img} loading="lazy" decoding="async" />
               {tier === "full" && three ? (
-                near && <Flip3D onFail={() => setThree(false)} />
+                near && <Flip3D onFail={() => setFailed(true)} />
               ) : tier === "full" ? (
                 <canvas ref={canvas} className={styles.canvas} aria-hidden="true" />
               ) : (

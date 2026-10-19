@@ -14,9 +14,9 @@
   .hero { min-height: 0; padding-block: 3.5rem 1rem; }
 }
 
-/* The 3D player takes over (components/three/Hero3D.tsx): the sprite device stays as the
-   poster underneath, unseen but still in the page, with its keys as the real links over the
-   3D keys and their printed labels showing. */
+/* The 3D player (components/three/Hero3D.tsx) is the hero's only look: the flat device stays
+   in the page, unseen, for its keys (the real links, moved over the 3D keys) and its text. It
+   shows only where 3D can't run or gave up. */
 .hero { position: relative; }
 .hero[data-3d] [data-device] {
   transform: none !important;
@@ -24,13 +24,32 @@
   pointer-events: none;
 }
 .hero[data-3d] [data-device] img,
-.hero[data-3d] [data-device] > :not(picture, [data-tape-keys]) { opacity: var(--sprite, 0) !important; }
+.hero[data-3d] [data-device] > :not(picture, [data-tape-keys]) { opacity: 0 !important; }
 .hero[data-3d] [data-tape-keys] img { opacity: 0 !important; }
 .hero[data-3d] [data-key-index] { pointer-events: auto; }
-/* The labels print on lit aluminium in 3D, not the sprite's shaded edge: the dark ink. */
-.hero[data-3d] [data-key-index] > span {
-  opacity: var(--fade3d, 1);
-  color: var(--device-ink);
-  text-shadow: none;
-}
+/* In 3D the labels are printed on the plate itself (components/three/keyLabels.ts): the
+   page's labels stay as the links' names for screen readers, unseen. */
+.hero[data-3d] [data-key-index] > span { opacity: 0; }
 .hero[data-3d] [data-blank-key] { pointer-events: none; }
+
+/* While the 3D player is expected (html[data-gl], set before first paint) the flat device is
+   never shown, so the 3D appears alone. It shows only where the 3D gave up (data-fallback),
+   or after a failsafe if the page's script never runs ("pending": lib/three/support.ts). */
+:global(html[data-gl]) .hero:not([data-3d], [data-fallback]) [data-device] img,
+:global(html[data-gl]) .hero:not([data-3d], [data-fallback]) [data-device] > :not(picture, [data-tape-keys]),
+:global(html[data-gl]) .hero:not([data-3d], [data-fallback]) [data-key-index] > span { opacity: 0; }
+:global(html[data-gl="pending"]) .hero:not([data-3d], [data-fallback]) [data-device] img,
+:global(html[data-gl="pending"]) .hero:not([data-3d], [data-fallback]) [data-device] > :not(picture, [data-tape-keys]),
+:global(html[data-gl="pending"]) .hero:not([data-3d], [data-fallback]) [data-key-index] > span {
+  animation: gl-failsafe 0s 10s forwards;
+}
+/* Meanwhile a key reached from the keyboard names itself, on a chip of the screen's dark,
+   so its focus ring never circles nothing. */
+:global(html[data-gl]) .hero:not([data-3d], [data-fallback]) [data-key-index]:focus-visible > span {
+  opacity: 1;
+  animation: none;
+  padding: 0.4em 0.6em;
+  border-radius: 4px;
+  background: var(--oled);
+}
+@keyframes gl-failsafe { to { opacity: 1; } }
