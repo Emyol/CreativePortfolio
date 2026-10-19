@@ -6,11 +6,12 @@ import { boostReels, packScales, reelAngle } from "@/components/device/useReelMo
 import { gsap } from "@/lib/motion/gsap";
 import { getHeroScroll, subscribeHeroScroll } from "@/lib/motion/heroScroll";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
-import { knobAngle, type SideId, type Track, type TrackId } from "@/lib/tape";
+import { keySlots, knobAngle, type SideId, type Track, type TrackId } from "@/lib/tape";
 import { entranceDecision, getHero, setHero, type HeroApi } from "@/lib/three/heroReady";
 import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
 import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
+import { addKeyLabels } from "./keyLabels";
 import { addScreenPlane } from "./screenPlane";
 import { drawScreen } from "./screenTexture";
 import { makeTable } from "./table";
@@ -74,7 +75,12 @@ export function Hero3D(props: Props) {
       if (dead) return;
       const { THREE: three, environment } = stage;
       const family = getComputedStyle(html).getPropertyValue("--font-dot").trim() || "Doto";
-      const [model] = await Promise.all([loadDevice(three, tier), document.fonts.load(`900 150px ${family}`).catch(() => [])]);
+      const mono = getComputedStyle(html).getPropertyValue("--font-mono").trim() || "monospace";
+      const [model] = await Promise.all([
+        loadDevice(three, tier),
+        document.fonts.load(`900 150px ${family}`).catch(() => []),
+        document.fonts.load(`400 54px ${mono}`).catch(() => []),
+      ]);
       if (dead) return;
 
       const { scene, light, dispose: disposeTable } = makeTable(three, environment, tier);
@@ -100,10 +106,12 @@ export function Hero3D(props: Props) {
       const cassette = node("Cassette");
       const casRest = cassette.position.clone();
       const casTurn = cassette.rotation.clone();
-      // The model's printed key labels are side A's; the page prints the real ones.
-      root.traverse((o) => {
-        if (o.name.startsWith("Print_") && o.name !== "Print_miel") o.visible = false;
-      });
+      // The model's printed key labels are side A's only: the plate prints the real ones,
+      // live, in their place.
+      const prints = ["about", "events", "mixtape", "people"].map((n) => node(`Print_${n}`));
+      prints.forEach((p) => (p.visible = false));
+      const printed = addKeyLabels(three, root, keys, prints, mono);
+      let printedKey = "";
       // This LED lights alone: the other views share the model's materials.
       const lens: THREE.Mesh[] = [];
       node("LEDLens").traverse((o) => (o as THREE.Mesh).isMesh && lens.push(o as THREE.Mesh));
@@ -115,6 +123,8 @@ export function Hero3D(props: Props) {
       const { mesh: screen, geometry: screenGeo, ctx, update: screenChanged, dispose: disposeScreen } = addScreenPlane(three, root);
       undo.push(() => {
         disposeScreen();
+        printed.dispose();
+        delete hero.dataset.printed;
         led.dispose();
         disposeTable();
         gsap.killTweensOf([cassette.position, cassette.rotation, mark.rotation, light.position, led, ...keys.map((k) => k.position)]);
@@ -255,6 +265,14 @@ export function Hero3D(props: Props) {
               gsap.to(mark.rotation, { y: -deg(target), duration: 0.5, ease: "back.out(1.6)", overwrite: true });
             }
             led.emissiveIntensity += ((now.led ? 2.5 : 0) - led.emissiveIntensity) * Math.min(1, dt * 20);
+          }
+
+          // The keys' labels, printed on the plate (the side's tracks; a blank key, none).
+          const texts = keySlots(now.tracks, now.side).map((s) => s.track?.label.toLowerCase() ?? "");
+          const labels = texts.join("|");
+          if (labels !== printedKey) {
+            printed.set(texts);
+            hero.dataset.printed = printedKey = labels;
           }
 
           // The screen flickers to new text, except while the entrance types it out.

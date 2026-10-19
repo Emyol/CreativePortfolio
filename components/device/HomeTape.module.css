@@ -27,10 +27,7 @@
 .hero[data-3d] [data-device] > :not(picture, [data-tape-keys]) { opacity: var(--sprite, 0) !important; }
 .hero[data-3d] [data-tape-keys] img { opacity: 0 !important; }
 .hero[data-3d] [data-key-index] { pointer-events: auto; }
-/* The labels print on lit aluminium in 3D, not the sprite's shaded edge: the dark ink. */
-.hero[data-3d] [data-key-index] > span {
-  opacity: var(--fade3d, 1);
-  color: var(--device-ink);
-  text-shadow: none;
-}
+/* In 3D the labels are printed on the plate itself (components/three/keyLabels.ts): the
+   page's labels stay as the links' names for screen readers, unseen. */
+.hero[data-3d] [data-key-index] > span { opacity: 0; }
 .hero[data-3d] [data-blank-key] { pointer-events: none; }

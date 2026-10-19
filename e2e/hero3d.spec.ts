@@ -53,6 +53,16 @@ test("the keys are real links over the 3D keys", async ({ page }) => {
   await expect(page).toHaveURL(/#events$/);
 });
 
+test("the key labels are printed on the 3D plate, not laid over it", async ({ page }) => {
+  await gotoReady(page, "/#top");
+  await expect(page.locator("[data-hero][data-3d]")).toHaveCount(1, { timeout: READY });
+  await expect(page.locator("[data-hero]")).toHaveAttribute("data-printed", "about|events|mixtape|people");
+  const opacities = await page.locator("[data-hero] [data-key-index] > span").evaluateAll((els) => els.map((el) => getComputedStyle(el).opacity));
+  expect(opacities).toEqual(["0", "0", "0", "0"]);
+  // Still the links' names for screen readers.
+  await expect(page.locator("[data-hero]").getByRole("link", { name: "mixtape" })).toHaveCount(1);
+});
+
 test("after the GPU drops the 3D, the flip starts a fresh stage", async ({ page }) => {
   await gotoReady(page, "/#top");
   await expect(page.locator("[data-hero][data-3d]")).toHaveCount(1, { timeout: READY });
