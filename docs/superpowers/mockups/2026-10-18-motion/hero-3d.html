@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hero in real 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Doto:wght@800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }</script>
+<style>
+  :root { --table: #E4E6E9; --ink: #141518; --muted: #5B5F68; --oled: #050506; --oled-text: #FF5A1F; --signal: #FF2E00; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--table); color: var(--ink); font-family: Archivo, system-ui, sans-serif; }
+  .stage { position: fixed; inset: 0; }
+  .stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+  .spacer { height: 260vh; }
+  .caption { position: fixed; z-index: 10; top: 14px; left: 14px; max-width: min(420px, 80vw); padding: 10px 12px; border-radius: 12px; background: #fffd;
+    box-shadow: 0 0 0 1px #14151820, 0 8px 24px -10px #0006; font-size: .85rem; line-height: 1.5; }
+  .caption b { display: block; font-family: "Space Mono", monospace; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 2px; }
+  .caption em { font-style: normal; font-weight: 700; color: var(--signal); }
+  .boot { position: fixed; z-index: 20; background: var(--oled); display: grid; place-items: center; container-type: inline-size; }
+  .boot span { font-family: Doto, monospace; font-weight: 900; color: var(--oled-text); letter-spacing: .06em; font-size: 16cqw; white-space: nowrap; }
+  .loading { position: fixed; inset: 0; display: grid; place-items: center; font-family: "Space Mono", monospace; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="loading" id="loading">loading the player…</div>
+<div class="stage" id="stage"></div>
+<div class="caption" id="caption" style="opacity:0"><b>hero in real 3D</b>
+  <em>Move your cursor</em>: it tilts and the light moves over the aluminium. <em>Drag</em> to turn it.
+  <em>Click a key</em>: it presses down, the knob turns, the screen changes. <em>Click the cassette</em> to pop it up.
+  <em>Scroll</em>: it leans back and sinks.</div>
+<div class="spacer"></div>
+
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const Q = new URLSearchParams(location.search);
+const stage = document.getElementById("stage"), caption = document.getElementById("caption");
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = !Q.has("noshadow");
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.9;
+
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+const key = new THREE.DirectionalLight("#ffffff", 2.4);
+key.position.set(-5, 12, 6);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
+key.shadow.radius = 6;
+key.shadow.bias = -0.0004;
+scene.add(key, new THREE.AmbientLight("#ffffff", 0.35));
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.22 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// The device's materials, rebuilt from art/blender/side-a/device.py (Blender's procedural
+// brushing and knurling don't travel in glTF).
+const phys = (o) => new THREE.MeshPhysicalMaterial(o);
+const MATS = {
+  Aluminium: phys({ color: "#C9CDD3", metalness: 1, roughness: 0.3 }),
+  AluDoor: phys({ color: "#C3C7CD", metalness: 1, roughness: 0.36 }),
+  Collar: phys({ color: "#B9BDC4", metalness: 1, roughness: 0.22 }),
+  OLED: phys({ color: "#040405", roughness: 0.3, clearcoat: 0.25, clearcoatRoughness: 0.06 }),
+  LED: phys({ color: "#1C0602", roughness: 0.08, clearcoat: 1, emissive: "#FF2E00", emissiveIntensity: 0 }),
+  Grille: phys({ color: "#16171A", roughness: 0.7 }),
+  Shell: phys({ color: "#2A2C31", roughness: 0.42 }),
+  ShellInside: phys({ color: "#7A7E85", roughness: 0.5 }),
+  Label: phys({ color: "#EFEDE8", roughness: 0.85 }),
+  Ink: phys({ color: "#16171A", roughness: 0.6 }),
+  InkSoft: phys({ color: "#9CA0A7", roughness: 0.7 }),
+  Window: phys({ color: "#F2F6F8", roughness: 0.03, transparent: true, opacity: 0.18, clearcoat: 1, depthWrite: false }),
+  Tape: phys({ color: "#1E120C", metalness: 0.35, roughness: 0.2 }),
+  Hub: phys({ color: "#F3F3F1", roughness: 0.42 }),
+  Screw: phys({ color: "#9EA2A8", metalness: 1, roughness: 0.3 }),
+  Knob: phys({ color: "#FF2E00", roughness: 0.34, clearcoat: 0.55, clearcoatRoughness: 0.12 }),
+  KnobMark: phys({ color: "#FAFAF8", roughness: 0.4 }),
+  Key: phys({ color: "#A2A6AD", roughness: 0.48 }),
+};
+
+// Live text on the screen: a canvas texture laid just above the OLED glass.
+const TRACKS = ["about", "events", "mixtape", "people"];
+const KNOB_DEG = [-135, -45, 45, 135];
+const screenCanvas = Object.assign(document.createElement("canvas"), { width: 1024, height: 452 });
+const sctx = screenCanvas.getContext("2d");
+const screenTex = new THREE.CanvasTexture(screenCanvas);
+screenTex.colorSpace = THREE.SRGBColorSpace;
+screenTex.anisotropy = 8;
+let lines = ["", ""];
+function drawScreen(dim = 1) {
+  sctx.fillStyle = "#040405"; sctx.fillRect(0, 0, 1024, 452);
+  sctx.globalAlpha = dim;
+  sctx.shadowColor = "rgba(255,90,31,.6)"; sctx.shadowBlur = 18;
+  sctx.fillStyle = "#FF5A1F"; sctx.font = "900 150px Doto"; sctx.fillText(lines[0], 70, 190);
+  sctx.shadowColor = "rgba(255,255,255,.25)"; sctx.fillStyle = "#F1E7E2"; sctx.font = "800 92px Doto"; sctx.fillText(lines[1], 74, 330);
+  sctx.globalAlpha = 1;
+  screenTex.needsUpdate = true;
+}
+function setLines(next, flicker = true) {
+  if (!flicker) { lines = next; return drawScreen(); }
+  gsap.timeline().call(() => drawScreen(0.15)).call(() => drawScreen(1), null, 0.04).call(() => drawScreen(0.15), null, 0.08).call(() => { lines = next; drawScreen(); }, null, 0.12);
+}
+
+await document.fonts.load("900 150px Doto");
+const gltf = await new GLTFLoader().loadAsync("/files/dev-device.glb");
+document.getElementById("loading").remove();
+const device = new THREE.Group(); // tilts and turns
+const lift = new THREE.Group();   // entrance dip and scroll sink
+lift.add(device);
+scene.add(lift);
+device.add(gltf.scene);
+gltf.scene.traverse((o) => {
+  if (!o.isMesh) return;
+  o.castShadow = true; o.receiveShadow = true;
+  const m = MATS[o.material?.name];
+  if (m) o.material = m;
+});
+const node = (n) => gltf.scene.getObjectByName(n);
+const keys = [0, 1, 2, 3].map((i) => node(`Key${i}`));
+const keyRest = keys.map((k) => k.position.y);
+const markPivot = node("KnobMarkPivot"), hubs = [node("HubLPivot"), node("HubRPivot")], cassette = node("Cassette");
+const cassetteRest = cassette.position.clone();
+
+const glass = node("OLEDGlass");
+const gbox = new THREE.Box3().setFromObject(glass);
+const gsize = gbox.getSize(new THREE.Vector3()), gcenter = gbox.getCenter(new THREE.Vector3());
+const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(gsize.x * 0.94, gsize.z * 0.9), new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false }));
+screenMesh.rotation.x = -Math.PI / 2;
+screenMesh.position.set(gcenter.x, gbox.max.y + 0.002, gcenter.z);
+gltf.scene.add(screenMesh);
+drawScreen();
+
+// Frame the device: a three-quarter view from the front, looking down.
+function frame() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  const dist = 15.5 / Math.min(1, camera.aspect / 1.35);
+  camera.position.set(0, dist * 0.78, dist * 0.62);
+  camera.lookAt(0, -0.2, 0.35);
+  camera.updateProjectionMatrix();
+}
+frame();
+addEventListener("resize", frame);
+
+// --- pointer: tilt toward the cursor, the light follows, drag turns it with a spring back
+const tilt = { x: 0, z: 0 }, turn = { y: 0 }, pointer = new THREE.Vector2(), ray = new THREE.Raycaster();
+let dragging = false, dragX = 0, startY = 0, moved = 0;
+addEventListener("pointermove", (e) => {
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  if (dragging) { moved += Math.abs(e.clientX - dragX); turn.y = startY + (e.clientX - dragX) * 0.006; return; }
+  gsap.to(tilt, { x: -pointer.y * 0.12, z: -pointer.x * 0.08, duration: 0.9, ease: "power3.out", overwrite: true });
+  gsap.to(key.position, { x: -5 + pointer.x * 7, z: 6 - pointer.y * 5, duration: 1.2, ease: "power3.out", overwrite: true });
+  const hit = pick();
+  renderer.domElement.style.cursor = hit ? "pointer" : "grab";
+});
+renderer.domElement.addEventListener("pointerdown", (e) => { dragging = true; dragX = e.clientX; startY = turn.y; moved = 0; gsap.killTweensOf(turn); });
+addEventListener("pointerup", () => {
+  if (!dragging) return;
+  dragging = false;
+  gsap.to(turn, { y: 0, duration: 1.6, ease: "elastic.out(1, 0.45)" });
+  if (moved < 6) click();
+});
+
+function pick() {
+  ray.setFromCamera(pointer, camera);
+  const hits = ray.intersectObjects([...keys, cassette], true);
+  if (!hits.length) return null;
+  let o = hits[0].object;
+  while (o) { if (keys.includes(o)) return { key: keys.indexOf(o) }; if (o === cassette) return { cassette: true }; o = o.parent; }
+  return null;
+}
+let current = 0;
+function press(i) {
+  keys.forEach((k, j) => gsap.to(k.position, { y: keyRest[j] - (j === i ? 0.045 : 0), duration: j === i ? 0.1 : 0.18, ease: j === i ? "power2.in" : "back.out(3)" }));
+  gsap.to(markPivot.rotation, { y: -THREE.MathUtils.degToRad(KNOB_DEG[i]), duration: 0.5, ease: "back.out(1.6)" });
+  if (i !== current) setLines(["SIDE A", `0${i + 1} ${TRACKS[i]}`]);
+  current = i;
+}
+function click() {
+  const hit = pick();
+  if (hit?.key !== undefined) press(hit.key);
+  if (hit?.cassette) gsap.timeline()
+    .to(cassette.position, { y: cassetteRest.y + 0.9, duration: 0.35, ease: "power2.out" })
+    .to(cassette.rotation, { x: -0.18, duration: 0.35, ease: "power2.out" }, 0)
+    .to(cassette.position, { y: cassetteRest.y, duration: 0.55, ease: "bounce.out" }, 0.45)
+    .to(cassette.rotation, { x: 0, duration: 0.4, ease: "power2.out" }, 0.45);
+}
+
+// --- reels spin; scroll leans it back and sinks it (the hero → dock handoff)
+let spin = 0, boost = { v: 0 };
+const scroll = { p: 0 };
+addEventListener("scroll", () => gsap.to(scroll, { p: Math.min(1, scrollY / innerHeight), duration: 0.5, ease: "power2.out", overwrite: true }));
+window.__three = { renderer, scene, gltf, camera };
+renderer.setAnimationLoop((t) => {
+  spin += 0.012 + boost.v * 0.02;
+  hubs.forEach((h) => (h.rotation.y = spin));
+  device.rotation.set(tilt.x + scroll.p * 0.55, turn.y, tilt.z);
+  lift.position.y = -scroll.p * 2.2;
+  lift.position.z = -scroll.p * 3;
+  lift.scale.setScalar(1 - scroll.p * 0.25);
+  renderer.render(scene, camera);
+});
+
+// --- entrance (agreed): screen first, then the tape loads, now into the 3D deck
+history.scrollRestoration = "manual"; scrollTo(0, 0);
+const boot = Object.assign(document.createElement("div"), { className: "boot", innerHTML: "<span>000</span>" });
+document.body.appendChild(boot);
+const label = boot.firstElementChild;
+const sp = gcenter.clone(); gltf.scene.updateMatrixWorld(); camera.updateMatrixWorld();
+const toScreen = () => {
+  const a = new THREE.Vector3(gbox.min.x, gbox.max.y, gbox.min.z).project(camera), b = new THREE.Vector3(gbox.max.x, gbox.max.y, gbox.max.z).project(camera);
+  const x0 = (Math.min(a.x, b.x) + 1) / 2 * innerWidth, x1 = (Math.max(a.x, b.x) + 1) / 2 * innerWidth;
+  const y0 = (1 - Math.max(a.y, b.y)) / 2 * innerHeight, y1 = (1 - Math.min(a.y, b.y)) / 2 * innerHeight;
+  return { left: x0, top: y0, width: x1 - x0, height: y1 - y0 };
+};
+gsap.set(boot, { left: 0, top: 0, width: innerWidth, height: innerHeight });
+cassette.position.y = cassetteRest.y + 6; cassette.rotation.set(-0.3, 0, 0.08);
+keys.forEach((k, j) => (k.position.y = keyRest[j] - 0.06));
+markPivot.rotation.y = -THREE.MathUtils.degToRad(-250);
+lift.position.y = 0; device.visible = true;
+renderer.domElement.style.opacity = 0;
+const counter = { n: 0 };
+const tl = gsap.timeline({ onComplete: () => { boot.remove(); gsap.to(caption, { opacity: 1, duration: 0.4 }); } });
+tl.to(counter, { n: 120, duration: 0.65, ease: "power2.out", onUpdate: () => (label.textContent = String(Math.round(counter.n)).padStart(3, "0")) }, 0.1)
+  .to(label, { opacity: 0.15, duration: 0.05, repeat: 3, yoyo: true, ease: "steps(1)" }, 0.78)
+  .call(() => (label.textContent = "SIDE A"), null, 0.88)
+  .to(boot, { ...toScreen(), borderRadius: 4, duration: 0.85, ease: "expo.inOut" }, 1.1)
+  .to(label, { fontSize: toScreen().width * 0.15, duration: 0.85, ease: "expo.inOut" }, 1.1)
+  .to(renderer.domElement, { opacity: 1, duration: 0.6 }, 1.3)
+  .call(() => { setLines(["SIDE A", ""], false); drawScreen(); boot.style.opacity = 0; }, null, 1.96);
+const drop = 1.85;
+tl.to(cassette.position, { y: cassetteRest.y, duration: 0.6, ease: "power3.in" }, drop)
+  .to(cassette.rotation, { x: 0, z: 0, duration: 0.6, ease: "power3.in" }, drop)
+  .to(lift.position, { y: -0.08, duration: 0.08, ease: "power2.out" }, drop + 0.6)
+  .to(lift.position, { y: 0, duration: 0.5, ease: "elastic.out(1, 0.45)" }, drop + 0.68)
+  .to(boost, { v: 9, duration: 0.5, ease: "power2.in" }, drop + 0.68)
+  .to(boost, { v: 0, duration: 0.9, ease: "power2.out" }, drop + 1.18)
+  .to(MATS.LED, { emissiveIntensity: 2.5, duration: 0.08, repeat: 3, yoyo: true, ease: "steps(1)" }, drop + 0.7)
+  .to(MATS.LED, { emissiveIntensity: 2.5, duration: 0.1 }, drop + 1.0)
+  .to(markPivot.rotation, { y: -THREE.MathUtils.degToRad(-135), duration: 0.9, ease: "back.out(1.3)" }, drop + 0.8);
+keys.forEach((k, j) => tl.to(k.position, { y: keyRest[j], duration: 0.42, ease: "back.out(2.2)" }, drop + 0.75 + j * 0.075));
+const text = "01 about";
+for (let i = 1; i <= text.length; i++) tl.call(() => { lines = ["SIDE A", text.slice(0, i)]; drawScreen(); }, null, drop + 0.9 + i * 0.035);
+["wheel", "keydown", "pointerdown", "touchstart"].forEach((ev) => addEventListener(ev, () => tl.progress() < 1 && tl.progress(1), { capture: true, passive: true, once: true }));
+</script>
+</body>
+</html>

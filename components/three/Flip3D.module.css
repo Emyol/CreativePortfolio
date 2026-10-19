@@ -1,0 +1,8 @@
+/* The flip's frame, where the stage draws the cassette; grab it to spin it. */
+.view {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: pan-y;
+}
+.view[data-grabbing] { cursor: grabbing; }

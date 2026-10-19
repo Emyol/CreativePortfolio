@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrance: screen first, then the tape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Doto:wght@700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root {
+    --table: #E4E6E9; --ink: #141518; --muted: #5B5F68; --oled: #050506; --signal: #FF2E00;
+    --oled-text: #FF5A1F; --device-ink: #17181B; --aspect: 1.43369;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--table); color: var(--ink); font-family: Archivo, system-ui, sans-serif; }
+  main { max-width: 1240px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem); margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { margin: 0 0 28px; color: var(--muted); max-width: 70ch; line-height: 1.5; }
+  .grid { display: grid; gap: 28px; }
+  .demo { max-width: 980px; background: #fff3; border-radius: 18px; box-shadow: 0 0 0 1px #14151814; padding: 14px; display: grid; gap: 12px; }
+  .demo.selected { box-shadow: 0 0 0 3px var(--signal); }
+  .demo h2 { margin: 0; font-size: 1.15rem; }
+  .demo p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.45; }
+  .tag { font-family: "Space Mono", monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 600 0.9rem Archivo, sans-serif; min-height: 40px; padding: 0 14px; border-radius: 10px; cursor: pointer; border: 1px solid #14151840; background: none; color: var(--ink); }
+  button.pick { background: var(--oled); color: #fff; border: 0; }
+  .demo.selected button.pick { background: var(--signal); color: var(--oled); }
+
+  .stage { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; background: var(--table); overflow: hidden; display: grid; place-items: center; }
+  .device { position: relative; width: min(62%, 720px); aspect-ratio: 2400 / 1674; container-type: inline-size; }
+  .device > *, .cass > * { position: absolute; }
+  .full { inset: 0; width: 100%; height: 100%; }
+  .shadow { opacity: 0.82; }
+  .cass { left: 9.767%; top: 14.667%; width: 44.884%; height: 42.667%; }
+  .shell { inset: 0; width: 100%; height: 100%; }
+  .screen { left: 60.93%; top: 15.667%; width: 28.14%; height: 15.667%; background: var(--oled); border-radius: 3%/5%; padding: 4% 5%; overflow: hidden;
+    font-family: Doto, monospace; color: var(--oled-text); text-shadow: 0 0 0.35em rgb(255 90 31 / .55), 0 0 .08em rgb(255 120 60 / .9); container-type: inline-size; }
+  .screen .l1 { font-weight: 900; font-size: 15cqw; letter-spacing: .06em; line-height: 1; white-space: nowrap; }
+  .screen .l2 { font-weight: 700; font-size: 9.5cqw; color: #F1E7E2; margin-top: 4%; white-space: nowrap; }
+  .name { left: 59.53%; top: 36.17%; font-family: "Space Mono", monospace; font-weight: 700; color: var(--device-ink); font-size: 4.4cqw; line-height: 1; }
+  .led { left: 89.07%; top: 39%; width: 1.4%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; opacity: 0;
+    background: radial-gradient(circle at 40% 35%, #FFD2C2 0 12%, var(--signal) 45%, rgb(255 46 0 / 0) 72%); box-shadow: 0 0 10px 2px rgb(255 46 0 / .6); }
+  .knob { left: 59.3%; top: 50.97%; width: 21.395%; height: 30.67%; }
+  .knob img { width: 100%; height: 100%; }
+  .key { width: 13.49%; height: 15.0%; }
+  .key img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .key .down { opacity: 0; }
+  .klabel { top: 81.2%; width: 11.65%; text-align: center; font-family: "Space Mono", monospace; font-size: 2.2cqw; color: var(--device-ink); }
+  .sheen { inset: 0; pointer-events: none; mix-blend-mode: soft-light; opacity: 0;
+    background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / .95) 48%, rgb(255 255 255 / .2) 55%, transparent 65%); background-size: 260% 100%; background-position: 120% 0;
+    -webkit-mask: url(/files/dev-plate.webp) center / 100% 100%; mask: url(/files/dev-plate.webp) center / 100% 100%; }
+  .boot { position: absolute; background: var(--oled); display: grid; place-items: center; z-index: 5; container-type: inline-size; }
+  .boot span { font-family: Doto, monospace; font-weight: 900; color: var(--oled-text); letter-spacing: .06em; font-size: 16cqw; white-space: nowrap;
+    text-shadow: 0 0 0.35em rgb(255 90 31 / .55), 0 0 .08em rgb(255 120 60 / .9); }
+  .note { margin-top: 26px; font-size: .9rem; color: var(--muted); line-height: 1.5; max-width: 80ch; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Screen first, then the tape loads</h1>
+  <p class="lede">C's opening runs straight into A. The page starts as the player's dark screen, counts the tape in and lands on SIDE A. The dark then shrinks into the little screen while the device appears around it with its window empty. The cassette drops in, the deck takes its weight, the reels spin up, the keys rise and the knob swings to the first track.</p>
+  <div class="grid options">
+    <section class="demo option" data-choice="combo">
+      <span class="tag">C then A · about 3 s until it settles</span>
+      <div class="stage" id="s-combo"></div>
+      <div class="row">
+        <button type="button" data-replay="combo">Replay</button>
+        <button type="button" data-speed="1">Normal speed</button>
+        <button type="button" data-speed="0.75">25% faster</button>
+        <button type="button" data-speed="0.6">40% faster</button>
+      </div>
+      <p>The page can be used the whole time: a click, a scroll or a key finishes the entrance at once. It plays once per visit, and with "reduce motion" switched on it becomes a plain fade.</p>
+    </section>
+  </div>
+  <p class="note">If the pace feels right, say so and I'll move on to how each section moves as you scroll. Use the speed buttons if it drags.</p>
+</main>
+<script>
+const F = (n) => `/files/dev-${n}.webp`;
+const LABELS = ["about", "events", "mixtape", "people"];
+const KEY_X = [0.09535, 0.21395, 0.33256, 0.45116];
+
+function build(stage) {
+  stage.innerHTML = "";
+  const d = document.createElement("div");
+  d.className = "device";
+  d.innerHTML = `
+    <img class="full shadow" src="${F("shadow")}" alt="">
+    <img class="full plate" src="${F("plate")}" alt="">
+    <div class="full sheen"></div>
+    <div class="cass">
+      <img class="pack" data-side="l" src="${F("pack")}" alt="" style="left:${(0.2343-0.09767)/0.44884*100 - 0.16744/0.44884*50}%;top:${(0.35-0.14667)/0.42667*100 - 0.16744*1.43369/0.42667*50}%;width:${0.16744/0.44884*100}%;height:${0.16744*1.43369/0.42667*100}%">
+      <img class="pack" data-side="r" src="${F("pack")}" alt="" style="left:${(0.40988-0.09767)/0.44884*100 - 0.16744/0.44884*50}%;top:${(0.35-0.14667)/0.42667*100 - 0.16744*1.43369/0.42667*50}%;width:${0.16744/0.44884*100}%;height:${0.16744*1.43369/0.42667*100}%;scale:.42">
+      <img class="hub" src="${F("hub")}" alt="" style="left:${(0.2343-0.09767)/0.44884*100 - 0.05581/0.44884*50}%;top:${(0.35-0.14667)/0.42667*100 - 0.05581*1.43369/0.42667*50}%;width:${0.05581/0.44884*100}%;height:${0.05581*1.43369/0.42667*100}%">
+      <img class="hub" src="${F("hub")}" alt="" style="left:${(0.40988-0.09767)/0.44884*100 - 0.05581/0.44884*50}%;top:${(0.35-0.14667)/0.42667*100 - 0.05581*1.43369/0.42667*50}%;width:${0.05581/0.44884*100}%;height:${0.05581*1.43369/0.42667*100}%">
+      <img class="shell" src="${F("shell-a")}" alt="">
+    </div>
+    <div class="screen"><div class="l1"></div><div class="l2"></div></div>
+    <span class="name">miel</span>
+    <span class="led"></span>
+    <span class="knob"><img src="${F("knob-mark")}" alt=""></span>
+    ${KEY_X.map((x, i) => `
+      <span class="key" style="left:${(x - 0.0186) * 100}%;top:${(0.69333 - 0.02667) * 100}%"><img class="up" src="${F("key-up")}" alt=""><img class="down" src="${F("key-down")}" alt=""></span>
+      <span class="klabel" style="left:${(x - 0.00942) * 100}%">${LABELS[i]}</span>`).join("")}
+  `;
+  stage.appendChild(d);
+  const q = (s) => d.querySelector(s), qa = (s) => [...d.querySelectorAll(s)];
+  return { stage, d, shadow: q(".shadow"), plate: q(".plate"), sheen: q(".sheen"), cass: q(".cass"), hubs: qa(".hub"), packs: qa(".pack"),
+    screen: q(".screen"), l1: q(".l1"), l2: q(".l2"), led: q(".led"), knob: q(".knob"), keys: qa(".key"), labels: qa(".klabel"), name: q(".name") };
+}
+
+// Shared tail: the screen flickers on and types, keys wake one by one, the knob swings to track 1.
+function wake(tl, r, at) {
+  const typeOut = (el, text, start, step) => {
+    for (let i = 1; i <= text.length; i++) tl.call(() => (el.textContent = text.slice(0, i)), null, start + i * step);
+  };
+  tl.to(r.led, { opacity: 1, duration: 0.08, repeat: 3, yoyo: true, ease: "steps(1)" }, at)
+    .to(r.led, { opacity: 1, duration: 0.1 }, at + 0.34)
+    .fromTo(r.screen, { filter: "brightness(0.2)" }, { filter: "brightness(1)", duration: 0.32, ease: "steps(4)" }, at + 0.05);
+  typeOut(r.l1, "SIDE A", at + 0.2, 0.06);
+  typeOut(r.l2, "01 about", at + 0.62, 0.035);
+  tl.fromTo(r.keys.map((k) => k.querySelector(".down")), { opacity: 1 }, { opacity: 0, duration: 0.14, stagger: 0.075 }, at + 0.1)
+    .fromTo(r.keys, { y: "3%" }, { y: 0, duration: 0.42, ease: "back.out(2.2)", stagger: 0.075 }, at + 0.1)
+    .fromTo(r.labels, { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", stagger: 0.075 }, at + 0.2)
+    .fromTo(r.knob, { rotate: -250 }, { rotate: -135, duration: 0.9, ease: "back.out(1.3)" }, at + 0.15)
+    .fromTo(r.name, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.out" }, at + 0.3);
+}
+
+
+const idleSpin = (r) => gsap.to(r.hubs, { rotate: "+=360", duration: 2.4, ease: "none", repeat: -1 });
+let speed = 1, current;
+
+function combo(r) {
+  const tl = gsap.timeline();
+  const boot = document.createElement("div");
+  boot.className = "boot";
+  boot.innerHTML = "<span>000</span>";
+  r.stage.appendChild(boot);
+  const label = boot.firstElementChild;
+  const st = r.stage.getBoundingClientRect(), sc = r.screen.getBoundingClientRect();
+  const target = { left: sc.left - st.left, top: sc.top - st.top, width: sc.width, height: sc.height };
+  gsap.set(boot, { left: 0, top: 0, width: st.width, height: st.height, borderRadius: 12 });
+  gsap.set(r.d, { opacity: 0, scale: 1.1 });
+  gsap.set(r.cass, { yPercent: -70, rotate: -4, scale: 1.05, opacity: 0, filter: "drop-shadow(0 30px 24px rgb(0 0 0 / .35))" });
+  gsap.set(r.knob, { rotate: -250 });
+  r.keys.forEach((k) => gsap.set(k.querySelector(".down"), { opacity: 1 }));
+  gsap.set(r.labels, { opacity: 0 }); gsap.set(r.name, { opacity: 0 });
+
+  // C: the counter runs the tape in and lands on SIDE A
+  const counter = { n: 0 };
+  tl.to(counter, { n: 120, duration: 0.65, ease: "power2.out", onUpdate: () => (label.textContent = String(Math.round(counter.n)).padStart(3, "0")) }, 0.1)
+    .to(label, { opacity: 0.15, duration: 0.05, repeat: 3, yoyo: true, ease: "steps(1)" }, 0.78)
+    .call(() => (label.textContent = "SIDE A"), null, 0.88)
+    // the dark shrinks into the little screen; the device, window empty, appears around it
+    .to(boot, { ...target, borderRadius: 4, duration: 0.85, ease: "expo.inOut" }, 1.1)
+    .to(label, { fontSize: "15cqw", duration: 0.85, ease: "expo.inOut" }, 1.1)
+    .to(r.d, { opacity: 1, scale: 1, duration: 0.95, ease: "expo.out" }, 1.25)
+    .call(() => { boot.remove(); r.l1.textContent = "SIDE A"; }, null, 1.96);
+
+  // A: the tape drops in and the deck takes its weight
+  const drop = 1.85;
+  tl.to(r.cass, { opacity: 1, duration: 0.15 }, drop)
+    .to(r.cass, { yPercent: 0, rotate: 0, scale: 1, duration: 0.6, ease: "power3.in" }, drop)
+    .to(r.cass, { filter: "drop-shadow(0 0px 0px rgb(0 0 0 / 0))", duration: 0.6, ease: "power3.in" }, drop)
+    .fromTo(r.d, { y: 0 }, { y: "1.2%", duration: 0.08, ease: "power2.out", immediateRender: false }, drop + 0.6)
+    .to(r.d, { y: 0, duration: 0.5, ease: "elastic.out(1, 0.45)" }, drop + 0.68)
+    .fromTo(r.hubs, { rotate: 0 }, { rotate: 1080, duration: 1.4, ease: "power2.inOut" }, drop + 0.68)
+    .to(r.packs[0], { rotate: 200, duration: 1.4, ease: "power2.inOut" }, drop + 0.68)
+    .to(r.packs[1], { rotate: 200, duration: 1.4, ease: "power2.inOut" }, drop + 0.68)
+    .to(r.led, { opacity: 1, duration: 0.08, repeat: 3, yoyo: true, ease: "steps(1)" }, drop + 0.7)
+    .to(r.led, { opacity: 1, duration: 0.1 }, drop + 1.0)
+    .fromTo(r.keys.map((k) => k.querySelector(".down")), { opacity: 1 }, { opacity: 0, duration: 0.14, stagger: 0.075 }, drop + 0.75)
+    .fromTo(r.keys, { y: "3%" }, { y: 0, duration: 0.42, ease: "back.out(2.2)", stagger: 0.075 }, drop + 0.75)
+    .fromTo(r.labels, { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", stagger: 0.075 }, drop + 0.85)
+    .fromTo(r.knob, { rotate: -250 }, { rotate: -135, duration: 0.9, ease: "back.out(1.3)" }, drop + 0.8)
+    .fromTo(r.name, { opacity: 0 }, { opacity: 1, duration: 0.5 }, drop + 0.9);
+  const text = "01 about";
+  for (let i = 1; i <= text.length; i++) tl.call(() => (r.l2.textContent = text.slice(0, i)), null, drop + 0.9 + i * 0.035);
+  tl.call(() => idleSpin(r), null, drop + 2.1);
+  return tl;
+}
+
+function play() {
+  const stage = document.getElementById("s-combo");
+  gsap.killTweensOf("*");
+  current?.kill();
+  const r = build(stage);
+  const imgs = [...stage.querySelectorAll("img")];
+  Promise.all(imgs.map((i) => (i.complete ? 1 : new Promise((res) => (i.onload = i.onerror = res))))).then(() =>
+    requestAnimationFrame(() => { current = combo(r); current.timeScale(1 / speed); }));
+}
+document.querySelector("[data-replay]").addEventListener("click", play);
+document.querySelectorAll("[data-speed]").forEach((b) => b.addEventListener("click", () => { speed = Number(b.dataset.speed); play(); }));
+setTimeout(play, 500);
+</script>
+</body>
+</html>

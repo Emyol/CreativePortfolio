@@ -1,10 +1,12 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Flip3D } from "@/components/three/Flip3D";
 import { DEVICE } from "@/lib/device/layout";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { useInViewOnce } from "@/lib/motion/useInViewOnce";
 import { playClunk } from "@/lib/sound";
+import { canUse3D, hasGpuWebGL } from "@/lib/three/support";
 import styles from "./Flip.module.css";
 
 const N = DEVICE.flipFrames;
@@ -12,9 +14,10 @@ const { width: FW, height: FH } = DEVICE.flipSize;
 const frame = (i: number) => `/device/flip/flip-${String(i).padStart(2, "0")}.webp`;
 
 /**
- * Between the sides the tape is turned over. Full motion scrubs the rendered frames on a
- * canvas while the stage holds still (sticky, not pinned, so nothing traps the scroll);
- * phones crossfade the first and last frames; reduced motion shows the turned tape.
+ * Between the sides the tape is turned over while the stage holds still (sticky, not pinned,
+ * so nothing traps the scroll). Full motion turns the 3D cassette (Flip3D), or without it
+ * scrubs the rendered frames on a canvas; phones crossfade the first and last frames;
+ * reduced motion shows the turned tape.
  */
 export function Flip() {
   const tier = useMotionTier();
@@ -24,6 +27,9 @@ export function Flip() {
   const caption = useRef<HTMLParagraphElement>(null);
   // Frames load only when the flip is within a screen of the viewport.
   const near = useInViewOnce(ref, "100% 0px 100% 0px");
+  // The 3D cassette on full motion with a GPU; the frames if it can't or it fails.
+  const [three, setThree] = useState(false);
+  useEffect(() => setThree(tier === "full" && canUse3D(tier, hasGpuWebGL())), [tier]);
 
   useGSAP(
     () => {
@@ -50,7 +56,7 @@ export function Flip() {
         c.dataset.ready = "";
       };
 
-      if (tier === "full" && near) {
+      if (tier === "full" && near && !three) {
         for (let i = 0; i < N; i++) {
           const img = new Image();
           img.decoding = "async";
@@ -77,7 +83,7 @@ export function Flip() {
       });
       return () => st.kill();
     },
-    { scope: ref, dependencies: [tier, near], revertOnUpdate: true },
+    { scope: ref, dependencies: [tier, near, three], revertOnUpdate: true },
   );
 
   return (
@@ -89,7 +95,9 @@ export function Flip() {
           ) : (
             <>
               <img src={frame(0)} alt="" width={FW} height={FH} className={styles.img} loading="lazy" decoding="async" />
-              {tier === "full" ? (
+              {tier === "full" && three ? (
+                near && <Flip3D onFail={() => setThree(false)} />
+              ) : tier === "full" ? (
                 <canvas ref={canvas} className={styles.canvas} aria-hidden="true" />
               ) : (
                 <img ref={last} src={frame(N - 1)} alt="" width={FW} height={FH} className={styles.img} style={{ opacity: 0 }} loading="lazy" decoding="async" />

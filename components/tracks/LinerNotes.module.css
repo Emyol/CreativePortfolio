@@ -14,7 +14,25 @@
   text-wrap: pretty;
 }
 .letter p { margin: 0 0 1.1em; }
-.letter p:first-child::first-line { color: #fff; }
+.letter [data-fold="top"] p:first-child::first-line { color: #fff; }
+
+/* The lower fold of the letter: it swings open about its top edge as the track arrives,
+   showing the ruled back of the paper while it is still folded under. */
+.fold { position: relative; transform-style: preserve-3d; transform-origin: 50% 0; }
+.foldFace { backface-visibility: hidden; }
+.foldBack {
+  position: absolute;
+  inset: 0;
+  transform: rotateX(180deg);
+  backface-visibility: hidden;
+  border-radius: 6px;
+  background: repeating-linear-gradient(0deg, #15161a 0 31px, #1d1f24 31px 32px);
+}
+
+/* The candid can be picked up: a grab cursor where it can be dragged. */
+.throwable { touch-action: pan-y; }
+@media (pointer: fine) { .throwable { cursor: grab; } .throwable:active { cursor: grabbing; } }
+html[data-tier="none"] .throwable { cursor: auto; }
 
 .sign {
   font-family: var(--font-mono), monospace;

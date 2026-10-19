@@ -51,3 +51,23 @@ test("turning it back off restores smooth scroll without a reload", async ({ pag
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect(page.locator("html")).toHaveClass(/lenis/);
 });
+
+test("switching on reduced motion lets a raised spine back down", async ({ page }) => {
+  await gotoReady(page, "/#on-rotation");
+  await headingAtTop(page, "on-rotation");
+  await page.locator("[data-spine]").nth(1).hover();
+  const raised = () => page.locator("[data-spine]").evaluateAll((els) => els.some((el) => !new DOMMatrix(getComputedStyle(el).transform).isIdentity));
+  await expect.poll(raised).toBe(true);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => page.locator("[data-spine]").evaluateAll((els) => els.every((el) => new DOMMatrix(getComputedStyle(el).transform).isIdentity))).toBe(true);
+});
+
+test("switching on reduced motion puts a cued tape back in its row", async ({ page }) => {
+  await gotoReady(page, "/#mixtape");
+  await headingAtTop(page, "mixtape");
+  await page.locator("[data-cue-row]").first().hover();
+  const tape = page.locator("[data-cue-row]").first().locator("span[aria-hidden='true']").first();
+  await expect.poll(() => tape.evaluate((el) => (el as HTMLElement).style.transform)).toContain("translate");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => tape.evaluate((el) => (el as HTMLElement).style.transform)).toBe("");
+});

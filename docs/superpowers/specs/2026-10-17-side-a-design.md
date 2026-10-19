@@ -206,6 +206,11 @@ them a slight concave top), and the composition must be re-shot top-down.
 
 ## Motion system
 
+> **Superseded in part (2026-10-18):** the entrance, the holds and arrivals, the 3D hero, flip
+> and footer, and the event write-in are specified in
+> `docs/superpowers/specs/2026-10-18-motion-design.md`, which replaces the "one signature move
+> per component" rule below. What follows still describes the reels, packs, keys and knob.
+
 Each component gets **one** signature move. Easing and durations follow the project's
 taste rules (custom ease-out for entering, ease-in-out for on-screen movement, nothing
 UI-facing over 300 ms except the scroll-scrubbed pieces).

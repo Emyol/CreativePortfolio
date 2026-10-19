@@ -489,6 +489,122 @@ if wanted("flip"):
         render_pass(f"flip-{i:02d}", visible)
     cas.rotation_euler, cas.location = (0, 0, 0), (CASSETTE[0], CASSETTE[1], FLOOR)
 
+# ---------------------------------------------------------------- glb (the real-time 3D player)
+# One model for the page's 3D hero, flip and footer (docs/superpowers/specs/2026-10-18-motion-
+# design.md). Two pitfalls found in the spike: bake every boolean before anything moves
+# (cutters stay put in world space, so a moved part loses its cuts), and give the underside a
+# thin skin rather than reusing the full-height `under` slab, which fills the top's recesses.
+# Raw output: out/device-raw.glb; scripts/compress-device.mjs writes public/device/device.glb.
+if wanted("glb"):
+    import mathutils
+    PACK_SPRITE.hide_render = True
+    glb_keys = [KEY_UP] + [key(f"Key{i}", *KEYS[i]) for i in range(1, 4)]
+    KEY_UP.name = "Key0"
+    glb_packs = [pack("PackL", -HUB_DX, PACK_MAX), pack("PackR", HUB_DX, PACK_MAX)]  # full; the page scales them
+    bpy.context.view_layer.update()
+
+    # Key labels and the nameplate as meshes; the screen's text stays live in the page.
+    dg = bpy.context.evaluated_depsgraph_get()
+    glb_print = []
+    for t in BEAUTY_ONLY:
+        if t.type == "FONT" and t.data.body in ("miel", "about", "events", "mixtape", "people"):
+            p = bpy.data.objects.new("Print_" + t.data.body, bpy.data.meshes.new_from_object(t.evaluated_get(dg)))
+            link(p)
+            p.matrix_world = t.matrix_world.copy()
+            glb_print.append(p)
+
+    glb_under = [o for o in UNDER_PARTS if o is not under]
+    SKIN = 0.02
+    skin = rrect("BottomSkin", W - 0.03, D - 0.03, SKIN, 0.40, (0, 0, -SKIN + 0.006), M["alu"], seg=16)
+    bevel(skin, 0.006, seg=2)
+    glb_parts = PLATE_PARTS + [interior, knob, mark, wall] + list(FRONT) + list(BACK) + HUB_L + HUB_R_PARTS + glb_packs + glb_keys + glb_print + glb_under + [skin]
+
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get()
+    for o in set(glb_parts):
+        if o.type == "MESH" and len(o.modifiers):
+            baked = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+            o.modifiers.clear()
+            o.data = baked
+
+    # The cuts leave the body's flat faces split into many coplanar triangles: dissolve them
+    # (planar, under 1°), which changes no shape and halves what the page downloads.
+    dec = body.modifiers.new("Planar", "DECIMATE")
+    dec.decimate_type = "DISSOLVE"
+    dec.angle_limit = math.radians(1)
+    bpy.context.view_layer.update()
+    body_flat = bpy.data.meshes.new_from_object(body.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    body.modifiers.clear()
+    body.data = body_flat
+
+    def keep_world(o, parent):
+        mw = o.matrix_world.copy()
+        o.parent = parent
+        o.matrix_world = mw
+
+    # Pivots for the parts the page turns.
+    hub_l = empty("HubLPivot", (-HUB_DX, HUB_DY, 0.065), parent=cas)
+    hub_r = empty("HubRPivot", (HUB_DX, HUB_DY, 0.065), parent=cas)
+    mark_pivot = empty("KnobMarkPivot", (KNOB[0], KNOB[1], H))
+    bpy.context.view_layer.update()
+    for p in HUB_L:
+        keep_world(p, hub_l)
+    for p in HUB_R_PARTS:
+        keep_world(p, hub_r)
+    keep_world(mark, mark_pivot)
+
+    # The underside was modelled face up for its sprite: turn it onto the bottom face (180°
+    # about X through mid-height), set on the skin, under one node the footer reveals.
+    flip_down = (mathutils.Matrix.Translation((0, 0, H / 2)) @ mathutils.Matrix.Rotation(math.pi, 4, "X")
+                 @ mathutils.Matrix.Translation((0, 0, -H / 2)))
+    lift = SKIN - 0.006
+    for o in glb_under:
+        o.matrix_world = flip_down @ o.matrix_world
+        o.location.z -= lift
+    underside = empty("Underside")
+    bpy.context.view_layer.update()
+    for o in glb_under + [skin]:
+        keep_world(o, underside)
+
+    # Where the sticker's and the door's live text goes: their corners, as seen once the
+    # device is turned over (TL, TR, BR, BL of the face-up rect), on their outer face.
+    def anchor(name, cx, cy, w, h, top):
+        a = empty(name, parent=underside)
+        for corner, (x, y) in {"TL": (cx - w / 2, cy + h / 2), "TR": (cx + w / 2, cy + h / 2), "BR": (cx + w / 2, cy - h / 2), "BL": (cx - w / 2, cy - h / 2)}.items():
+            p = flip_down @ mathutils.Vector((x, y, top))
+            empty(name + corner, (p.x, p.y, p.z - lift), parent=a)
+    anchor("StickerAnchor", *STICKER, H + 0.004)
+    anchor("DoorAnchor", 2.15, 0.0, 2.3, 3.1, H + 0.006)
+
+    # A top-down planar UV on the aluminium, so the page can brush it (anisotropy).
+    for o in [body, skin, door]:
+        me = o.data
+        if not me.uv_layers:
+            me.uv_layers.new(name="UVMap")
+        uv = me.uv_layers.active.data
+        for loop in me.loops:
+            w = o.matrix_world @ me.vertices[loop.vertex_index].co
+            uv[loop.index].uv = ((w.x + W / 2) / W, (w.y + D / 2) / D)
+
+    def ancestors(o):
+        while o.parent:
+            o = o.parent
+            yield o
+
+    chosen = set(glb_parts) | {hub_l, hub_r, mark_pivot, underside}
+    for o in list(chosen):
+        chosen.update(ancestors(o))
+    for o in [x for x in bpy.data.objects if x.name.startswith(("StickerAnchor", "DoorAnchor"))]:
+        chosen.add(o)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in chosen:
+        o.hide_set(False)
+        o.select_set(True)
+    os.makedirs(OUT, exist_ok=True)
+    bpy.ops.export_scene.gltf(filepath=OUT + "device-raw.glb", export_format="GLB", use_selection=True, export_apply=False,
+                              export_yup=True, export_cameras=False, export_lights=False, export_materials="EXPORT")
+    print("EXPORTED device-raw.glb", len(chosen), "objects")
+
 # ---------------------------------------------------------------- layout.json
 def fx(x):
     return (x + CW / 2) / CW

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full sketch: 3D footer, smooth flip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Doto:wght@700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/Draggable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/InertiaPlugin.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+<style>
+  :root { --table: #E4E6E9; --ink: #141518; --muted: #5B5F68; --alu: #D3D6DB; --oled: #050506; --signal: #FF2E00; --oled-text: #FF5A1F;
+    --panel-text: #E9E9E9; --panel-muted: #9A9EA6; --rule: #2A2C31; --device-ink: #17181B; --gutter: clamp(16px, 4vw, 48px); }
+  * { box-sizing: border-box; }
+  html.lenis, html.lenis body { height: auto; }
+  body { margin: 0; background: var(--table); color: var(--ink); font-family: Archivo, system-ui, sans-serif; overflow-x: hidden; }
+  .caption { position: fixed; z-index: 80; top: 14px; left: 14px; max-width: min(400px, 70vw); padding: 10px 12px; border-radius: 12px; background: #fffd;
+    box-shadow: 0 0 0 1px #14151820, 0 8px 24px -10px #0006; font-size: .85rem; line-height: 1.45; }
+  .caption b { display: block; font-family: "Space Mono", monospace; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 2px; }
+  .caption em { font-style: normal; font-weight: 700; color: var(--signal); }
+
+  /* hero device */
+  .hero { height: 100vh; display: grid; place-items: center; }
+  .intro { perspective: 1400px; }
+  .boot { position: fixed; z-index: 100; background: var(--oled); display: grid; place-items: center; container-type: inline-size; }
+  .boot span { font-family: Doto, monospace; font-weight: 900; color: var(--oled-text); letter-spacing: .06em; font-size: 16cqw; white-space: nowrap; text-shadow: 0 0 .35em rgb(255 90 31 / .55); }
+  .skip { position: fixed; z-index: 101; right: 16px; bottom: 16px; font-family: "Space Mono", monospace; font-size: .72rem; color: #9A9EA6; }
+  .device { position: relative; width: min(64vw, 820px); aspect-ratio: 2400 / 1674; container-type: inline-size; transform-origin: 50% 70%; }
+  .device > *, .cass > * { position: absolute; }
+  .full { inset: 0; width: 100%; height: 100%; }
+  .shadow { opacity: .82; }
+  .cass { left: 9.767%; top: 14.667%; width: 44.884%; height: 42.667%; }
+  .shell { inset: 0; width: 100%; height: 100%; }
+  .screen { left: 60.93%; top: 15.667%; width: 28.14%; height: 15.667%; background: var(--oled); border-radius: 3%/5%; padding: 4% 5%; overflow: hidden;
+    font-family: Doto, monospace; color: var(--oled-text); text-shadow: 0 0 .35em rgb(255 90 31 / .55); container-type: inline-size; }
+  .screen .l1 { font-weight: 900; font-size: 15cqw; letter-spacing: .06em; line-height: 1; }
+  .screen .l2 { font-weight: 700; font-size: 9.5cqw; color: #F1E7E2; margin-top: 4%; }
+  .name { left: 59.53%; top: 36.17%; font-family: "Space Mono", monospace; font-weight: 700; color: var(--device-ink); font-size: 4.4cqw; line-height: 1; }
+  .led { left: 89.07%; top: 39%; width: 1.4%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #FFD2C2 0 12%, var(--signal) 45%, transparent 72%); }
+  .knob { left: 59.3%; top: 50.97%; width: 21.395%; height: 30.67%; transition: rotate 280ms cubic-bezier(.77,0,.175,1); }
+  .knob img { width: 100%; height: 100%; }
+  .key { width: 13.49%; height: 15%; }
+  .key img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .klabel { top: 81.2%; width: 11.65%; text-align: center; font-family: "Space Mono", monospace; font-size: 2.2cqw; color: var(--device-ink); }
+
+  /* dock */
+  .dock { position: fixed; z-index: 50; left: 0; right: 0; bottom: 14px; width: fit-content; margin-inline: auto; display: flex; align-items: center; gap: 12px; padding: 9px 14px 9px 10px; border-radius: 18px;
+    background: linear-gradient(180deg, rgb(255 255 255 / .5), transparent 45%), linear-gradient(100deg, #c2c5ca, var(--alu) 30%, #e3e5e8 52%, var(--alu) 70%, #c4c7cc);
+    box-shadow: inset 0 1px 0 #fffa, 0 0 0 1px #1415181a, 0 22px 44px -16px #0a0c1080; }
+  .dwin { position: relative; width: 72px; height: 46px; border-radius: 9px; background: #7c8087; padding: 3px; perspective: 300px; }
+  .dwin img { width: 100%; height: 100%; object-fit: contain; }
+  .dwin .dhub { position: absolute; top: 47%; width: 9px; height: 9px; margin: -4.5px; border-radius: 50%; background: conic-gradient(#222 0 25%, #ddd 0 50%, #222 0 75%, #ddd 0); }
+  .dscreen { width: 220px; height: 46px; border-radius: 8px; background: var(--oled); padding: 6px 12px; font-family: Doto, monospace; color: var(--oled-text); line-height: 1.05; }
+  .dscreen .a { font-weight: 900; font-size: 15px; letter-spacing: .06em; }
+  .dscreen .b { font-weight: 700; font-size: 11px; color: #F1E7E2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dknob { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #ff7a55, var(--signal) 55%, #b51f00); position: relative; transition: rotate 280ms cubic-bezier(.77,0,.175,1); }
+  .dknob::after { content: ""; position: absolute; left: 50%; top: 18%; width: 3px; height: 30%; margin-left: -1.5px; border-radius: 2px; background: #fff; }
+  .dkeys { display: flex; gap: 5px; }
+  .dkey { width: 46px; height: 32px; border-radius: 7px; background: linear-gradient(#dcdee2, #b9bcc2); box-shadow: inset 0 1px 0 #fff9, 0 1px 2px #0004; display: grid; place-items: end center; padding-bottom: 3px;
+    font: 9px "Space Mono", monospace; color: var(--device-ink); transition: transform 160ms, background 160ms; }
+  .dkey[data-on] { transform: translateY(2px); background: linear-gradient(#c9ccd1, #aeb2b8); box-shadow: inset 0 2px 4px #0003; }
+
+  /* sections: only the header is shared, and only a flicker */
+  .tracks { width: min(1180px, 100% - 2 * var(--gutter)); margin: 0 auto; display: grid; gap: 26vh; }
+  .track { position: relative; }
+  .head { display: flex; align-items: flex-end; gap: 14px; margin-left: 2px; }
+  .num { font-family: "Space Mono", monospace; font-size: .875rem; color: var(--muted); margin-bottom: 10px; }
+  .tab { background: var(--oled); border-radius: 12px 12px 0 0; padding: 10px 22px 2px; margin-left: 10px; }
+  .title { margin: 0; font-family: Doto, monospace; font-weight: 800; font-size: clamp(2.25rem, 1.4rem + 3.6vw, 4.25rem); color: var(--oled-text); line-height: 1.05; letter-spacing: .02em; text-shadow: 0 0 .3em rgb(255 90 31 / .45); }
+  .panel { position: relative; background: var(--oled); color: var(--panel-text); border-radius: 18px; padding: clamp(18px, 3vw, 34px); box-shadow: 0 30px 60px -30px #0008; }
+  .hint { position: absolute; right: 16px; top: 14px; font-family: "Space Mono", monospace; font-size: .7rem; color: var(--panel-muted); letter-spacing: .06em; text-transform: uppercase; }
+
+  /* about: a folded letter */
+  .about { display: grid; grid-template-columns: 1.4fr 1fr; gap: 40px; align-items: start; perspective: 1400px; }
+  .sheet { transform-style: preserve-3d; }
+  .half { position: relative; transform-style: preserve-3d; }
+  .half .face { backface-visibility: hidden; padding: 4px 0; }
+  .half.b { transform-origin: 50% 0%; }
+  .half.b .back { position: absolute; inset: 0; transform: rotateX(180deg); backface-visibility: hidden; background: repeating-linear-gradient(0deg, #15161a 0 31px, #1d1f24 31px 32px); border-radius: 6px; }
+  .letter p { margin: 0 0 18px; font-size: 1.05rem; line-height: 1.75; }
+  .sign { font-family: "Space Mono", monospace; color: var(--panel-muted); font-size: .85rem; }
+  .candid { aspect-ratio: 4 / 5; border-radius: 4px; background: #f3f0ea; padding: 12px 12px 46px; box-shadow: 0 18px 40px -14px #000c; rotate: -3deg; position: relative; cursor: grab; touch-action: none; z-index: 2; }
+  .candid:active { cursor: grabbing; }
+  .candid .img { width: 100%; height: 100%; background: linear-gradient(135deg, #6b3a3a, #3b2224); pointer-events: none; }
+  .tapebit { position: absolute; top: -10px; left: 50%; width: 90px; height: 24px; margin-left: -45px; background: #e8e4dacc; rotate: 2deg; }
+
+  /* events: recorded in by a playhead */
+  .events { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; position: relative; }
+  .playhead { position: absolute; top: -8px; bottom: -8px; left: 0; width: 2px; background: var(--signal); box-shadow: 0 0 12px 2px #ff2e0088; z-index: 3; pointer-events: none; }
+  .playhead span { position: absolute; top: -22px; left: -18px; font-family: "Space Mono", monospace; font-size: .7rem; font-weight: 700; color: var(--signal); white-space: nowrap; }
+  .card { cursor: pointer; transform-style: preserve-3d; will-change: transform; }
+  .card .ph { aspect-ratio: 16 / 10; border-radius: 6px; position: relative; overflow: hidden; }
+  .card .ph::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), #ffffff33, transparent 55%); opacity: 0; transition: opacity 200ms; }
+  .card:hover .ph::after { opacity: 1; }
+  .card h3 { margin: 10px 0 4px; font-size: 1rem; }
+  .meta { font-family: "Space Mono", monospace; font-size: .72rem; color: var(--panel-muted); }
+  .meta i { font-style: normal; color: var(--signal); }
+
+  /* mixtape: a label maker */
+  .rows { display: grid; }
+  .row { position: relative; display: grid; grid-template-columns: 34px 40px 1fr 48px auto; align-items: center; gap: 12px; padding: 14px 4px 14px 4px; border-bottom: 1px solid var(--rule); transition: background 200ms; }
+  .row:hover { background: #ffffff08; }
+  .row .n { font-family: "Space Mono", monospace; font-size: .75rem; color: var(--panel-muted); }
+  .play { width: 34px; height: 34px; border-radius: 50%; background: #e9e9e9; display: grid; place-items: center; border: 0; cursor: pointer; position: relative; z-index: 2; }
+  .play::after { content: ""; border-left: 10px solid #111; border-top: 6px solid transparent; border-bottom: 6px solid transparent; margin-left: 3px; }
+  .row[data-playing] .play { background: var(--signal); }
+  .row[data-playing] .play::after { border: 0; width: 10px; height: 12px; margin: 0; background: linear-gradient(90deg, #111 0 35%, transparent 35% 65%, #111 65%); }
+  .row b { display: inline-block; font-size: .98rem; min-height: 1.2em; font-family: "Space Mono", monospace; letter-spacing: .02em; }
+  .row small { display: block; color: var(--panel-muted); }
+  .mini { position: absolute; left: -96px; top: 50%; width: 76px; margin-top: -25px; pointer-events: none; filter: drop-shadow(0 6px 8px #0008); opacity: 0; }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 22px; opacity: 0; }
+  .row[data-playing] .bars { opacity: 1; }
+  .bars span { width: 5px; height: 100%; background: var(--oled-text); transform-origin: 50% 100%; transform: scaleY(.15); border-radius: 1px; }
+  .open { font-family: "Space Mono", monospace; font-size: .72rem; color: var(--panel-muted); text-decoration: underline; }
+
+  /* people: rolling credits */
+  .window { height: 62vh; overflow: hidden; -webkit-mask: linear-gradient(transparent, #000 18%, #000 82%, transparent); mask: linear-gradient(transparent, #000 18%, #000 82%, transparent); }
+  .roll { list-style: none; margin: 0; padding: 0; display: grid; gap: 34px; text-align: center; }
+  .roll .rel { font-family: "Space Mono", monospace; font-size: .72rem; text-transform: uppercase; letter-spacing: .14em; color: var(--panel-muted); }
+  .roll .who { display: inline-block; font-size: clamp(1.4rem, 1rem + 1.6vw, 2.2rem); font-weight: 800; margin-top: 4px; cursor: default; transition: color 200ms, letter-spacing 300ms cubic-bezier(.23,1,.32,1); }
+  .roll li:hover .who { color: var(--oled-text); letter-spacing: .04em; }
+  .roll .note { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 300ms cubic-bezier(.23,1,.32,1); color: var(--panel-muted); font-size: .92rem; }
+  .roll .note > span { overflow: hidden; }
+  .roll li:hover .note { grid-template-rows: 1fr; }
+
+  /* flip */
+  .flip { height: 230vh; }
+  .flip .stage { position: sticky; top: 0; height: 100vh; display: grid; place-items: center; }
+  .flip .grab { display: grid; justify-items: center; cursor: grab; touch-action: pan-y; user-select: none; }
+  .flip canvas { width: min(60vw, 760px); aspect-ratio: 3 / 2; pointer-events: none; }
+  .flip .side { font-family: "Space Mono", monospace; color: var(--muted); font-size: .85rem; margin-top: -2vh; }
+
+  /* made: things on a table */
+  .table { position: relative; height: min(56vh, 500px); min-height: 380px; overflow: hidden; border-radius: 12px; background: radial-gradient(ellipse at 50% 40%, #16181d, #0b0c0e); }
+  .thing { position: absolute; width: 230px; background: #f3f0ea; color: #1a1a1a; padding: 10px 10px 14px; border-radius: 4px; box-shadow: 0 16px 30px -12px #000; cursor: grab; touch-action: none; user-select: none; }
+  .thing:active { cursor: grabbing; }
+  .thing .pic { aspect-ratio: 4 / 3; border-radius: 2px; }
+  .thing h3 { margin: 10px 0 2px; font-size: .95rem; } .thing p { margin: 0; font-size: .8rem; color: #555; }
+  .tidy { position: absolute; z-index: 5; right: 14px; bottom: 14px; font: 600 .82rem Archivo, sans-serif; min-height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid #ffffff40; background: #0008; color: #fff; cursor: pointer; }
+
+  /* on rotation: a cassette rack */
+  .rack { display: flex; gap: 12px; align-items: flex-end; height: 340px; padding: 0 8px; border-bottom: 6px solid #2a2c31; overflow: hidden; }
+  .spine { position: relative; width: 66px; height: 290px; flex: none; border-radius: 4px 4px 0 0; background: linear-gradient(90deg, #1d1f24, #2b2e35 40%, #1a1c20); box-shadow: inset 0 0 0 1px #ffffff12; cursor: pointer; transform-origin: 50% 100%;
+    display: grid; grid-template-rows: auto 1fr auto; justify-items: center; padding: 10px 0; border: 0; color: inherit; font: inherit; }
+  .spine .stripe { width: 100%; height: 26px; }
+  .spine .t { writing-mode: vertical-rl; rotate: 180deg; font-weight: 800; font-size: 1rem; letter-spacing: .04em; margin: 12px 0; }
+  .spine .k { font-family: "Space Mono", monospace; font-size: .62rem; text-transform: uppercase; color: var(--panel-muted); }
+  .spine:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+  .rnote { min-height: 3.2em; margin-top: 18px; color: var(--panel-muted); font-size: .98rem; }
+  .rnote b { color: var(--panel-text); }
+
+  /* footer: the device turns over */
+  .turn { height: 100vh; display: grid; place-items: center; perspective: 1600px; }
+  .turnbox { position: relative; width: min(78vw, 1000px); aspect-ratio: 1200 / 840; container-type: inline-size; }
+  /* The rendered shadow runs past the frame; fade the frame's edges so it never shows a box. */
+  .turnbox canvas { width: 100%; height: 100%;
+    -webkit-mask: radial-gradient(ellipse 62% 64% at 50% 50%, #000 72%, transparent 100%); mask: radial-gradient(ellipse 62% 64% at 50% 50%, #000 72%, transparent 100%); }
+  /* Live text over the rendered (blank) sticker and battery door; boxes measured on the last frame. */
+  .sticker { position: absolute; padding: 3cqw; font-family: "Space Mono", monospace; color: #222; opacity: 0; cursor: pointer;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transition: clip-path 380ms cubic-bezier(.23,1,.32,1); }
+  .sticker::after { content: ""; position: absolute; right: 0; bottom: 0; width: 24%; height: 28%; background: linear-gradient(135deg, #d9d5ca 50%, transparent 50%); box-shadow: -3px -3px 6px #0002; transform: scale(0); transform-origin: 100% 100%; transition: transform 380ms cubic-bezier(.23,1,.32,1); }
+  .sticker:hover { clip-path: polygon(0 0, 100% 0, 100% 72%, 76% 100%, 0 100%); }
+  .sticker:hover::after { transform: scale(1); }
+  .sticker h4 { margin: 0 0 1.4cqw; font-size: 1.9cqw; letter-spacing: .08em; } .sticker p { margin: 0; font-size: 1.55cqw; line-height: 1.6; }
+  .door { position: absolute; display: grid; align-content: center; gap: 1.8cqw; padding: 2.5cqw; font-family: "Space Mono", monospace; font-size: 1.8cqw; color: #1b1c20; }
+  .door a { opacity: 0; }
+  .door a { color: inherit; }
+
+  /* event page */
+  .evpage { position: fixed; inset: 0; z-index: 90; background: var(--table); overflow: auto; visibility: hidden; }
+  .evpage .ehead { position: fixed; z-index: 91; }
+  .evpage .ebody { width: min(860px, 100% - 2 * var(--gutter)); margin: 0 auto; padding: calc(56vh + 30px) 0 120px; }
+  .evpage h1 { font-size: clamp(2rem, 1.4rem + 3vw, 3.6rem); margin: 0 0 8px; }
+  .evpage .line { display: block; overflow: hidden; } .evpage .line > span { display: block; }
+  .evpage .story p { font-size: 1.1rem; line-height: 1.75; margin: 0 0 18px; }
+  .evpage .close { position: fixed; z-index: 92; top: 14px; right: 14px; font: 600 .9rem Archivo, sans-serif; min-height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: var(--oled); color: #fff; cursor: pointer; }
+  @media (max-width: 760px) { .about { grid-template-columns: 1fr; } .events { grid-template-columns: 1fr 1fr; } .dscreen { width: 140px; } .dwin { display: none; } .thing { width: 160px; } }
+</style>
+</head>
+<body>
+<div class="caption" id="caption"><b>each section holds</b>Each section stops once it is fully in view. Your scrolling plays its arrival, and the page moves on only when it has finished. Scroll back to reverse it.</div>
+<header class="hero" id="hero"><div class="intro" id="intro"><div class="device" id="device"></div></div></header>
+<main class="tracks" id="tracks"></main>
+<div class="evpage" id="evpage" aria-hidden="true"></div>
+<div class="dock" id="dock">
+  <div class="dwin"><img id="dock-shell" src="/files/dev-shell-a.webp" alt=""><span class="dhub" style="left:31%"></span><span class="dhub" style="left:69%"></span></div>
+  <div class="dscreen"><div class="a" id="dock-side">SIDE A</div><div class="b" id="dock-line">01 about</div></div>
+  <div class="dknob" id="dock-knob"></div>
+  <div class="dkeys" id="dkeys"></div>
+</div>
+
+<script>
+gsap.registerPlugin(ScrollTrigger, Draggable, InertiaPlugin);
+const F = (n) => `/files/dev-${n}.webp`;
+const LABELS = ["about", "events", "mixtape", "people"];
+const KEY_X = [0.09535, 0.21395, 0.33256, 0.45116];
+const G = [["#3b3f6b", "#24243d"], ["#2f6b4f", "#1d3a2c"], ["#5b6b2f", "#33401b"], ["#5a3b6b", "#2c1f3b"], ["#2f5a6b", "#1b3340"], ["#6b4a2f", "#3d2a1b"]];
+const grad = (g) => `linear-gradient(135deg,${g[0]},${g[1]})`;
+const MONTHS = ["June", "April", "February", "July", "May", "March"];
+const head = (n, title) => `<div class="head"><span class="num">${n}</span><div class="tab"><h2 class="title">${title}</h2></div></div>`;
+const T = (id, n, title, side, caption, inner, hint = "") => `<section class="track" data-track="${id}" data-n="${n}" data-side="${side}" data-caption="${caption}">${head(n, title)}<div class="panel">${hint ? `<span class="hint">${hint}</span>` : ""}${inner}</div></section>`;
+
+document.getElementById("tracks").innerHTML = [
+  T("about", "01", "about", "a", "<b>about</b>The letter unfolds like a folded J-card insert as you scroll. <em>Try: grab the photo and throw it.</em> It springs back to its tape.",
+    `<div class="about"><div class="sheet letter">
+       <div class="half a"><div class="face"><p>Fixture letter, first paragraph. This text stands in for the owner's own letter and never ships.</p></div></div>
+       <div class="half b"><div class="face"><p>Fixture letter, second paragraph, long enough to wrap across several ruled lines on a desktop screen so the reveal can be judged properly.</p><p class="sign">Miel</p></div><div class="back"></div></div>
+     </div><div class="candid" id="candid"><span class="tapebit"></span><div class="img"></div></div></div>`, "drag the photo"),
+  T("events", "02", "events", "a", "<b>events</b>A red REC playhead sweeps across with your scroll and records each photo in. <em>Try: move over a photo</em>, it tilts toward you like a print in your hand. Click one to open it.",
+    `<div class="events" id="events"><div class="playhead" id="playhead"><span>● REC</span></div>${G.map((g, i) => `<article class="card" data-i="${i}"><div class="ph" style="background:${grad(g)}"></div><h3>Fixture event ${6 - i}</h3><div class="meta"><i>● LIVE</i> ${MONTHS[i]} 2025 · Fixture place ${6 - i}</div></article>`).join("")}</div>`, "tilt · click"),
+  T("mixtape", "03", "mixtape", "a", "<b>mixtape</b>Each title prints out like a label maker as it comes up. <em>Try: hover a song</em>, its cassette slides out of the case and the dock cues it. Press play for the levels.",
+    `<div class="rows">${[1, 2, 3, 4, 5, 6].map((n) => `<div class="row" data-song="Fixture song ${n}"><img class="mini" src="${F("shell-a")}" alt=""><span class="n">0${n}</span><button type="button" class="play" aria-label="Play fixture song ${n}"></button><span><b></b><small>Fixture artist</small></span><span class="bars">${"<span></span>".repeat(5)}</span><span class="open">Open in Spotify</span></div>`).join("")}</div>`, "hover · play"),
+  T("people", "04", "people", "a", "<b>people</b>The names roll past like film credits, faster than you scroll. <em>Try: hover a name</em> to light it and read its note.",
+    `<div class="window"><ul class="roll" id="roll">${[["Thesis teammate", "Fixture person A"], ["Kuya", "Fixture person B"], ["Bandmate", "Fixture person C"], ["Community", "Fixture person D"], ["Mentor", "Fixture person E"], ["Classmate", "Fixture person F"], ["Org", "Fixture community G"], ["Friend", "Fixture person H"]].map(([r, w]) => `<li><div class="rel">${r}</div><span class="who">${w}</span><div class="note"><span>A fixture note about this person.</span></div></li>`).join("")}</ul></div>`, "hover a name"),
+].join("") + `
+  <section class="flip" id="flip">
+    <div class="stage"><div class="grab" id="grab"><canvas id="flip-canvas" width="1200" height="800" aria-label="The cassette turning over"></canvas><span class="side" id="flip-side">side a · drag to spin</span></div></div>
+  </section>` + [
+  T("made", "05", "made", "b", "<b>made</b>Things are dropped onto the table, scattered. <em>Try: drag and throw them</em> around the table, then press Tidy up.",
+    `<div class="table" id="table">${[0, 1, 2, 3, 4].map((i) => `<div class="thing"><div class="pic" style="background:${grad(G[(i + 2) % 6])}"></div><h3>Fixture thing ${i + 1}</h3><p>A short fixture note.</p></div>`).join("")}<button type="button" class="tidy" id="tidy">Tidy up</button></div>`, ""),
+  T("on-rotation", "06", "on rotation", "b", "<b>on rotation</b>Cassette spines drop into the rack. <em>Try: hover a spine</em> to pull it out and read it. Scroll fast and they lean.",
+    `<div class="rack" id="rack">${[["game", "Fixture game", "#ff5a1f"], ["anime", "Fixture anime", "#e9e9e9"], ["manga", "Fixture manga", "#7aa2ff"], ["game", "Game two", "#ff5a1f"], ["anime", "Anime two", "#e9e9e9"], ["manga", "Manga two", "#7aa2ff"], ["game", "Game three", "#ff5a1f"]].map(([k, t, c]) => `<button type="button" class="spine" data-title="${t}" data-kind="${k}"><span class="stripe" style="background:${c}"></span><span class="t">${t}</span><span class="k">${k}</span></button>`).join("")}</div><p class="rnote" id="rnote">Hover or focus a spine.</p>`, "hover a spine"),
+].join("") + `
+  <footer class="turn" id="turn" data-caption="<b>the end</b>The whole device turns over to show its underside. <em>Try: hover the sticker</em> and its corner peels.">
+    <div class="turnbox" id="turnbox"><canvas id="turn-canvas" width="1200" height="840" aria-label="The player turning over onto its back"></canvas>
+      <div class="sticker" id="sticker"><h4>TOOLBOX</h4><p>TypeScript · React · Next.js<br>Python · Supabase</p></div>
+      <div class="door" id="door"><a href="#">GitHub</a><a href="#">Email</a></div>
+    </div>
+  </footer>`;
+
+document.getElementById("dkeys").innerHTML = LABELS.map((l, i) => `<span class="dkey" data-key="${l}" ${i === 0 ? "data-on" : ""}>${l}</span>`).join("");
+document.getElementById("device").innerHTML = `
+  <img class="full shadow" src="${F("shadow")}" alt=""><img class="full" src="${F("plate")}" alt="">
+  <div class="cass">
+    ${[0.2343, 0.40988].map((x, i) => `<img src="${F("pack")}" alt="" style="left:${(x-0.09767)/0.44884*100 - 0.16744/0.44884*50}%;top:${(0.35-0.14667)/0.42667*100 - 0.16744*1.43369/0.42667*50}%;width:${0.16744/0.44884*100}%;height:${0.16744*1.43369/0.42667*100}%;scale:${i ? 0.42 : 1}">`).join("")}
+    ${[0.2343, 0.40988].map((x) => `<img class="hub" src="${F("hub")}" alt="" style="left:${(x-0.09767)/0.44884*100 - 0.05581/0.44884*50}%;top:${(0.35-0.14667)/0.42667*100 - 0.05581*1.43369/0.42667*50}%;width:${0.05581/0.44884*100}%;height:${0.05581*1.43369/0.42667*100}%">`).join("")}
+    <img class="shell" src="${F("shell-a")}" alt="">
+  </div>
+  <div class="screen"><div class="l1">SIDE A</div><div class="l2">01 about</div></div>
+  <span class="name">miel</span><span class="led"></span>
+  <span class="knob" id="hero-knob" style="rotate:-135deg"><img src="${F("knob-mark")}" alt=""></span>
+  ${KEY_X.map((x, i) => `<span class="key" style="left:${(x - 0.0186) * 100}%;top:${(0.69333 - 0.02667) * 100}%"><img src="${F("key-up")}" alt=""></span><span class="klabel" style="left:${(x - 0.00942) * 100}%">${LABELS[i]}</span>`).join("")}`;
+
+// Smooth scroll, scroll-speed reels (already on the site).
+const lenis = new Lenis({ lerp: 0.1 });
+lenis.on("scroll", ScrollTrigger.update);
+gsap.ticker.add((t) => lenis.raf(t * 1000));
+gsap.ticker.lagSmoothing(0);
+let angle = 0, playing = false;
+const spinUp = { v: 0 }; // the entrance spins the reels up past idle
+gsap.ticker.add((_t, dt) => {
+  angle -= (playing ? 1.6 : Math.abs(lenis.velocity) * 0.9 + 0.15 + spinUp.v) * dt * 0.06;
+  document.querySelectorAll(".hub, .dhub").forEach((h) => (h.style.transform = `rotate(${angle}deg)`));
+});
+
+const caption = document.getElementById("caption");
+const say = (html) => (caption.innerHTML = html);
+const dockLine = document.getElementById("dock-line");
+const KNOB = { about: -135, events: -45, mixtape: 45, people: 135, made: -135, "on-rotation": -45 };
+function flicker(el, text) {
+  if (el.textContent === text) return;
+  gsap.timeline().to(el, { opacity: 0.1, duration: 0.04, repeat: 2, yoyo: true, ease: "steps(1)" }).call(() => (el.textContent = text)).to(el, { opacity: 1, duration: 0.04 });
+}
+let trackLine = "01 about";
+function setTrack(t) {
+  const id = t.dataset.track;
+  setSide(t.dataset.side); // the section decides the side; spinning the cassette by hand mustn't
+  document.getElementById("hero-knob").style.rotate = `${KNOB[id]}deg`;
+  document.getElementById("dock-knob").style.rotate = `${KNOB[id] + 135}deg`;
+  trackLine = `${t.dataset.n} ${id.replace("-", " ")}`;
+  flicker(dockLine, trackLine);
+  const keys = t.dataset.side === "b" ? ["made", "on-rotation"] : LABELS;
+  document.getElementById("dkeys").innerHTML = keys.map((l) => `<span class="dkey" data-key="${l}" ${l === id ? "data-on" : ""}>${l.replace("on-rotation", "rotation")}</span>`).join("");
+  say(t.dataset.caption);
+}
+let side = "a";
+function setSide(s) {
+  if (s === side) return;
+  side = s;
+  flicker(document.getElementById("dock-side"), `SIDE ${s.toUpperCase()}`);
+  const shell = document.getElementById("dock-shell");
+  gsap.timeline().to(shell, { rotateY: 90, duration: 0.15, ease: "power2.in" }).call(() => (shell.src = F(s === "a" ? "shell-a" : "shell-b"))).to(shell, { rotateY: 0, duration: 0.2, ease: "power2.out" });
+}
+
+// Hero → dock (agreed).
+gsap.timeline({ scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 0.6 } }).to("#device", { rotateX: 32, scale: 0.72, yPercent: 18, opacity: 0.15, ease: "none" }, 0);
+gsap.fromTo("#dock", { yPercent: 160, scale: 0.92 }, { yPercent: 0, scale: 1, ease: "none", scrollTrigger: { trigger: "#hero", start: "45% top", end: "85% top", scrub: 0.5 } });
+
+// The one shared cue: a section's title flickers on like the device's screen.
+document.querySelectorAll(".track").forEach((t) => {
+  const title = t.querySelector(".title");
+  gsap.set(title, { opacity: 0 });
+  ScrollTrigger.create({ trigger: t, start: "top 80%", once: true, onEnter: () => gsap.to(title, { opacity: 1, duration: 0.05, repeat: 5, yoyo: true, ease: "steps(1)", onComplete: () => gsap.set(title, { opacity: 1 }) }) });
+  ScrollTrigger.create({ trigger: t, start: "top 50%", end: "bottom 50%", onToggle: (s) => s.isActive && setTrack(t) });
+});
+
+// Each section holds still once it's fully in view (above the dock), your scroll plays its
+// arrival, and it lets go only when the arrival is finished. Scrolling back reverses it.
+const VIEW = () => innerHeight - 110;
+function hold(el, distance, build, start) {
+  // scrub: true, because Lenis already smooths the scroll: a scrub delay on top made each
+  // arrival trail the scroll and still be finishing as the section moved away.
+  const tl = gsap.timeline({ defaults: { ease: "none" }, scrollTrigger: {
+    trigger: el, pin: true, scrub: true, anticipatePin: 1, invalidateOnRefresh: true,
+    // Centred above the dock if it fits; else its top just inside the screen; a section
+    // taller than the screen holds with its end in view instead.
+    start: start ?? (() => el.offsetHeight <= VIEW() ? `center ${Math.round(VIEW() / 2)}px` : el.offsetHeight <= innerHeight - 20 ? "top top+=10" : "bottom bottom-=110"),
+    end: () => `+=${distance}`,
+  } });
+  build(tl);
+  // A short rest at the end, so the finished arrival is seen still before the page moves on.
+  tl.to({}, { duration: Math.max(0.15, tl.duration() * 0.15) });
+  return tl;
+}
+
+// ABOUT — the letter unfolds; the photo can be thrown and springs back.
+const aboutT = document.querySelector("[data-track=about]");
+hold(aboutT, 650, (tl) => tl.fromTo(aboutT.querySelector(".half.a"), { opacity: 0.4 }, { opacity: 1, duration: 0.3 }, 0)
+  .fromTo(aboutT.querySelector(".half.b"), { rotateX: -178 }, { rotateX: 0, ease: "power2.inOut", duration: 1 }, 0.1));
+Draggable.create("#candid", {
+  type: "x,y", inertia: true, edgeResistance: 0.65,
+  onPress() { gsap.to(this.target, { scale: 1.05, boxShadow: "0 40px 60px -16px #000", duration: 0.2 }); },
+  onDrag() { gsap.to(this.target, { rotate: -3 + gsap.utils.clamp(-25, 25, this.deltaX * 2), duration: 0.3 }); },
+  onThrowUpdate() { gsap.to(this.target, { rotate: -3 + gsap.utils.clamp(-25, 25, this.deltaX * 2), duration: 0.3 }); },
+  onThrowComplete() { gsap.to(this.target, { x: 0, y: 0, rotate: -3, scale: 1, boxShadow: "0 18px 40px -14px #000c", duration: 1.1, ease: "elastic.out(1, 0.55)" }); },
+  onRelease() { if (!this.tween) gsap.to(this.target, { x: 0, y: 0, rotate: -3, scale: 1, boxShadow: "0 18px 40px -14px #000c", duration: 1.1, ease: "elastic.out(1, 0.55)" }); },
+});
+
+// EVENTS — a REC playhead records each photo in; photos tilt toward the cursor.
+const evGrid = document.getElementById("events"), playhead = document.getElementById("playhead");
+const cards = [...evGrid.querySelectorAll(".card")];
+const rec = { p: 0 };
+const paint = () => {
+    const w = evGrid.offsetWidth, x = rec.p * (w + 40) - 20;
+    gsap.set(playhead, { x, opacity: rec.p > 0 && rec.p < 1 ? 1 : 0 });
+    cards.forEach((c) => {
+      const left = c.offsetLeft, f = gsap.utils.clamp(0, 1, (x - left) / c.offsetWidth);
+      c.style.clipPath = `inset(0 ${(1 - f) * 100}% 0 0)`;
+      c.querySelector(".ph").style.filter = `brightness(${0.35 + 0.65 * f}) saturate(${f})`;
+    });
+};
+paint();
+hold(document.querySelector("[data-track=events]"), 900, (tl) => tl.to(rec, { p: 1, duration: 1, onUpdate: paint }));
+cards.forEach((c) => {
+  const rx = gsap.quickTo(c, "rotationX", { duration: 0.5, ease: "power3" }), ry = gsap.quickTo(c, "rotationY", { duration: 0.5, ease: "power3" });
+  gsap.set(c, { transformPerspective: 700 });
+  c.addEventListener("pointermove", (e) => {
+    const r = c.getBoundingClientRect(), px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+    rx(-(py - 0.5) * 16); ry((px - 0.5) * 20);
+    c.style.setProperty("--gx", `${px * 100}%`); c.style.setProperty("--gy", `${py * 100}%`);
+  });
+  c.addEventListener("pointerleave", () => { rx(0); ry(0); });
+});
+
+// MIXTAPE — titles print like a label maker; hover cues a song; play bounces the levels.
+hold(document.querySelector("[data-track=mixtape]"), 800, (tl) => document.querySelectorAll(".row").forEach((row, k) => {
+  const b = row.querySelector("b"), text = row.dataset.song, typed = { n: 0 };
+  tl.fromTo(typed, { n: 0 }, { n: text.length, duration: 0.5, onUpdate: () => (b.textContent = text.slice(0, Math.round(typed.n))) }, k * 0.15)
+    .fromTo(row.querySelector(".n"), { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.15, ease: "back.out(3)" }, k * 0.15);
+}));
+document.querySelectorAll(".row").forEach((row) => {
+  const text = row.dataset.song, mini = row.querySelector(".mini");
+  row.addEventListener("pointerenter", () => { gsap.to(mini, { x: 30, opacity: 1, rotate: -6, duration: 0.45, ease: "back.out(1.6)" }); flicker(dockLine, `CUE ${text}`); });
+  row.addEventListener("pointerleave", () => { gsap.to(mini, { x: 0, opacity: 0, rotate: 0, duration: 0.25, ease: "power2.in" }); flicker(dockLine, trackLine); });
+});
+let bars;
+document.querySelectorAll(".play").forEach((p) => p.addEventListener("click", () => {
+  const row = p.closest(".row"), on = !row.hasAttribute("data-playing");
+  document.querySelectorAll(".row").forEach((r) => r.removeAttribute("data-playing"));
+  bars?.kill(); playing = on;
+  if (!on) return;
+  row.setAttribute("data-playing", "");
+  bars = gsap.timeline({ repeat: -1 });
+  row.querySelectorAll(".bars span").forEach((s, k) => bars.to(s, { scaleY: () => 0.2 + Math.random() * 0.8, duration: 0.14 + k * 0.02, ease: "sine.inOut", repeat: 7, repeatRefresh: true, yoyo: true }, 0));
+}));
+
+// PEOPLE — the credits roll past faster than the page.
+const roll = document.getElementById("roll");
+hold(document.querySelector("[data-track=people]"), 1100, (tl) => tl.fromTo(roll, { y: () => roll.parentElement.offsetHeight * 0.75 }, { y: () => -roll.offsetHeight + roll.parentElement.offsetHeight * 0.25, duration: 1 }));
+
+// FLIP — 48 rendered frames on a canvas, blended between neighbours so the turn is continuous
+// at any scroll position; drag spins it yourself with momentum, settling on a side.
+const FLIP_N = 48, LAST = FLIP_N - 1, LOOP = 2 * LAST; // 0..47 turns A→B, 47..94 turns back
+const flipCanvas = document.getElementById("flip-canvas"), fctx = flipCanvas.getContext("2d"), flipSide = document.getElementById("flip-side");
+const flipFrames = [];
+const spin = { f: 0 };
+let dragging = false;
+const show = () => {
+  const p = ((spin.f % LOOP) + LOOP) % LOOP;
+  const pos = p <= LAST ? p : LOOP - p;
+  if (flipFrames.length === FLIP_N) {
+    // The nearest frame: blending two neighbours double-printed the moving parts mid-turn.
+    fctx.clearRect(0, 0, 1200, 800);
+    fctx.drawImage(flipFrames[Math.round(pos)], 0, 0);
+  }
+  const s = p >= LAST / 2 && p < LOOP - LAST / 2 ? "b" : "a";
+  setSide(s); flipSide.textContent = `side ${s} · drag to spin`;
+};
+// Decoded before they're needed, so scrubbing never waits on an image.
+Promise.all(Array.from({ length: FLIP_N }, (_, i) => fetch(F(`f48-${String(i).padStart(2, "0")}`)).then((r) => r.blob()).then((b) => createImageBitmap(b))))
+  .then((bitmaps) => { flipFrames.push(...bitmaps); show(); });
+const flipST = ScrollTrigger.create({ trigger: "#flip", start: "top top", end: "bottom bottom", scrub: true,
+  onUpdate: (st) => { if (!dragging) gsap.to(spin, { f: st.progress * LAST, duration: 0.3, ease: "power2.out", overwrite: true, onUpdate: show }); },
+  onToggle: (st) => st.isActive && say("<b>the flip</b>Now 48 frames instead of 24. <em>Try: grab the cassette and spin it</em>; let go mid-turn and it carries on and settles on a side.") });
+const proxy = document.createElement("div");
+Draggable.create(proxy, { trigger: "#grab", type: "x", inertia: true,
+  onPress() { dragging = true; this.startF = spin.f; gsap.killTweensOf(spin); gsap.set(proxy, { x: 0 }); this.update(); },
+  onDrag() { spin.f = this.startF - this.x / 7; show(); },
+  onThrowUpdate() { spin.f = this.startF - this.x / 7; show(); },
+  snap: { x: function (endX) { const f = this.startF - endX / 7; const target = Math.round(f / LAST) * LAST; return (this.startF - target) * 7; } },
+  onThrowComplete() { dragging = false; },
+  onRelease() { if (!this.tween) dragging = false; } });
+
+// MADE — things dropped on the table, scattered; drag and throw them; tidy up.
+const table = document.getElementById("table"), things = [...table.querySelectorAll(".thing")];
+const SPOTS = [[6, 10, -8], [34, 30, 5], [62, 8, -3], [18, 52, 9], [52, 50, -6]];
+const place = (immediate) => things.forEach((t, i) => {
+  const [x, y, r] = SPOTS[i];
+  const to = { left: `${x}%`, top: `${y}%`, x: 0, y: 0, rotate: r };
+  immediate ? gsap.set(t, to) : gsap.to(t, { ...to, duration: 0.9, ease: "power3.inOut", delay: i * 0.05 });
+});
+place(true);
+hold(document.querySelector("[data-track=made]"), 850, (tl) => things.forEach((t, i) =>
+  tl.fromTo(t, { opacity: 0, scale: 1.45, yPercent: -30, rotate: SPOTS[i][2] * 3, boxShadow: "0 90px 80px -20px #000" },
+    { opacity: 1, scale: 1, yPercent: 0, rotate: SPOTS[i][2], boxShadow: "0 16px 30px -12px #000", duration: 0.35, ease: "power3.in" }, i * 0.16)));
+let z = 10;
+Draggable.create(things, { type: "x,y", bounds: table, inertia: true, edgeResistance: 0.8,
+  onPress() { this.target.style.zIndex = ++z; gsap.to(this.target, { scale: 1.06, boxShadow: "0 40px 50px -16px #000", duration: 0.2 }); },
+  onDrag() { gsap.to(this.target, { rotate: `+=${gsap.utils.clamp(-4, 4, this.deltaX * 0.4)}`, duration: 0.2 }); },
+  onRelease() { gsap.to(this.target, { scale: 1, boxShadow: "0 16px 30px -12px #000", duration: 0.35 }); } });
+document.getElementById("tidy").addEventListener("click", () => place(false));
+
+// ON ROTATION — spines drop into the rack; hover pulls one out; fast scroll makes them lean.
+const spines = [...document.querySelectorAll(".spine")], rnote = document.getElementById("rnote");
+hold(document.querySelector("[data-track=on-rotation]"), 700, (tl) => tl.fromTo(spines, { yPercent: -130 }, { yPercent: 0, duration: 0.4, ease: "bounce.out", stagger: 0.08 }));
+spines.forEach((s) => {
+  const out = () => { gsap.to(s, { y: -46, duration: 0.35, ease: "back.out(2)" }); rnote.innerHTML = `<b>${s.dataset.title}</b> · ${s.dataset.kind}. A fixture note on why it's on rotation right now.`; };
+  const back = () => gsap.to(s, { y: 0, duration: 0.3, ease: "power2.out" });
+  s.addEventListener("pointerenter", out); s.addEventListener("focus", out);
+  s.addEventListener("pointerleave", back); s.addEventListener("blur", back);
+});
+const lean = gsap.quickTo(spines, "skewX", { duration: 0.6, ease: "power3" });
+gsap.ticker.add(() => lean(gsap.utils.clamp(-14, 14, -lenis.velocity * 0.5)));
+
+// FOOTER — the whole device turns over to its underside.
+// The footer section is what holds (never the element being turned: the two would fight).
+// The rendered turnover plays with the scroll (the frames carry their own easing), then the
+// sticker's toolbox and the door's links print on as live text.
+const TURN_N = 48, tctx = document.getElementById("turn-canvas").getContext("2d"), turnFrames = [], turnAt = { p: 0 };
+const drawTurn = () => {
+  if (turnFrames.length !== TURN_N) return;
+  const pos = Math.min(TURN_N - 1, Math.max(0, turnAt.p));
+  tctx.clearRect(0, 0, 1200, 840);
+  tctx.drawImage(turnFrames[Math.round(pos)], 0, 0);
+};
+Promise.all(Array.from({ length: TURN_N }, (_, i) => fetch(F(`t-${String(i).padStart(2, "0")}`)).then((r) => r.blob()).then((b) => createImageBitmap(b))))
+  .then((bitmaps) => { turnFrames.push(...bitmaps); drawTurn(); });
+// Measured on the last rendered frame (percent of the frame): the blank sticker and the door panel.
+const STICKER_BOX = [19.4, 31.7, 35.3, 36.2], DOOR_BOX = [59.7, 29.0, 21.8, 41.9];
+const placeBox = (el, [x, y, w, h]) => Object.assign(el.style, { left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%` });
+placeBox(document.getElementById("sticker"), STICKER_BOX);
+placeBox(document.getElementById("door"), DOOR_BOX);
+hold(document.getElementById("turn"), 1000, (tl) => tl.to(turnAt, { p: TURN_N - 1, duration: 1, onUpdate: drawTurn })
+  .fromTo("#sticker", { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.15, ease: "power2.out" }, 1)
+  .fromTo("#door a", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.12, stagger: 0.06, ease: "power2.out" }, 1.05), "top top");
+ScrollTrigger.create({ trigger: "#turn", start: "top 60%", onEnter: () => say(document.getElementById("turn").dataset.caption) });
+
+// Opening an event: the photo grows into the page's header (as before).
+const ev = document.getElementById("evpage");
+cards.forEach((card) => card.addEventListener("click", () => {
+  const i = Number(card.dataset.i), ph = card.querySelector(".ph"), r = ph.getBoundingClientRect();
+  ev.innerHTML = `<button type="button" class="close">Back to the tape</button><div class="ehead" style="background:${grad(G[i])}"></div>
+    <div class="ebody"><div class="meta"><i>● LIVE</i> ${MONTHS[i]} 2025 · Fixture place ${6 - i}</div><h1 class="line"><span>Fixture event ${6 - i}</span></h1>
+    <div class="story"><p class="line"><span>A fixture story paragraph stands in for what the owner writes about the night.</span></p></div></div>`;
+  const eh = ev.querySelector(".ehead");
+  lenis.stop(); gsap.set(card, { rotationX: 0, rotationY: 0 });
+  gsap.set(ev, { visibility: "visible", backgroundColor: "rgb(228 230 233 / 0)" });
+  gsap.set(eh, { left: r.left, top: r.top, width: r.width, height: r.height, borderRadius: 6 });
+  gsap.set(ph, { opacity: 0 });
+  gsap.timeline().to(ev, { backgroundColor: "rgb(228 230 233 / 1)", duration: 0.35 }, 0.1)
+    .to(eh, { left: 0, top: 0, width: innerWidth, height: innerHeight * 0.56, borderRadius: 0, duration: 0.8, ease: "expo.inOut" }, 0)
+    .fromTo(ev.querySelectorAll(".ebody .meta, .ebody .line > span"), { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, stagger: 0.08, duration: 0.6, ease: "power3.out" }, 0.55);
+  ev.querySelector(".close").addEventListener("click", () => {
+    const back = ph.getBoundingClientRect();
+    gsap.timeline({ onComplete: () => { gsap.set(ev, { visibility: "hidden" }); gsap.set(ph, { opacity: 1 }); ev.innerHTML = ""; lenis.start(); } })
+      .to(ev.querySelectorAll(".ebody, .close"), { opacity: 0, duration: 0.2 }, 0)
+      .to(eh, { left: back.left, top: back.top, width: back.width, height: back.height, borderRadius: 6, duration: 0.7, ease: "expo.inOut" }, 0.05)
+      .to(ev, { backgroundColor: "rgb(228 230 233 / 0)", duration: 0.3 }, 0.4);
+  });
+}));
+
+// Pins change where everything after them sits: order the triggers top to bottom and remeasure.
+ScrollTrigger.sort();
+ScrollTrigger.refresh();
+
+// ENTRANCE — screen first, then the tape loads (agreed: C then A, normal speed, ~3 s).
+// Once per visit; a scroll, click or key finishes it at once. Reduced motion: a plain fade.
+history.scrollRestoration = "manual";
+scrollTo(0, 0);
+(function entrance() {
+  const d = document.getElementById("device"), intro = document.getElementById("intro");
+  const q = (sel) => d.querySelector(sel), qa = (sel) => [...d.querySelectorAll(sel)];
+  const screen = q(".screen"), l1 = q(".l1"), l2 = q(".l2"), cass = q(".cass"), knob = q(".knob"), led = q(".led"), name = q(".name");
+  const keys = qa(".key"), labels = qa(".klabel");
+  const boot = document.createElement("div");
+  boot.className = "boot";
+  boot.innerHTML = "<span>000</span>";
+  const skip = document.createElement("span");
+  skip.className = "skip";
+  skip.textContent = "scroll, click or press a key to skip";
+  document.body.append(boot, skip);
+  const label = boot.firstElementChild;
+  const sc = screen.getBoundingClientRect();
+  gsap.set(boot, { left: 0, top: 0, width: innerWidth, height: innerHeight, borderRadius: 0 });
+  gsap.set(caption, { opacity: 0 });
+  gsap.set(intro, { opacity: 0, scale: 1.1 });
+  gsap.set(cass, { yPercent: -70, rotate: -4, scale: 1.05, opacity: 0 });
+  l1.textContent = ""; l2.textContent = "";
+  knob.style.transition = "none";
+  const dial = { a: -250 };
+  const turnKnob = () => (knob.style.rotate = `${dial.a}deg`);
+  turnKnob();
+  gsap.set(keys, { y: "3%", opacity: 0.6 }); gsap.set([labels, name, led], { opacity: 0 });
+
+  const tl = gsap.timeline({ onComplete: done });
+  // the counter runs the tape in and lands on SIDE A
+  const counter = { n: 0 };
+  tl.to(counter, { n: 120, duration: 0.65, ease: "power2.out", onUpdate: () => (label.textContent = String(Math.round(counter.n)).padStart(3, "0")) }, 0.1)
+    .to(label, { opacity: 0.15, duration: 0.05, repeat: 3, yoyo: true, ease: "steps(1)" }, 0.78)
+    .call(() => (label.textContent = "SIDE A"), null, 0.88)
+    // the dark shrinks into the device's screen; the device, window empty, appears around it
+    .to(boot, { left: sc.left, top: sc.top, width: sc.width, height: sc.height, borderRadius: 4, duration: 0.85, ease: "expo.inOut" }, 1.1)
+    .to(label, { fontSize: sc.width * 0.15, duration: 0.85, ease: "expo.inOut" }, 1.1)
+    .to(intro, { opacity: 1, scale: 1, duration: 0.95, ease: "expo.out" }, 1.25)
+    .call(() => { boot.remove(); l1.textContent = "SIDE A"; }, null, 1.96);
+  // the tape drops in and the deck takes its weight
+  const drop = 1.85;
+  tl.to(cass, { opacity: 1, duration: 0.15 }, drop)
+    .to(cass, { yPercent: 0, rotate: 0, scale: 1, duration: 0.6, ease: "power3.in" }, drop)
+    .to(intro, { y: 8, duration: 0.08, ease: "power2.out" }, drop + 0.6)
+    .to(intro, { y: 0, duration: 0.5, ease: "elastic.out(1, 0.45)" }, drop + 0.68)
+    .to(spinUp, { v: 14, duration: 0.5, ease: "power2.in" }, drop + 0.68)
+    .to(spinUp, { v: 0, duration: 0.9, ease: "power2.out" }, drop + 1.18)
+    .to(led, { opacity: 1, duration: 0.08, repeat: 3, yoyo: true, ease: "steps(1)" }, drop + 0.7)
+    .to(led, { opacity: 1, duration: 0.1 }, drop + 1.0)
+    .to(keys, { y: 0, opacity: 1, duration: 0.42, ease: "back.out(2.2)", stagger: 0.075 }, drop + 0.75)
+    .to(labels, { opacity: 1, duration: 0.4, stagger: 0.075 }, drop + 0.85)
+    .to(dial, { a: -135, duration: 0.9, ease: "back.out(1.3)", onUpdate: turnKnob }, drop + 0.8)
+    .to(name, { opacity: 1, duration: 0.5 }, drop + 0.9);
+  const text = "01 about";
+  for (let i = 1; i <= text.length; i++) tl.call(() => (l2.textContent = text.slice(0, i)), null, drop + 0.9 + i * 0.035);
+
+  function done() {
+    boot.remove(); skip.remove();
+    l1.textContent = "SIDE A"; l2.textContent = text;
+    knob.style.transition = ""; spinUp.v = 0;
+    gsap.to(caption, { opacity: 1, duration: 0.3 });
+    ["wheel", "keydown", "pointerdown", "touchstart"].forEach((e) => removeEventListener(e, finish, { capture: true }));
+  }
+  function finish() { if (tl.progress() < 1) tl.progress(1); }
+  ["wheel", "keydown", "pointerdown", "touchstart"].forEach((e) => addEventListener(e, finish, { capture: true, passive: true }));
+})();
+</script>
+</body>
+</html>

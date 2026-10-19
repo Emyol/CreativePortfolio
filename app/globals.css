@@ -53,6 +53,9 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 body { background: var(--table); overflow-x: clip; }
+/* The 3D stage's canvas sits behind the page (z-index -1): body lets it show through, and
+   html, the same colour, stays the background. */
+body:has(> canvas[data-stage]) { background: transparent; }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
 }
@@ -102,13 +105,22 @@ main:focus, main:focus-visible { outline: none; }
 body:has([data-dock]) { padding-bottom: 6.5rem; }
 html:has([data-dock]) { scroll-padding-bottom: 7rem; }
 
-/* Power-on: the hero screen waits dark until it is typed in (set before paint). If JS
-   never takes over, it lights after 3 s. */
-html[data-boot="pending"] [data-hero] [data-screen] > * {
+/* The entrance (set before paint): the page opens as the player's dark screen, until the
+   entrance takes over. If JS never does, the dark lifts and the screen lights after 5 s. */
+html[data-boot="pending"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: var(--oled);
+  animation: boot-failsafe-lift 0s linear 5s forwards;
+}
+html:is([data-boot="pending"], [data-boot="running"]) [data-hero] [data-screen] > * {
   visibility: hidden;
-  animation: boot-failsafe 0s linear 3s forwards;
+  animation: boot-failsafe 0s linear 5s forwards;
 }
 @keyframes boot-failsafe { to { visibility: visible; } }
+@keyframes boot-failsafe-lift { to { visibility: hidden; } }
 
 /* CSS smooth scrolling fights Lenis. */
 html.lenis { scroll-behavior: auto !important; }

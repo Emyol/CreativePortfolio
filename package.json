@@ -14,7 +14,8 @@
     "kanji:fetch": "node scripts/fetch-kanjivg.mjs",
     "texture:paper": "node scripts/make-paper-noise.mjs",
     "device:render": "\"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe\" -b --factory-startup -P art/blender/side-a/device.py",
-    "device:encode": "node scripts/encode-device.mjs"
+    "device:encode": "node scripts/encode-device.mjs",
+    "device:glb": "node scripts/blender.mjs --only glb && node scripts/compress-device.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -27,10 +28,14 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "server-only": "^0.0.1",
+    "three": "^0.186.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
     "@playwright/test": "^1.64.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -38,9 +43,11 @@
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.2",
     "cross-env": "^10.1.0",
     "jsdom": "^30.1.2",
+    "meshoptimizer": "^1.3.0",
     "sharp": "^0.35.5",
     "typescript": "^5.9.3",
     "vitest": "^5.0.4"

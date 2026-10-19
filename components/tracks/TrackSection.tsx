@@ -1,7 +1,9 @@
 "use client";
 import { useRef, type ReactNode } from "react";
-import { gsap, useGSAP } from "@/lib/motion/gsap";
+import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
+import { useHold } from "@/lib/motion/useHold";
+import { ARRIVALS } from "./arrivals";
 import { formatTrackNumber, type Track } from "@/lib/tape";
 import styles from "./TrackSection.module.css";
 
@@ -14,26 +16,29 @@ export function TrackSection({ track, children }: { track: Track; children: Reac
   const ref = useRef<HTMLElement>(null);
   const tier = useMotionTier();
 
-  // Each track rises 8 px into place once, as it enters. A track already on screen (or
-  // above it) when the page settles is left alone: hiding it to fade it back would blink.
-  // The decision waits two frames so a deep link's jump has landed first. Focus landing
-  // inside finishes the rise at once.
+  // The track holds while the visitor's scroll plays its own arrival (arrivals.ts).
+  useHold(ref, ARRIVALS[track.id], track.id);
+
+  // The one cue every track shares: its title flickers on like the device's screen as the
+  // track comes up. A title already on screen (or above it) when the page settles is left
+  // lit; the decision waits two frames so a deep link's jump has landed first.
   useGSAP(
     (_context, contextSafe) => {
       if (tier === "none" || !ref.current || !contextSafe) return;
-      const el = ref.current;
-      let tween: gsap.core.Tween | undefined;
+      const title = ref.current.querySelector<HTMLElement>("[data-track-heading]");
+      if (!title) return;
       const arm = contextSafe(() => {
-        if (el.getBoundingClientRect().top < window.innerHeight * 0.85) return;
-        tween = gsap.from(el, { y: 8, opacity: 0, duration: 0.4, ease: "power2.out", scrollTrigger: { trigger: el, start: "top 85%", once: true } });
+        if (title.getBoundingClientRect().top < window.innerHeight * 0.8) return;
+        gsap.set(title, { opacity: 0 });
+        ScrollTrigger.create({
+          trigger: title,
+          start: "top 80%",
+          once: true,
+          onEnter: () => gsap.to(title, { opacity: 1, duration: 0.05, repeat: 5, yoyo: true, ease: "steps(1)", onComplete: () => gsap.set(title, { opacity: 1 }) }),
+        });
       });
       let raf = requestAnimationFrame(() => (raf = requestAnimationFrame(arm)));
-      const finish = () => tween?.progress(1);
-      el.addEventListener("focusin", finish);
-      return () => {
-        cancelAnimationFrame(raf);
-        el.removeEventListener("focusin", finish);
-      };
+      return () => cancelAnimationFrame(raf);
     },
     { scope: ref, dependencies: [tier], revertOnUpdate: true },
   );

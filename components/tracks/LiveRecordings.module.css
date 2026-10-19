@@ -1,3 +1,44 @@
+/* The REC playhead: a red line that sweeps across the prints as the track arrives. */
+/* overflow-x: clip keeps the swept-off playhead from widening the page; the label above stays. */
+.recorder { position: relative; overflow-x: clip; }
+.rec {
+  position: absolute;
+  z-index: 2;
+  top: -0.5rem;
+  bottom: -0.5rem;
+  left: 0;
+  width: 2px;
+  background: var(--signal);
+  opacity: 0;
+  pointer-events: none;
+}
+.rec span {
+  position: absolute;
+  top: -1.4rem;
+  left: -1.1rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--signal);
+  white-space: nowrap;
+}
+
+/* A print held in the hand: a soft light follows the cursor across it. */
+.tilt { border-radius: 6px; will-change: transform; }
+.tilt .media { position: relative; }
+.tilt .media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgb(255 255 255 / 0.16), transparent 55%);
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+  pointer-events: none;
+}
+@media (pointer: fine) { .card:hover .media::after { opacity: 1; } }
+
 .list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));

@@ -6,6 +6,7 @@ import { EventPhoto } from "@/components/tracks/EventPhoto";
 import type { EventItem, SiteContent } from "@/lib/content/schema";
 import { formatDate } from "@/lib/dates";
 import { visibleTracks } from "@/lib/tape";
+import { EventArrival } from "./EventArrival";
 import styles from "./EventPageBody.module.css";
 
 /**
@@ -21,7 +22,7 @@ export function EventPageBody({ content, event, home = "/" }: { content: SiteCon
   return (
     <>
       <main id="main" tabIndex={-1} className={styles.page}>
-        <article className={styles.recording}>
+        <EventArrival className={styles.recording}>
           <header className={styles.header}>
             <h1 className={styles.title}>{event.name}</h1>
             <p className={styles.meta}>
@@ -33,14 +34,14 @@ export function EventPageBody({ content, event, home = "/" }: { content: SiteCon
           <div className={styles.cover}>
             <EventPhoto event={event} sizes="(min-width: 1180px) 1100px, 100vw" className={styles.coverImg} priority />
           </div>
-          <div className={styles.story}>
+          <div className={styles.story} data-story>
             <p className={styles.summary}>{event.summary}</p>
             {event.story.map((p, i) => (
               <p key={i}>{p}</p>
             ))}
           </div>
           {rest.length > 0 && (
-            <ul className={styles.gallery}>
+            <ul className={styles.gallery} data-gallery>
               {rest.map((photo, i) => (
                 <li key={`${photo.src}-${i}`}>
                   <Photo photo={photo} sizes="(min-width: 900px) 820px, 100vw" className={styles.galleryImg} />
@@ -48,7 +49,7 @@ export function EventPageBody({ content, event, home = "/" }: { content: SiteCon
               ))}
             </ul>
           )}
-        </article>
+        </EventArrival>
         <nav aria-label="Event" className={styles.nav}>
           <Link href={`${home}#events`}>Back to events</Link>
           <Link href="/tracklist">Track list</Link>

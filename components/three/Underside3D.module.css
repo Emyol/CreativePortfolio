@@ -1,0 +1,7 @@
+/* Where the stage draws the turning device: its box and some room round it, so the shadow
+   of the lifted device is never cut off. Purely visual: input goes to the page. */
+.view {
+  position: absolute;
+  inset: -22% -14%;
+  pointer-events: none;
+}

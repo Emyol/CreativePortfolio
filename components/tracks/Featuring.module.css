@@ -1,3 +1,6 @@
+/* The credits' window: the names roll up into it as the track arrives. */
+.window { overflow: hidden; }
+
 .credits {
   columns: 2 18rem;
   column-gap: clamp(2rem, 5vw, 4rem);
@@ -31,8 +34,24 @@
   font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.6rem);
   line-height: 1.2;
   overflow-wrap: anywhere;
+  transition: color 300ms var(--ease-out), letter-spacing 300ms var(--ease-out);
 }
+/* A name lights up like the screen on hover or focus, and spreads a little. */
+.credit:hover .name,
+.credit:focus-within .name { color: var(--oled-text); letter-spacing: 0.04em; }
 .name a { text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+
+/* With a pointer, a note opens with its linked name (hover or keyboard focus); a name with
+   no link can't take focus, so its note always shows, as every note does on touch screens. */
+.noteBox { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 300ms var(--ease-out); }
+.noteBox > .note { overflow: hidden; min-height: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .credit[data-linked] .noteBox { grid-template-rows: 0fr; }
+  .credit[data-linked]:hover .noteBox,
+  .credit[data-linked]:focus-within .noteBox { grid-template-rows: 1fr; }
+}
+html[data-tier="none"] .name,
+html[data-tier="none"] .noteBox { transition: none; }
 
 .note {
   margin: 0.35rem 0 0;

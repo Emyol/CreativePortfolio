@@ -75,3 +75,48 @@ test("no smooth scrolling on the track list", async ({ page }) => {
   await gotoReady(page, "/tracklist");
   await expect(page.locator("html")).not.toHaveClass(/lenis/);
 });
+
+test.describe("hero to dock", () => {
+  test.use({ reducedMotion: "no-preference" });
+  test("the dock rises with the scroll, not at a threshold", async ({ page }) => {
+    await gotoReady(page, "/#top");
+    const heroH = await page.locator("[data-hero]").evaluate((el) => (el as HTMLElement).offsetHeight);
+    const dockY = async (share: number) => {
+      await page.evaluate((y) => window.scrollTo(0, y), Math.round(heroH * share));
+      await page.waitForTimeout(500);
+      return page.locator("[data-dock]").evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42);
+    };
+    const sunk = await dockY(0);
+    const at60 = await dockY(0.6);
+    const at75 = await dockY(0.75);
+    const risen = await dockY(1);
+    expect(sunk).toBeGreaterThan(0);
+    expect(at60).toBeLessThan(sunk);
+    expect(at60).toBeGreaterThan(0);
+    expect(at75).toBeLessThan(at60);
+    expect(risen).toBe(0);
+  });
+
+  test("the device leans back and sinks as you leave it", async ({ page }) => {
+    await gotoReady(page, "/#top");
+    // Let the 3D finish taking over (its crossfade included) so the check can't race it.
+    await page.waitForSelector("[data-hero][data-3d]", { timeout: 15_000 }).catch(() => {});
+    await page.waitForTimeout(700);
+    const heroH = await page.locator("[data-hero]").evaluate((el) => (el as HTMLElement).offsetHeight);
+    await page.evaluate((y) => window.scrollTo(0, y), Math.round(heroH * 0.5));
+    await page.waitForTimeout(500);
+    // The 3D player (when it has taken over) leans and sinks in its own scene and fades as
+    // it goes; the sprite device leans by its transform.
+    if (await page.locator("[data-hero][data-3d]").count()) {
+      // Only the hero fades: the canvas is shared with the flip and the footer, which may be
+      // on screen at the same time (a short tape), so it stays at full strength.
+      const fade = await page.locator("[data-hero]").evaluate((el) => Number(getComputedStyle(el).getPropertyValue("--fade3d")));
+      expect(fade).toBeLessThan(1);
+      expect(fade).toBeGreaterThan(0.15);
+      expect(await page.locator("canvas[data-stage]").evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+    } else {
+      const m = await page.locator("[data-hero] [data-device]").evaluate((el) => new DOMMatrix(getComputedStyle(el).transform));
+      expect(m.isIdentity).toBe(false);
+    }
+  });
+});

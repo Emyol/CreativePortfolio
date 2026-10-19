@@ -6,6 +6,7 @@ import { SoundToggle } from "@/components/game/SoundToggle";
 import type { FooterLink, SiteContent } from "@/lib/content/schema";
 import { DEVICE, pct, type Rect } from "@/lib/device/layout";
 import styles from "./Underside.module.css";
+import { UndersideDevice } from "./UndersideDevice";
 
 const place = (r: Rect): CSSProperties => ({ left: pct(r.x), top: pct(r.y), width: pct(r.w), height: pct(r.h) });
 
@@ -19,14 +20,15 @@ type Props = { toolbox: SiteContent["about"]["toolbox"]; links: FooterLink[] };
 
 /**
  * The footer is the device turned over: rubber feet, a spec sticker carrying the toolbox
- * as live text, and the owner's links printed on the battery door.
+ * as live text, and the owner's links printed on the battery door. On full motion the 3D
+ * player turns over into it (UndersideDevice).
  */
 export function Underside({ toolbox, links }: Props) {
   return (
     <footer className={styles.footer}>
-      <div className={styles.device}>
+      <UndersideDevice className={styles.device}>
         <Sprite name="underside" className={styles.art} />
-        <div className={styles.sticker} style={place(DEVICE.underside.sticker)}>
+        <div className={styles.sticker} style={place(DEVICE.underside.sticker)} data-anchor="sticker">
           <p className={styles.brand}>
             <span>miel</span>
             <span>pocket tape player</span>
@@ -48,7 +50,7 @@ export function Underside({ toolbox, links }: Props) {
           </span>
         </div>
         {links.length > 0 && (
-          <ul className={styles.door} style={place(DOOR)} aria-label="Links">
+          <ul className={styles.door} style={place(DOOR)} aria-label="Links" data-anchor="door">
             {links.map((l) => (
               <li key={l.url}>
                 <a href={l.url}>{l.label}</a>
@@ -56,7 +58,7 @@ export function Underside({ toolbox, links }: Props) {
             ))}
           </ul>
         )}
-      </div>
+      </UndersideDevice>
       <div className={styles.meta}>
         <p>Fonts: Archivo, Space Mono and Doto, from Google Fonts under the OFL.</p>
         <p><Link href="/tracklist">Track list</Link></p>
