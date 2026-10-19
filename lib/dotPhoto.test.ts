@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coverRect, dotLevels, rowLight, STEPS } from "./dotPhoto";
+import { coverRect, dotLevels, rowLight, sampleSrc, STEPS } from "./dotPhoto";
 
 /** An RGBA buffer of grey pixels. */
 const greys = (...vs: number[]) => new Uint8ClampedArray(vs.flatMap((v) => [v, v, v, 255]));
@@ -63,5 +63,16 @@ describe("rowLight", () => {
       expect(steps[i]).toBeGreaterThanOrEqual(steps[i - 1]);
       expect(steps[i] - steps[i - 1]).toBeLessThan(0.35);
     }
+  });
+});
+
+describe("sampleSrc", () => {
+  it("samples a published upload from a small optimised copy, not the full file", () => {
+    expect(sampleSrc("/api/media/ab12.jpg")).toBe("/_next/image?url=%2Fapi%2Fmedia%2Fab12.jpg&w=128&q=75");
+  });
+
+  it("takes fixture data: URIs and admin drafts as they are (the optimiser can't read them)", () => {
+    expect(sampleSrc("data:image/svg+xml,abc")).toBe("data:image/svg+xml,abc");
+    expect(sampleSrc("/api/media/ab12.jpg?draft")).toBe("/api/media/ab12.jpg?draft");
   });
 });

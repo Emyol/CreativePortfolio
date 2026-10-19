@@ -97,7 +97,7 @@ One long vertical page (the tape), a page per event, and a plain index.
 
    | # | Track | Content (from `seed.json`) | Form |
    |---|---|---|---|
-   | 01 | about | `about.letter`, `about.candid` | Liner notes: a few paragraphs set like a cassette J-card, with one taped-in candid photo if supplied |
+   | 01 | about | `about.letter`, `about.candid` | Liner notes: a few paragraphs set like a cassette J-card, with the candid photo, if supplied, shown as a dot-matrix on a small dark screen (changed 2026-10-19 from a taped-in print: the dots match the player's lettering) |
    | 02 | events | `events` | "Live recordings": a list of events attended, newest first, each a card with photo, name, venue, date; each opens its event page |
    | 03 | mixtape | `music` | The mixtape: track list with Miel's note per song, and the Spotify deck (see **The mixtape**) |
    | 04 | people | `people` | "Featuring": credits set like an album's thank-you list |

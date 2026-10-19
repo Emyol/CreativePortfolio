@@ -53,10 +53,30 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
       const screen = root.querySelector("[data-dot-photo]");
       if (!screen) return;
       const power = { on: 0 };
+      // It flickers once as it comes fully on, and again only after going fully dark.
+      let flickered = false;
+      const show = () => {
+        revealDots(screen, power.on);
+        if (power.on <= 0) flickered = false;
+        else if (power.on >= 1 && !flickered) {
+          flickered = true;
+          flickerDots(screen);
+        }
+      };
       revealDots(screen, 0);
-      tl.to(power, { on: 1, ease: "none", duration: 0.8, onUpdate: () => revealDots(screen, power.on) }, 0.15).call(() => flickerDots(screen), undefined, 0.98);
+      tl.to(power, { on: 1, ease: "none", duration: 0.8, onUpdate: show }, 0.15);
+      // A refresh (a resize) rewinds the hold and puts it back without updates: draw what it
+      // put back, without a flicker.
+      const sync = () => {
+        revealDots(screen, power.on);
+        flickered = power.on > 0;
+      };
+      ScrollTrigger.addEventListener("refresh", sync);
       // Without the hold (reduced motion, or torn down), the screen is simply on.
-      return () => revealDots(screen, 1);
+      return () => {
+        ScrollTrigger.removeEventListener("refresh", sync);
+        revealDots(screen, 1);
+      };
     },
   },
   // A red REC playhead sweeps across and records each print in as it passes.

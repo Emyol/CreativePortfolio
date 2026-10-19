@@ -56,3 +56,14 @@ export function rowLight(row: number, rows: number, reveal: number): number {
   const t = Math.min(1, Math.max(0, (front - row) / BAND));
   return t * t * (3 - 2 * t);
 }
+
+/**
+ * Where to sample a photo from: a published upload through the image optimiser at 128 px
+ * (plenty for the dots, averaged on the way down, and far lighter than the upload); fixture
+ * data: URIs and admin drafts (?draft, which need the owner's cookie) as they are, as
+ * components/Photo does.
+ */
+export function sampleSrc(src: string): string {
+  if (src.startsWith("data:") || src.endsWith("?draft")) return src;
+  return `/_next/image?url=${encodeURIComponent(src)}&w=128&q=75`;
+}
