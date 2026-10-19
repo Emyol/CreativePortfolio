@@ -53,6 +53,24 @@ test("the keys are real links over the 3D keys", async ({ page }) => {
   await expect(page).toHaveURL(/#events$/);
 });
 
+test("after the GPU drops the 3D, the flip starts a fresh stage", async ({ page }) => {
+  await gotoReady(page, "/#top");
+  await expect(page.locator("[data-hero][data-3d]")).toHaveCount(1, { timeout: READY });
+  await page.locator("canvas[data-stage]").evaluate((c) => (c as HTMLCanvasElement).getContext("webgl2")!.getExtension("WEBGL_lose_context")!.loseContext());
+  await expect(page.locator("[data-hero][data-3d]")).toHaveCount(0);
+  await page.locator("#flip").evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + scrollY + 40));
+  await expect(page.locator("[data-flip][data-3d]")).toHaveCount(1, { timeout: READY });
+  await expect(page.locator("canvas[data-stage]")).toHaveCount(1);
+  expect(await page.locator("canvas[data-stage]").evaluate((c) => (c as HTMLCanvasElement).getContext("webgl2")!.isContextLost())).toBe(false);
+});
+
+test("the stage's canvas is exactly the visible viewport", async ({ page }) => {
+  await gotoReady(page, "/#top");
+  await expect(page.locator("[data-hero][data-3d]")).toHaveCount(1, { timeout: READY });
+  const [h, css] = await page.locator("canvas[data-stage]").evaluate((c) => [innerHeight, (c as HTMLElement).style.height]);
+  expect(css).toBe(`${h}px`);
+});
+
 test("without WebGL the sprite device and the entrance still work", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));

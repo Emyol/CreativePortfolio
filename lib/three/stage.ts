@@ -47,7 +47,9 @@ async function create(tier: MotionTier): Promise<Stage> {
 
   const renderer = new three.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(dprFor(tier, window.devicePixelRatio || 1));
-  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  // Sized to the visible viewport in CSS too: `100vh` is the large viewport on phones, taller
+  // than `innerHeight` while the toolbar shows, which stretched the drawing off the keys.
+  renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = three.SRGBColorSpace;
   renderer.toneMapping = three.NeutralToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -58,7 +60,7 @@ async function create(tier: MotionTier): Promise<Stage> {
   const canvas = renderer.domElement;
   canvas.setAttribute("aria-hidden", "true");
   canvas.setAttribute("data-stage", "");
-  Object.assign(canvas.style, { position: "fixed", inset: "0", width: "100vw", height: "100vh", zIndex: "-1", pointerEvents: "none" });
+  Object.assign(canvas.style, { position: "fixed", left: "0", top: "0", zIndex: "-1", pointerEvents: "none" });
 
   const pmrem = new three.PMREMGenerator(renderer);
   const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -108,21 +110,44 @@ async function create(tier: MotionTier): Promise<Stage> {
   // One loop, only while there is something to draw and the tab can be seen.
   const run = () => renderer.setAnimationLoop(views.size && !document.hidden ? draw : null);
   document.addEventListener("visibilitychange", run);
-  window.addEventListener("resize", () => renderer.setSize(window.innerWidth, window.innerHeight, false));
-  canvas.addEventListener("webglcontextlost", (e) => {
-    e.preventDefault();
-    lost.forEach((cb) => cb());
-  });
+  const resize = () => renderer.setSize(window.innerWidth, window.innerHeight);
+  window.addEventListener("resize", resize);
+  // A lost context ends this stage: its views fall back, and the next view to ask makes a
+  // fresh one (a dead renderer kept in the cache would take views and draw nothing).
+  let dead = false;
+  const created = stage;
+  canvas.addEventListener(
+    "webglcontextlost",
+    (e) => {
+      e.preventDefault();
+      dead = true;
+      if (stage === created) stage = null;
+      renderer.setAnimationLoop(null);
+      document.removeEventListener("visibilitychange", run);
+      window.removeEventListener("resize", resize);
+      lost.forEach((cb) => cb());
+      lost.clear();
+      views.clear();
+      canvas.remove();
+      renderer.dispose();
+    },
+    { once: true },
+  );
+  const alive = () => {
+    if (dead) throw new Error("the 3D stage lost its GPU context");
+  };
 
   return {
     THREE: three,
     renderer,
     environment,
     async prepare(view) {
+      alive();
       // Compiled on first draw, the physical materials froze the page for most of a second.
       await renderer.compileAsync(view.scene, view.camera);
     },
     add(view) {
+      alive();
       // The canvas is in the page only while some view uses it (none under reduced motion).
       if (!canvas.isConnected) document.body.prepend(canvas);
       views.add(view);
