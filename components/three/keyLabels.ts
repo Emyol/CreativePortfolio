@@ -5,24 +5,29 @@ import type * as THREE from "three";
 // screen readers, unseen). Sized for a 512×96 canvas over a 1.6×0.3 plane.
 export const LABEL_W = 512;
 export const LABEL_H = 96;
-const PLANE_W = 1.6; // model units
-const PLANE_H = 0.3;
+export const PLANE_W = 1.6; // model units
+export const PLANE_H = 0.3;
+/** The width a label may take, px of its canvas: about its key's spacing, so neighbours never touch. */
+export const LABEL_FIT = 420;
 const SIZE = 54; // px: Space Mono at the plate's printed size (device.py: 0.15 units)
 const MIN = 30;
 const CHAR = 0.6; // Space Mono's advance as a share of its size
 
-/** The label's font size: the plate's, shrunk for a long label so it fits under its key. */
-export function labelSize(text: string): number {
-  return Math.max(MIN, Math.min(SIZE, Math.floor(LABEL_W / Math.max(1, text.length * CHAR))));
+/**
+ * The label's font size: the plate's (times `scale`: phones print larger, as the whole
+ * player is smaller there), shrunk for a long label so it fits under its own key.
+ */
+export function labelSize(text: string, scale = 1): number {
+  return Math.max(MIN, Math.min(Math.round(SIZE * scale), Math.floor(LABEL_FIT / Math.max(1, text.length * CHAR))));
 }
 
 /** Draws a label centred, in white: the material colours it with the device's ink. */
-function drawLabel(ctx: CanvasRenderingContext2D, text: string, family: string): void {
+function drawLabel(ctx: CanvasRenderingContext2D, text: string, family: string, scale: number): void {
   ctx.clearRect(0, 0, LABEL_W, LABEL_H);
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `400 ${labelSize(text)}px ${family}, monospace`;
+  ctx.font = `400 ${labelSize(text, scale)}px ${family}, monospace`;
   ctx.fillText(text, LABEL_W / 2, LABEL_H / 2);
 }
 
@@ -32,7 +37,7 @@ function drawLabel(ctx: CanvasRenderingContext2D, text: string, family: string):
  * one per key). Returns `set(labels)` to print new text (an empty string leaves a key
  * blank) and `dispose`.
  */
-export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: THREE.Object3D[], prints: THREE.Object3D[], family: string) {
+export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: THREE.Object3D[], prints: THREE.Object3D[], family: string, scale = 1) {
   root.updateMatrixWorld(true);
   const box = new three.Box3();
   const geometry = new three.PlaneGeometry(PLANE_W, PLANE_H);
@@ -58,15 +63,17 @@ export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: TH
     box.setFromObject(prints[i]);
     mesh.position.set(x, box.max.y + 0.002, (box.min.z + box.max.z) / 2);
     root.add(mesh);
-    return { ctx, tex, material, text: null as string | null };
+    return { ctx, tex, material, mesh, text: null as string | null };
   });
   return {
+    /** The printed labels' planes, one per key. */
+    meshes: labels.map((l) => l.mesh),
     set(texts: string[]) {
       labels.forEach((l, i) => {
         const text = texts[i] ?? "";
         if (text === l.text) return;
         l.text = text;
-        drawLabel(l.ctx, text, family);
+        drawLabel(l.ctx, text, family, scale);
         l.tex.needsUpdate = true;
       });
     },

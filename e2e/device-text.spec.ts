@@ -2,8 +2,9 @@ import { expect, test, type Page } from "@playwright/test";
 import sharp from "sharp";
 import { gotoReady, headingAtTop } from "./helpers";
 
-// Axe can't see text printed over an image, so this measures it: hide the labels, read the
-// rendered plate behind each one, and compare with the label's ink.
+// Axe can't see text printed on the 3D plate, so this measures it in a screenshot: in the
+// box under each key where its label is printed, the ink (darkest pixels) against the plate
+// (lightest), and how tall the printed letters stand.
 const lum = (r: number, g: number, b: number) => {
   const c = [r, g, b].map((v) => {
     const s = v / 255;
@@ -13,40 +14,54 @@ const lum = (r: number, g: number, b: number) => {
 };
 const ratio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 
-async function worstLabelContrast(page: Page) {
-  const labels = page.locator("[data-hero] [data-key-index] span:last-child");
-  const boxes = await labels.evaluateAll((els) => els.map((el) => {
-    const r = el.getBoundingClientRect();
-    return { x: r.x, y: r.y, w: r.width, h: r.height, color: getComputedStyle(el).color };
-  }));
-  await labels.evaluateAll((els) => els.forEach((el) => ((el as HTMLElement).style.visibility = "hidden")));
+async function printedLabels(page: Page) {
+  await expect(page.locator("[data-hero][data-3d]")).toHaveCount(1, { timeout: 30_000 });
+  await page.waitForTimeout(600);
+  const dpr = await page.evaluate(() => devicePixelRatio);
+  // Where the hero says each label is printed (its plane, projected on screen).
+  const boxes = await page.locator("[data-hero] [data-key-index]").evaluateAll((els) =>
+    els.map((el) => {
+      const [x, y, w, h] = (el as HTMLElement).dataset.printRect!.split(",").map(Number);
+      return { x, y, w, h };
+    }),
+  );
   const shot = await page.screenshot();
-  await labels.evaluateAll((els) => els.forEach((el) => ((el as HTMLElement).style.visibility = "")));
-  let worst = Infinity;
+  let contrast = Infinity;
+  let height = Infinity;
   for (const b of boxes) {
-    const { data } = await sharp(shot).extract({ left: Math.round(b.x), top: Math.round(b.y), width: Math.max(1, Math.round(b.w)), height: Math.max(1, Math.round(b.h)) }).raw().toBuffer({ resolveWithObject: true });
-    let bg = 0;
-    for (let i = 0; i < data.length; i += 3) bg = Math.max(bg, lum(data[i], data[i + 1], data[i + 2])); // the lightest pixel behind it is the worst case for light ink
-    const [r, g, bl] = b.color.match(/\d+/g)!.map(Number);
-    worst = Math.min(worst, ratio(lum(r, g, bl), bg));
+    const left = Math.round(b.x * dpr), top = Math.round(b.y * dpr), width = Math.round(b.w * dpr), rows = Math.round(b.h * dpr);
+    const { data, info } = await sharp(shot).extract({ left, top, width, height: rows }).raw().toBuffer({ resolveWithObject: true });
+    const ch = info.channels;
+    let ink = Infinity, plate = 0;
+    const lums: number[] = [];
+    for (let i = 0; i < data.length; i += ch) {
+      const l = lum(data[i], data[i + 1], data[i + 2]);
+      lums.push(l);
+      ink = Math.min(ink, l);
+      plate = Math.max(plate, l);
+    }
+    contrast = Math.min(contrast, ratio(ink, plate));
+    const mid = (ink + plate) / 2;
+    const inked = [...Array(rows).keys()].filter((y) => lums.slice(y * width, (y + 1) * width).some((l) => l < mid));
+    height = Math.min(height, inked.length ? (inked[inked.length - 1] - inked[0] + 1) / dpr : 0);
   }
-  return worst;
+  return { contrast, height };
 }
 
 test.use({ reducedMotion: "reduce" });
 
 test("the hero's printed key labels meet 4.5:1 against the plate", async ({ page }) => {
   await gotoReady(page, "/#top");
-  expect(await worstLabelContrast(page)).toBeGreaterThanOrEqual(4.5);
+  expect((await printedLabels(page)).contrast).toBeGreaterThanOrEqual(4.5);
 });
 
 test.describe("phones", () => {
   test.use({ viewport: { width: 390, height: 844 } });
   test("the labels stay legible and readable at phone size", async ({ page }) => {
     await gotoReady(page, "/#top");
-    expect(await worstLabelContrast(page)).toBeGreaterThanOrEqual(4.5);
-    const size = await page.locator("[data-hero] [data-key-index] span:last-child").first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(size).toBeGreaterThanOrEqual(11);
+    const { contrast, height } = await printedLabels(page);
+    expect(contrast).toBeGreaterThanOrEqual(4.5);
+    expect(height).toBeGreaterThanOrEqual(7); // CSS px from ascender to descender, about 11 px type
   });
 });
 

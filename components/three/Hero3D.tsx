@@ -12,7 +12,7 @@ import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
 import { hasGpuWebGL } from "@/lib/three/support";
 import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
-import { addKeyLabels } from "./keyLabels";
+import { addKeyLabels, PLANE_H, PLANE_W } from "./keyLabels";
 import { addScreenPlane } from "./screenPlane";
 import { drawScreen } from "./screenTexture";
 import { makeTable } from "./table";
@@ -128,7 +128,8 @@ export function Hero3D(props: Props) {
       // live, in their place.
       const prints = ["about", "events", "mixtape", "people"].map((n) => node(`Print_${n}`));
       prints.forEach((p) => (p.visible = false));
-      const printed = addKeyLabels(three, root, keys, prints, mono);
+      // Phones print the labels larger: the whole player is small there.
+      const printed = addKeyLabels(three, root, keys, prints, mono, matchMedia(NARROW_QUERY).matches ? 1.5 : 1);
       let printedKey = "";
       // This LED lights alone: the other views share the model's materials.
       const lens: THREE.Mesh[] = [];
@@ -230,12 +231,23 @@ export function Hero3D(props: Props) {
           a.dataset.keyX = String(Math.round((x0 + x1) / 2));
           a.dataset.keyY = String(Math.round((y0 + y1) / 2));
         }
+        // Where each label is printed, on screen (for checks of its legibility).
+        printed.meshes.forEach((m, i) => {
+          const a = placed[i]?.a;
+          if (!a) return;
+          const pts = [[-PLANE_W / 2, -PLANE_H / 2], [PLANE_W / 2, -PLANE_H / 2], [PLANE_W / 2, PLANE_H / 2], [-PLANE_W / 2, PLANE_H / 2]].map(([x, y]) => toViewport(m.localToWorld(corner.set(x, y, 0)), r));
+          const xs = pts.map((q) => q.x);
+          const ys = pts.map((q) => q.y);
+          const rect = [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)].map((n) => Math.round(n)).join(",");
+          if (a.dataset.printRect !== rect) a.dataset.printRect = rect;
+        });
       };
       undo.push(() =>
         saved.forEach((css, a) => {
           a.style.cssText = css;
           delete a.dataset.keyX;
           delete a.dataset.keyY;
+          delete a.dataset.printRect;
         }),
       );
 
