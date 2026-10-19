@@ -65,7 +65,9 @@ export function HomeTape({ tracks, songs, children }: { tracks: Track[]; songs: 
   useEffect(() => {
     const hero = document.querySelector("[data-hero]");
     if (!hero) return;
-    const io = new IntersectionObserver(([e]) => setHeroInView(e.intersectionRatio >= HERO_THRESHOLD), {
+    // The latest entry counts: after a long frame the browser can report several at once
+    // (still half in view, then gone), and the first would leave the dock asleep.
+    const io = new IntersectionObserver((entries) => setHeroInView(entries[entries.length - 1].intersectionRatio >= HERO_THRESHOLD), {
       threshold: [0, HERO_THRESHOLD, 0.6, 1],
     });
     io.observe(hero);
