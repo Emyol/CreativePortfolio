@@ -5,6 +5,7 @@ import { screenLines } from "@/components/device/Device";
 import { boostReels, packScales, reelAngle } from "@/components/device/useReelMotion";
 import { gsap } from "@/lib/motion/gsap";
 import { getHeroScroll, subscribeHeroScroll } from "@/lib/motion/heroScroll";
+import { marqueeAt } from "@/lib/motion/marquee";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { keySlots, knobAngle, type SideId, type Track, type TrackId } from "@/lib/tape";
 import { entranceDecision, getHero, setHero, type HeroApi } from "@/lib/three/heroReady";
@@ -14,7 +15,7 @@ import { canDraw3D } from "@/lib/three/support";
 import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
 import { addKeyLabels, PLANE_H, PLANE_W } from "./keyLabels";
 import { addScreenPlane } from "./screenPlane";
-import { drawScreen } from "./screenTexture";
+import { drawScreen, HEAD_SIZE, headlineShift } from "./screenTexture";
 import { makeTable } from "./table";
 import styles from "./Hero3D.module.css";
 
@@ -151,8 +152,19 @@ export function Hero3D(props: Props) {
       let shownKey = "";
       let shownProgress: number | undefined;
       let flicker: gsap.core.Timeline | null = null;
+      // A headline too long comes round (lib/motion/marquee.ts): from when it was shown, and
+      // how far it has moved (null at rest, cut short).
+      let headAt = 0;
+      let headScroll: number | null = null;
+      const show = (lines: string[]) => {
+        if (lines[0] !== shown[0]) {
+          headAt = time;
+          headScroll = null;
+        }
+        shown = lines;
+      };
       const paint = (dim = 1, lines = shown) => {
-        drawScreen(ctx, lines, { dim, progress: shownProgress, family });
+        drawScreen(ctx, lines, { dim, progress: shownProgress, family, scroll: headScroll ?? undefined });
         screenChanged();
       };
       undo.push(() => flicker?.kill());
@@ -310,7 +322,7 @@ export function Hero3D(props: Props) {
             shownProgress = now.progress;
             flicker?.kill();
             if (html.dataset.boot || !old.length || still) {
-              shown = lines;
+              show(lines);
               paint();
             } else {
               flicker = gsap
@@ -318,11 +330,18 @@ export function Hero3D(props: Props) {
                 .call(() => paint(0.15, old))
                 .call(() => paint(1, old), undefined, 0.04)
                 .call(() => paint(0.15, old), undefined, 0.08)
-                .call(() => ((shown = lines), paint()), undefined, 0.12);
+                .call(() => (show(lines), paint()), undefined, 0.12);
             }
           } else if (now.progress !== shownProgress) {
             shownProgress = now.progress;
             if (!flicker?.isActive()) paint();
+          }
+          // Held still under reduced motion: a long headline only rests, cut short.
+          const shift = still ? 0 : headlineShift(shown);
+          const scroll = shift ? marqueeAt((time - headAt) * 1000, shift, HEAD_SIZE) : null;
+          if (scroll !== headScroll && !flicker?.isActive()) {
+            headScroll = scroll;
+            paint();
           }
 
           scene.updateMatrixWorld();

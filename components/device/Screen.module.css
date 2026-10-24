@@ -24,6 +24,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* A row coming round (Screen's Row): its text and copy move as one strip, uncut. */
+.screen [data-marquee] { text-overflow: clip; }
+.screen [data-marquee] > span { display: inline-block; }
 .primary { font-weight: 900; font-size: 1.45em; letter-spacing: 0.06em; }
 .secondary { font-weight: 700; color: #F1E7E2; text-shadow: 0 0 0.3em rgb(255 255 255 / 0.25); }
 

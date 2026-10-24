@@ -31,3 +31,54 @@ test("the elapsed time ticking does not flicker the screen", () => {
   rerender(at("full", <Screen lines={["Song", "Artist  0:02"]} />));
   expect(document.querySelector("[data-screen]")).not.toHaveAttribute("data-flicker");
 });
+
+// jsdom lays nothing out: every row's text is 500 px wide in a 200 px screen, and animate() is
+// a stand-in that finishes when told to.
+function longRows() {
+  const ends: (() => void)[] = [];
+  const animate = vi.fn(() => ({ finished: new Promise<void>((r) => ends.push(r)), cancel: vi.fn() }));
+  const spies = [
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+      return this.tagName === "SPAN" ? 500 : 0;
+    }),
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+      return this.tagName === "P" ? 200 : 0;
+    }),
+    vi.spyOn(HTMLElement.prototype, "offsetLeft", "get").mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute("aria-hidden") ? 530 : 0;
+    }),
+  ];
+  HTMLElement.prototype.animate = animate as unknown as HTMLElement["animate"];
+  return { animate, finish: () => act(async () => ends.forEach((end) => end())), restore: () => spies.forEach((s) => s.mockRestore()) };
+}
+
+test("a title too long for the screen comes round a few passes, then rests cut short", async () => {
+  const rows = longRows();
+  render(at("full", <Screen lines={["A song title far too long for the screen", "Artist  0:01"]} />));
+  const row = document.querySelector("[data-screen] p")!;
+  expect(row).toHaveAttribute("data-marquee");
+  // It comes round to a copy of itself, hidden from screen readers.
+  expect(row.querySelector("[aria-hidden]")).toHaveTextContent("A song title far too long for the screen");
+  expect(rows.animate).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ iterations: 3 }));
+  await rows.finish();
+  expect(row).not.toHaveAttribute("data-marquee");
+  expect(row.querySelector("[aria-hidden]")).toBeNull();
+  rows.restore();
+});
+
+test("under reduced motion a long title only rests, cut short", () => {
+  const rows = longRows();
+  render(at("none", <Screen lines={["A song title far too long for the screen"]} />));
+  expect(document.querySelector("[data-screen] p")).not.toHaveAttribute("data-marquee");
+  expect(rows.animate).not.toHaveBeenCalled();
+  rows.restore();
+});
+
+test("the clock ticking does not start a long title over", () => {
+  const rows = longRows();
+  const { rerender } = render(at("full", <Screen lines={["Song", "An artist with a very long name  0:01"]} />));
+  const started = rows.animate.mock.calls.length;
+  rerender(at("full", <Screen lines={["Song", "An artist with a very long name  0:02"]} />));
+  expect(rows.animate).toHaveBeenCalledTimes(started);
+  rows.restore();
+});
