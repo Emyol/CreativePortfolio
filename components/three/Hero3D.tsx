@@ -155,7 +155,7 @@ export function Hero3D(props: Props) {
       let flicker: gsap.core.Timeline | null = null;
       // A headline too long comes round (lib/motion/marquee.ts): from when it was shown, how
       // far it moves to come round (0: it fits, or held still under reduced motion), and how
-      // far it has (null at rest, cut short).
+      // far it has (null: at rest, cut short).
       let headAt = 0;
       let headShift = 0;
       let headScroll: number | null = null;

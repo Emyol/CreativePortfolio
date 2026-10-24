@@ -17,15 +17,15 @@ test("the next pass starts from the start again", () => {
   expect(marqueeAt(pass + MARQUEE.rest + 2500, 300, 20)).toBeCloseTo(150);
 });
 
-test("after its passes it is done", () => {
-  expect(marqueeAt(pass * MARQUEE.passes - 1, 300, 20)).not.toBeNull();
-  expect(marqueeAt(pass * MARQUEE.passes, 300, 20)).toBeNull();
+test("it keeps coming round, pass after pass", () => {
+  expect(marqueeAt(pass * 40, 300, 20)).toBe(0);
+  expect(marqueeAt(pass * 40 + MARQUEE.rest + 2500, 300, 20)).toBeCloseTo(150);
 });
 
 test("it steps a dot column at a time", () => {
   const dot = MARQUEE.dot * 20;
   for (let ms = MARQUEE.rest; ms < pass; ms += 37) {
-    const x = marqueeAt(ms, 300, 20)!;
+    const x = marqueeAt(ms, 300, 20);
     expect(x / dot).toBeCloseTo(Math.round(x / dot));
   }
 });

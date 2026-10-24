@@ -20,8 +20,7 @@ type Props = {
 
 /**
  * The device's OLED. Each line is one row of lit dot-matrix text; a row too long for it
- * comes round a few passes (Row), then rests cut with an ellipsis. The full text stays in
- * the title. Not a live region: it changes on every scroll.
+ * comes round for as long as it shows (Row). The full text stays in the title. Not a live region: it changes on every scroll.
  * A change of text gives one 120 ms dot-matrix flicker; the clock ticking does not.
  */
 export function Screen({ lines, className, style, progress }: Props) {
@@ -55,8 +54,8 @@ export function Screen({ lines, className, style, progress }: Props) {
 
 /**
  * One row. Too long for the screen, its text and a copy (hidden from screen readers) move
- * left as one strip until the copy stands where the text began, a few passes
- * (lib/motion/marquee.ts); then, or under reduced motion, it rests cut with an ellipsis.
+ * left as one strip until the copy stands where the text began, again and again
+ * (lib/motion/marquee.ts); under reduced motion it rests cut with an ellipsis.
  * The copy has the gap on both sides, so the strip is two equal halves and moves by half
  * its width: still exact after a resize, the dot face loading, or the clock widening.
  */
@@ -64,8 +63,7 @@ function Row({ text, className, still }: { text: string; className: string; stil
   const row = useRef<HTMLParagraphElement>(null);
   const own = useRef<HTMLSpanElement>(null);
   const [long, setLong] = useState(false);
-  const [done, setDone] = useState(false);
-  const runs = long && !still && !done;
+  const runs = long && !still;
 
   // Measured before paint (no ellipsis shows first), on every render (the clock may widen
   // it), as the screen scales with the render, and once the dot face loads.
@@ -98,9 +96,8 @@ function Row({ text, className, still }: { text: string; className: string; stil
         { transform: "none", offset: MARQUEE.rest / pass, easing: `steps(${Math.max(1, Math.round(shift / MARQUEE.dot))})` },
         { transform: "translateX(-50%)" },
       ],
-      { duration: pass, iterations: MARQUEE.passes },
+      { duration: pass, iterations: Infinity },
     );
-    moving.finished.then(() => setDone(true), () => undefined);
     return () => moving.cancel();
   }, [runs]);
 

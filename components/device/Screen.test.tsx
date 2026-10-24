@@ -38,10 +38,9 @@ test("the elapsed time ticking does not flicker the screen", () => {
 });
 
 // jsdom lays nothing out: every row's text is 500 px wide in a 200 px screen, and animate() is
-// a stand-in that finishes when told to.
+// a stand-in.
 function longRows() {
-  const ends: (() => void)[] = [];
-  const animate = vi.fn(() => ({ finished: new Promise<void>((r) => ends.push(r)), cancel: vi.fn() }));
+  const animate = vi.fn(() => ({ cancel: vi.fn() }));
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
       return this.tagName === "SPAN" ? 500 : 0;
     });
@@ -49,20 +48,17 @@ function longRows() {
       return this.tagName === "P" ? 200 : 0;
     });
   HTMLElement.prototype.animate = animate as unknown as HTMLElement["animate"];
-  return { animate, finish: () => act(async () => ends.forEach((end) => end())) };
+  return { animate };
 }
 
-test("a title too long for the screen comes round a few passes, then rests cut short", async () => {
+test("a title too long for the screen comes round for as long as it shows", () => {
   const rows = longRows();
   render(at("full", <Screen lines={["A song title far too long for the screen", "Artist  0:01"]} />));
   const row = document.querySelector("[data-screen] p")!;
   expect(row).toHaveAttribute("data-marquee");
   // It comes round to a copy of itself, hidden from screen readers.
   expect(row.querySelector("[aria-hidden]")).toHaveTextContent("A song title far too long for the screen");
-  expect(rows.animate).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ iterations: 3 }));
-  await rows.finish();
-  expect(row).not.toHaveAttribute("data-marquee");
-  expect(row.querySelector("[aria-hidden]")).toBeNull();
+  expect(rows.animate).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ iterations: Infinity }));
 });
 
 test("under reduced motion a long title only rests, cut short", () => {
