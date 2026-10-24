@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import type * as THREE from "three";
 import { screenLines } from "@/components/device/Device";
+import { screenKey } from "@/components/device/Screen";
 import { boostReels, packScales, reelAngle } from "@/components/device/useReelMotion";
 import { gsap } from "@/lib/motion/gsap";
 import { getHeroScroll, subscribeHeroScroll } from "@/lib/motion/heroScroll";
@@ -15,7 +16,7 @@ import { canDraw3D } from "@/lib/three/support";
 import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
 import { addKeyLabels, PLANE_H, PLANE_W } from "./keyLabels";
 import { addScreenPlane } from "./screenPlane";
-import { drawScreen, HEAD_SIZE, headlineShift } from "./screenTexture";
+import { drawScreen, HEAD_SIZE, headlineShift, measureHead } from "./screenTexture";
 import { makeTable } from "./table";
 import styles from "./Hero3D.module.css";
 
@@ -152,14 +153,17 @@ export function Hero3D(props: Props) {
       let shownKey = "";
       let shownProgress: number | undefined;
       let flicker: gsap.core.Timeline | null = null;
-      // A headline too long comes round (lib/motion/marquee.ts): from when it was shown, and
-      // how far it has moved (null at rest, cut short).
+      // A headline too long comes round (lib/motion/marquee.ts): from when it was shown, how
+      // far it moves to come round (0: it fits, or held still under reduced motion), and how
+      // far it has (null at rest, cut short).
       let headAt = 0;
+      let headShift = 0;
       let headScroll: number | null = null;
       const show = (lines: string[]) => {
         if (lines[0] !== shown[0]) {
           headAt = time;
-          headScroll = null;
+          headShift = still ? 0 : headlineShift(lines, measureHead(ctx, family));
+          headScroll = headShift ? 0 : null;
         }
         shown = lines;
       };
@@ -315,7 +319,7 @@ export function Hero3D(props: Props) {
 
           // The screen flickers to new text, except while the entrance types it out.
           const lines = now.screen ?? screenLines(now.tracks, now.side, now.current);
-          const key = lines.join("\n");
+          const key = screenKey(lines);
           if (key !== shownKey) {
             const old = shown;
             shownKey = key;
@@ -332,13 +336,13 @@ export function Hero3D(props: Props) {
                 .call(() => paint(0.15, old), undefined, 0.08)
                 .call(() => (show(lines), paint()), undefined, 0.12);
             }
-          } else if (now.progress !== shownProgress) {
+          } else if ((now.progress !== shownProgress || lines.join("\n") !== shown.join("\n")) && !flicker?.isActive()) {
+            // The playhead moved or the clock ticked: no flicker.
             shownProgress = now.progress;
-            if (!flicker?.isActive()) paint();
+            show(lines);
+            paint();
           }
-          // Held still under reduced motion: a long headline only rests, cut short.
-          const shift = still ? 0 : headlineShift(shown);
-          const scroll = shift ? marqueeAt((time - headAt) * 1000, shift, HEAD_SIZE) : null;
+          const scroll = headShift ? marqueeAt((time - headAt) * 1000, headShift, HEAD_SIZE) : null;
           if (scroll !== headScroll && !flicker?.isActive()) {
             headScroll = scroll;
             paint();

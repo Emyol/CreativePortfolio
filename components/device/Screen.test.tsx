@@ -5,7 +5,12 @@ import { MotionTierContext } from "@/lib/motion/MotionProvider";
 import type { MotionTier } from "@/lib/motion/tier";
 import { Screen } from "./Screen";
 
-afterEach(() => vi.useRealTimers());
+const realAnimate = HTMLElement.prototype.animate;
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  HTMLElement.prototype.animate = realAnimate;
+});
 const at = (tier: MotionTier, ui: ReactNode) => <MotionTierContext.Provider value={tier}>{ui}</MotionTierContext.Provider>;
 
 test("changing text flickers the screen once, for 120 ms", () => {
@@ -37,19 +42,14 @@ test("the elapsed time ticking does not flicker the screen", () => {
 function longRows() {
   const ends: (() => void)[] = [];
   const animate = vi.fn(() => ({ finished: new Promise<void>((r) => ends.push(r)), cancel: vi.fn() }));
-  const spies = [
-    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+  vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
       return this.tagName === "SPAN" ? 500 : 0;
-    }),
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+    });
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
       return this.tagName === "P" ? 200 : 0;
-    }),
-    vi.spyOn(HTMLElement.prototype, "offsetLeft", "get").mockImplementation(function (this: HTMLElement) {
-      return this.hasAttribute("aria-hidden") ? 530 : 0;
-    }),
-  ];
+    });
   HTMLElement.prototype.animate = animate as unknown as HTMLElement["animate"];
-  return { animate, finish: () => act(async () => ends.forEach((end) => end())), restore: () => spies.forEach((s) => s.mockRestore()) };
+  return { animate, finish: () => act(async () => ends.forEach((end) => end())) };
 }
 
 test("a title too long for the screen comes round a few passes, then rests cut short", async () => {
@@ -63,7 +63,6 @@ test("a title too long for the screen comes round a few passes, then rests cut s
   await rows.finish();
   expect(row).not.toHaveAttribute("data-marquee");
   expect(row.querySelector("[aria-hidden]")).toBeNull();
-  rows.restore();
 });
 
 test("under reduced motion a long title only rests, cut short", () => {
@@ -71,7 +70,6 @@ test("under reduced motion a long title only rests, cut short", () => {
   render(at("none", <Screen lines={["A song title far too long for the screen"]} />));
   expect(document.querySelector("[data-screen] p")).not.toHaveAttribute("data-marquee");
   expect(rows.animate).not.toHaveBeenCalled();
-  rows.restore();
 });
 
 test("the clock ticking does not start a long title over", () => {
@@ -80,5 +78,4 @@ test("the clock ticking does not start a long title over", () => {
   const started = rows.animate.mock.calls.length;
   rerender(at("full", <Screen lines={["Song", "An artist with a very long name  0:02"]} />));
   expect(rows.animate).toHaveBeenCalledTimes(started);
-  rows.restore();
 });

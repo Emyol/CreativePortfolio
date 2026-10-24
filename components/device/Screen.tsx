@@ -1,11 +1,14 @@
 "use client";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { MARQUEE, marqueePass } from "@/lib/motion/marquee";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import styles from "./Screen.module.css";
 
 const FLICKER_MS = 120;
 const CLOCK = /\d+:\d\d/g;
+
+/** What the screen shows, less the clock: the clock ticking is not new text (nor a flicker). */
+export const screenKey = (lines: readonly (string | undefined)[]) => lines.join("|").replace(CLOCK, "");
 
 type Props = {
   lines: [string, string?] | string[];
@@ -23,7 +26,7 @@ type Props = {
  */
 export function Screen({ lines, className, style, progress }: Props) {
   const tier = useMotionTier();
-  const key = lines.join("|").replace(CLOCK, "");
+  const key = screenKey(lines);
   const prev = useRef(key);
   const [flicker, setFlicker] = useState(false);
   useEffect(() => {
@@ -54,38 +57,47 @@ export function Screen({ lines, className, style, progress }: Props) {
  * One row. Too long for the screen, its text and a copy (hidden from screen readers) move
  * left as one strip until the copy stands where the text began, a few passes
  * (lib/motion/marquee.ts); then, or under reduced motion, it rests cut with an ellipsis.
+ * The copy has the gap on both sides, so the strip is two equal halves and moves by half
+ * its width: still exact after a resize, the dot face loading, or the clock widening.
  */
 function Row({ text, className, still }: { text: string; className: string; still: boolean }) {
   const row = useRef<HTMLParagraphElement>(null);
   const own = useRef<HTMLSpanElement>(null);
-  const copy = useRef<HTMLSpanElement>(null);
   const [long, setLong] = useState(false);
   const [done, setDone] = useState(false);
   const runs = long && !still && !done;
 
-  // Measured again as the screen scales with the render and once the dot face loads.
+  // Measured before paint (no ellipsis shows first), on every render (the clock may widen
+  // it), as the screen scales with the render, and once the dot face loads.
+  const measure = () => {
+    if (row.current && own.current) setLong(own.current.offsetWidth > row.current.clientWidth + 1);
+  };
+  useLayoutEffect(measure);
+  const remeasure = useRef(measure);
+  remeasure.current = measure;
   useEffect(() => {
-    const measure = () => {
-      if (row.current && own.current) setLong(own.current.offsetWidth > row.current.clientWidth + 1);
-    };
-    measure();
-    const resized = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    const again = () => remeasure.current();
+    const resized = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(again);
     resized?.observe(row.current!);
-    document.fonts?.addEventListener("loadingdone", measure);
+    document.fonts?.addEventListener("loadingdone", again);
     return () => {
       resized?.disconnect();
-      document.fonts?.removeEventListener("loadingdone", measure);
+      document.fonts?.removeEventListener("loadingdone", again);
     };
-  }, [text]);
+  }, []);
 
   useEffect(() => {
-    if (!runs || !row.current || !own.current || !copy.current) return;
-    const shift = copy.current.offsetLeft - own.current.offsetLeft;
-    if (!(shift > 0)) return;
+    if (!runs || !row.current || !own.current) return;
+    // Timed in its own font size, so a resize mid-pass changes nothing.
     const size = parseFloat(getComputedStyle(row.current).fontSize) || 16;
-    const pass = marqueePass(shift, size);
+    const shift = own.current.offsetWidth / size + MARQUEE.gap;
+    const pass = marqueePass(shift, 1);
     const moving = own.current.parentElement!.animate(
-      [{ transform: "none" }, { transform: "none", offset: MARQUEE.rest / pass }, { transform: `translateX(${-shift}px)` }],
+      [
+        { transform: "none" },
+        { transform: "none", offset: MARQUEE.rest / pass, easing: `steps(${Math.max(1, Math.round(shift / MARQUEE.dot))})` },
+        { transform: "translateX(-50%)" },
+      ],
       { duration: pass, iterations: MARQUEE.passes },
     );
     moving.finished.then(() => setDone(true), () => undefined);
@@ -97,7 +109,7 @@ function Row({ text, className, still }: { text: string; className: string; stil
       <span>
         <span ref={own}>{text}</span>
         {runs && (
-          <span ref={copy} aria-hidden="true" style={{ marginLeft: `${MARQUEE.gap}em` }}>
+          <span aria-hidden="true" style={{ paddingInline: `${MARQUEE.gap}em` }}>
             {text}
           </span>
         )}
