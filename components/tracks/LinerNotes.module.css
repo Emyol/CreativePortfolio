@@ -12,6 +12,7 @@
   font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
   line-height: 1.65;
   text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 .letter p { margin: 0 0 1.1em; }
 .letter p:first-child::first-line { color: #fff; }
