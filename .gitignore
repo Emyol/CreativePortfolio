@@ -55,3 +55,7 @@ __pycache__/
 
 # Raw Blender renders; the encoded files in public/device/ are what ships
 art/blender/side-a/out/
+
+# Local tool scratch: arena runs and the Impeccable hook's cache
+.arena/
+.impeccable/
