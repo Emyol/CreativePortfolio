@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { Draggable } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
 import { useGSAP } from "@gsap/react";
 
 // True while a refresh puts focus back where it was (not the visitor moving it).
@@ -11,7 +12,7 @@ let restoring = false;
 export const restoringFocus = (): boolean => restoring;
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, Draggable, InertiaPlugin, useGSAP);
+  gsap.registerPlugin(ScrollTrigger, Draggable, InertiaPlugin, SplitText, useGSAP);
 
   // A refresh lifts each pinned section out of its spacer and back, which drops focus from
   // anything inside it (a heading a key or "Back to events" just focused). Put it back.
@@ -30,4 +31,4 @@ if (typeof window !== "undefined") {
   });
 }
 
-export { gsap, ScrollTrigger, Draggable, InertiaPlugin, useGSAP };
+export { gsap, ScrollTrigger, Draggable, InertiaPlugin, SplitText, useGSAP };

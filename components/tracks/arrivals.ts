@@ -1,4 +1,4 @@
-import { gsap, ScrollTrigger } from "@/lib/motion/gsap";
+import { gsap, ScrollTrigger, SplitText } from "@/lib/motion/gsap";
 import type { Arrival } from "@/lib/motion/useHold";
 import type { TrackId } from "@/lib/tape";
 import { flickerDots, revealDots } from "./DotPhoto";
@@ -36,22 +36,73 @@ function record(li: HTMLElement, share: number) {
   if (media) media.style.filter = f >= 1 ? "" : `brightness(${(0.35 + 0.65 * f).toFixed(3)}) saturate(${f.toFixed(3)})`;
 }
 
+const rise = gsap.parseEase("power3.out");
+// Lines only, masked, and aria "none": the text stays as it is for assistive tech. Spans keep
+// the paragraphs valid HTML; SplitText leaves span lines inline, so make each line and its
+// edge blocks once split (the line can then move, and its edge hide it).
+const LINES: SplitText.Vars = {
+  type: "lines",
+  mask: "lines",
+  aria: "none",
+  tag: "span",
+  onSplit: (self) => [...self.lines, ...self.masks].forEach((el) => ((el as HTMLElement).style.display = "block")),
+};
+
+/**
+ * The About letter's lines rising into place one by one, each from behind its own edge, over
+ * one unit of `tl` from 0.1. Before the rise the letter is hidden whole; after it, and outside
+ * the hold, it is plain text (SplitText's line blocks would break find-in-page, copying and a
+ * screen reader's sentences), so it is only split while the lines are moving.
+ */
+function riseLetter(tl: gsap.core.Timeline, root: HTMLElement): () => void {
+  const letter = root.querySelector<HTMLElement>("article");
+  const paragraphs = letter?.querySelectorAll("p");
+  if (!letter || !paragraphs?.length) return () => undefined;
+  const head = { at: 0 };
+  let split: SplitText | null = null;
+  const unsplit = () => {
+    if (split?.isSplit) split.revert();
+  };
+  const paint = () => {
+    letter.style.opacity = head.at <= 0 ? "0" : "";
+    if (head.at <= 0 || head.at >= 1) return unsplit();
+    if (!split) split = SplitText.create(paragraphs, LINES);
+    else if (!split.isSplit) split.split(LINES);
+    // Each line rises over 0.4, their starts spread over the first 0.6.
+    const n = split.lines.length;
+    split.lines.forEach((line, i) => {
+      const t = gsap.utils.clamp(0, 1, (head.at - (n > 1 ? (0.6 * i) / (n - 1) : 0)) / 0.4);
+      gsap.set(line, { yPercent: 105 * (1 - rise(t)) });
+    });
+  };
+  paint();
+  tl.to(head, { at: 1, duration: 1, onUpdate: paint }, 0.1);
+  // A refresh (a resize) measures the plain letter, then the lines are split again as they
+  // now wrap; it rewinds the hold and puts it back without updates, so paint what it put back.
+  ScrollTrigger.addEventListener("refreshInit", unsplit);
+  ScrollTrigger.addEventListener("refresh", paint);
+  return () => {
+    ScrollTrigger.removeEventListener("refreshInit", unsplit);
+    ScrollTrigger.removeEventListener("refresh", paint);
+    unsplit();
+    letter.style.opacity = "";
+  };
+}
+
 /**
  * Each track's own arrival, played while it holds (docs/superpowers/specs/2026-10-18-motion-design.md).
  * Distances are the desktop hold lengths measured in the mockups.
  */
 export const ARRIVALS: Record<TrackId, Arrival> = {
-  // The letter unfolds like a folded J-card insert: the lower fold swings down and open,
-  // while the candid's screen powers on, a scanline lighting it row by row, then flickers.
+  // The letter's lines rise into place one by one, each from behind its own edge (nothing
+  // of a line shows before it rises), while the candid's screen powers on, a scanline
+  // lighting it row by row, then flickers.
   about: {
     distance: 650,
     hold: (tl, { root }) => {
-      const top = root.querySelector("[data-fold=top]");
-      const bottom = root.querySelector("[data-fold=bottom]");
-      if (top) tl.fromTo(top, { opacity: 0.4 }, { opacity: 1, duration: 0.3 }, 0);
-      if (bottom) tl.fromTo(bottom, { rotateX: -178, transformPerspective: 1400, transformOrigin: "50% 0%" }, { rotateX: 0, ease: "power2.inOut", duration: 1 }, 0.1);
+      const unrise = riseLetter(tl, root);
       const screen = root.querySelector("[data-dot-photo]");
-      if (!screen) return;
+      if (!screen) return unrise;
       const power = { on: 0 };
       // It flickers once as it comes fully on, and again only after going fully dark.
       let flickered = false;
@@ -72,10 +123,12 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
         flickered = power.on > 0;
       };
       ScrollTrigger.addEventListener("refresh", sync);
-      // Without the hold (reduced motion, or torn down), the screen is simply on.
+      // Without the hold (reduced motion, or torn down), the screen is simply on and the
+      // letter plain text again.
       return () => {
         ScrollTrigger.removeEventListener("refresh", sync);
         revealDots(screen, 1);
+        unrise();
       };
     },
   },
