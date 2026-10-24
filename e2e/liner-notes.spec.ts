@@ -2,84 +2,83 @@ import { expect, test, type Page } from "@playwright/test";
 import { gotoReady } from "./helpers";
 
 /**
- * A real letter's lower fold is far taller than its first paragraph. Lengthen the fixture's
- * so the folded flap is taller than what it lies over, then resize a little: the refresh
- * re-measures the hold (and the fold's perspective) on the new size.
+ * How far each of the letter's lines has risen into place, in order (0 is hidden below its
+ * edge, 1 is in place), and how much of any line shows outside its own edge. SplitText wraps
+ * each line in an edge (`p > div`) that the line (`p > div > div`) rises into.
  */
-const lengthenLetter = async (page: Page, paragraphs: number) => {
-  await page.locator("#about [data-fold=bottom] p").first().evaluate((p, n) => {
-    for (let i = 0; i < n; i++) p.after(p.cloneNode(true));
-  }, paragraphs);
-  const { width, height } = page.viewportSize()!;
-  await page.setViewportSize({ width, height: height - 20 });
-  await page.waitForTimeout(600);
-};
+const lines = (page: Page) =>
+  page.locator("#about article").evaluate((letter) =>
+    [...letter.querySelectorAll<HTMLElement>("p > div > div")].map((line) => {
+      const edge = line.parentElement!.getBoundingClientRect();
+      const r = line.getBoundingClientRect();
+      return { risen: 1 - (r.top - edge.top) / edge.height, outside: r.top < edge.top - 1 };
+    }),
+  );
 
-/** What the visitor sees of the letter at this point of the arrival. */
-const sample = (page: Page) =>
-  page.locator("#about").evaluate((root) => {
-    const letter = root.querySelector("article")!;
-    const fold = root.querySelector("[data-fold=bottom]")!;
-    const back = fold.querySelector("[aria-hidden]")!;
-    const first = root.querySelector<HTMLElement>("[data-fold=top] p")!;
-    const l = letter.getBoundingClientRect();
-    // The flap painted just above the letter, over the card's padding and the heading's tab.
-    const above = [0.1, 0.3, 0.5, 0.7, 0.9].some((f) => document.elementFromPoint(l.left + f * l.width, l.top - 6) === back);
-    // The ends of the first paragraph's lines the flap still lies across: its words show
-    // beside the flap if it leaves them bare. (Lines it has lifted off are meant to show.)
-    const flap = back.getBoundingClientRect();
-    const range = document.createRange();
-    range.selectNodeContents(first);
-    const ends = [...range.getClientRects()]
-      .filter((r) => r.top + r.height / 2 > flap.top && r.top + r.height / 2 < flap.bottom)
-      .flatMap((r) => [
-        [r.left + 3, r.top + r.height / 2],
-        [r.right - 3, r.top + r.height / 2],
-      ]);
-    const bare = ends.some(([x, y]) => first.contains(document.elementFromPoint(x, y)));
-    // How much wider than the letter the fold looks as it swings toward the visitor, and
-    // whether any of it paints past the card's padding beside the letter.
-    const f = fold.getBoundingClientRect();
-    const swell = f.width / l.width;
-    const pad = parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.25;
-    const ys = [0.1, 0.3, 0.5, 0.7, 0.9].map((k) => f.top + k * f.height);
-    const outside = ys.some((y) => [l.left - pad - 2, l.right + pad + 2].some((x) => fold.contains(document.elementFromPoint(x, y))));
-    return { arrival: Number(root.getAttribute("data-arrival")), above, beside: bare, swell, outside };
-  });
-
-const cases = [
-  { name: "a letter longer than its first paragraph", width: 1440, height: 900, paragraphs: 4 },
-  { name: "a letter taller than the screen", width: 1440, height: 900, paragraphs: 30 },
-  { name: "a long letter on a phone", width: 390, height: 844, paragraphs: 15 },
-];
+const plain = (page: Page) =>
+  page.locator("#about article").evaluate((letter) => ({
+    split: letter.querySelectorAll("p > div").length,
+    text: letter.textContent,
+    hidden: letter.querySelectorAll("[aria-hidden]").length,
+  }));
 
 test.describe("full motion", () => {
   test.use({ reducedMotion: "no-preference" });
 
-  for (const c of cases) {
-    test(`the folded letter keeps its words hidden and its flap in place: ${c.name}`, async ({ page }) => {
-      await page.setViewportSize({ width: c.width, height: c.height });
-      await gotoReady(page, "/#top");
-      await lengthenLetter(page, c.paragraphs);
-      await page.mouse.move(c.width / 2, 300);
-      const seen: Awaited<ReturnType<typeof sample>>[] = [];
-      for (let i = 0; i < 150; i++) {
-        await page.mouse.wheel(0, 60);
-        await page.waitForTimeout(60);
-        const s = await sample(page);
-        const box = await page.locator("#about article").boundingBox();
-        if (box && box.y > 0 && box.y < c.height) seen.push(s);
-        if (s.arrival >= 1) break;
-      }
-      expect(seen.filter((s) => s.arrival > 0 && s.arrival < 0.5).length).toBeGreaterThan(2);
-      // Where the flap lies over the first paragraph, none of it shows around the flap.
-      expect(seen.filter((s) => s.beside)).toEqual([]);
-      // The flap never reaches past the letter's top, whatever its height.
-      expect(seen.filter((s) => s.above)).toEqual([]);
-      // Nor does it balloon sideways as it swings past upright.
-      expect(Math.max(...seen.map((s) => s.swell))).toBeLessThan(1.25);
-      expect(seen.filter((s) => s.outside)).toEqual([]);
-      expect(seen.at(-1)!.arrival).toBe(1);
-    });
-  }
+  test("the letter's lines rise into place one by one, none showing before its turn", async ({ page }) => {
+    await gotoReady(page, "/#top");
+    const about = page.locator("#about");
+    const { text } = await plain(page);
+    await page.mouse.move(720, 300);
+    const seen: { arrival: number; risen: number[]; outside: boolean }[] = [];
+    for (let i = 0; i < 80; i++) {
+      await page.mouse.wheel(0, 60);
+      await page.waitForTimeout(60);
+      const arrival = Number(await about.getAttribute("data-arrival"));
+      const ls = await lines(page);
+      seen.push({ arrival, risen: ls.map((l) => l.risen), outside: ls.some((l) => l.outside) });
+      if (arrival >= 1) break;
+    }
+    expect(seen[0].risen.length).toBeGreaterThan(3);
+    // Before the hold every line is hidden below its own edge.
+    expect(seen[0].risen.every((r) => r <= 0.001)).toBe(true);
+    // Midway some lines are in and later ones still hidden: they rise in order.
+    expect(seen.some((s) => s.risen[0] > 0.99 && s.risen.at(-1)! < 0.01)).toBe(true);
+    for (const s of seen) {
+      for (let i = 1; i < s.risen.length; i++) expect(s.risen[i]).toBeLessThanOrEqual(s.risen[i - 1] + 0.001);
+    }
+    // No line ever shows above its edge, and all are in place once it arrives.
+    expect(seen.filter((s) => s.outside)).toEqual([]);
+    await expect(about).toHaveAttribute("data-arrival", "1.00");
+    await expect.poll(async () => Math.min(...(await lines(page)).map((l) => l.risen))).toBeGreaterThan(0.999);
+    // A screen reader reads the same letter throughout: nothing hidden from it, no text lost.
+    const during = await plain(page);
+    expect(during.text).toBe(text);
+    expect(during.hidden).toBe(0);
+  });
+
+  test("switching on reduced motion puts the letter back as plain text, all of it shown", async ({ page }) => {
+    await gotoReady(page, "/#top");
+    await page.mouse.move(720, 300);
+    for (let i = 0; i < 40; i++) {
+      await page.mouse.wheel(0, 60);
+      await page.waitForTimeout(60);
+      const risen = (await lines(page)).map((l) => l.risen);
+      if (risen.length && risen[0] > 0.5 && risen.at(-1)! < 0.5) break;
+    }
+    expect((await plain(page)).split).toBeGreaterThan(0);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect.poll(async () => (await plain(page)).split).toBe(0);
+    await expect(page.locator("#about article p").first()).toBeVisible();
+    await expect(page.locator("#about article p").last()).toBeInViewport();
+  });
+});
+
+test.describe("reduced motion", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("the letter is never split", async ({ page }) => {
+    await gotoReady(page, "/#about");
+    expect((await plain(page)).split).toBe(0);
+  });
 });

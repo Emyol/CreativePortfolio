@@ -1,4 +1,4 @@
-import { gsap, ScrollTrigger } from "@/lib/motion/gsap";
+import { gsap, ScrollTrigger, SplitText } from "@/lib/motion/gsap";
 import type { Arrival } from "@/lib/motion/useHold";
 import type { TrackId } from "@/lib/tape";
 import { flickerDots, revealDots } from "./DotPhoto";
@@ -41,21 +41,32 @@ function record(li: HTMLElement, share: number) {
  * Distances are the desktop hold lengths measured in the mockups.
  */
 export const ARRIVALS: Record<TrackId, Arrival> = {
-  // The letter unfolds like a folded J-card insert: the lower fold swings down and open,
-  // while the candid's screen powers on, a scanline lighting it row by row, then flickers.
+  // The letter's lines rise into place one by one, each from behind its own edge (nothing
+  // of a line shows before it rises), while the candid's screen powers on, a scanline
+  // lighting it row by row, then flickers.
   about: {
     distance: 650,
     hold: (tl, { root }) => {
-      const top = root.querySelector("[data-fold=top]");
-      const bottom = root.querySelector<HTMLElement>("[data-fold=bottom]");
-      if (top) tl.fromTo(top, { opacity: 0.4 }, { opacity: 1, duration: 0.3 }, 0);
-      // Folded toward the visitor, so perspective makes the flap wider than the paragraph it
-      // lies over, never narrower (folded away, the paragraph's words showed beside it). The
-      // perspective grows with the fold, so swinging toward the visitor swells it by at most a
-      // fifth, however long the letter (a fixed one let a tall fold balloon past the card).
-      if (bottom) tl.fromTo(bottom, { rotateX: 178, transformPerspective: () => Math.max(1400, bottom.offsetHeight * 6), transformOrigin: "50% 0%" }, { rotateX: 0, ease: "power2.inOut", duration: 1 }, 0.1);
+      const paragraphs = root.querySelectorAll("article p");
+      // Lines only, so a screen reader still reads whole lines (aria "none" leaves the text
+      // as it is). autoSplit splits again when the lines rewrap (a resize, a late font) and
+      // hands the new lines a rise carrying the old one's progress.
+      const split = paragraphs.length
+        ? SplitText.create(paragraphs, {
+            type: "lines",
+            mask: "lines",
+            aria: "none",
+            autoSplit: true,
+            // Returned on its own (not the hold's timeline), so a new split replaces only it.
+            onSplit: (self) => {
+              const rise = gsap.fromTo(self.lines, { yPercent: 105 }, { yPercent: 0, ease: "power3.out", duration: 0.4, stagger: { amount: 0.6 } });
+              tl.add(rise, 0.1);
+              return rise;
+            },
+          })
+        : null;
       const screen = root.querySelector("[data-dot-photo]");
-      if (!screen) return;
+      if (!screen) return () => split?.revert();
       const power = { on: 0 };
       // It flickers once as it comes fully on, and again only after going fully dark.
       let flickered = false;
@@ -76,10 +87,12 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
         flickered = power.on > 0;
       };
       ScrollTrigger.addEventListener("refresh", sync);
-      // Without the hold (reduced motion, or torn down), the screen is simply on.
+      // Without the hold (reduced motion, or torn down), the screen is simply on and the
+      // letter plain text again.
       return () => {
         ScrollTrigger.removeEventListener("refresh", sync);
         revealDots(screen, 1);
+        split?.revert();
       };
     },
   },
