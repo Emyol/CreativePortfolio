@@ -47,9 +47,13 @@ export const ARRIVALS: Record<TrackId, Arrival> = {
     distance: 650,
     hold: (tl, { root }) => {
       const top = root.querySelector("[data-fold=top]");
-      const bottom = root.querySelector("[data-fold=bottom]");
+      const bottom = root.querySelector<HTMLElement>("[data-fold=bottom]");
       if (top) tl.fromTo(top, { opacity: 0.4 }, { opacity: 1, duration: 0.3 }, 0);
-      if (bottom) tl.fromTo(bottom, { rotateX: -178, transformPerspective: 1400, transformOrigin: "50% 0%" }, { rotateX: 0, ease: "power2.inOut", duration: 1 }, 0.1);
+      // Folded toward the visitor, so perspective makes the flap wider than the paragraph it
+      // lies over, never narrower (folded away, the paragraph's words showed beside it). The
+      // perspective grows with the fold, so swinging toward the visitor swells it by at most a
+      // fifth, however long the letter (a fixed one let a tall fold balloon past the card).
+      if (bottom) tl.fromTo(bottom, { rotateX: 178, transformPerspective: () => Math.max(1400, bottom.offsetHeight * 6), transformOrigin: "50% 0%" }, { rotateX: 0, ease: "power2.inOut", duration: 1 }, 0.1);
       const screen = root.querySelector("[data-dot-photo]");
       if (!screen) return;
       const power = { on: 0 };

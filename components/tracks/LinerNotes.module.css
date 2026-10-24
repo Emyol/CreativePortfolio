@@ -12,6 +12,10 @@
   font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
   line-height: 1.65;
   text-wrap: pretty;
+  /* The folded flap is as tall as the lower fold, often taller than the first paragraph it
+     lies over: cut it at the letter's top so it never covers the card's edge or the heading,
+     and within the card's padding (at least 1.25rem) while it swings toward the visitor. */
+  clip-path: inset(0 -1rem -100vh);
 }
 .letter p { margin: 0 0 1.1em; }
 .letter [data-fold="top"] p:first-child::first-line { color: #fff; }
