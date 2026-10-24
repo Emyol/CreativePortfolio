@@ -147,6 +147,18 @@ shadow sits on the page, and it must not be clipped.
 
 **Screen.** The screen is live text: a canvas texture over `OLEDGlass`, in Doto. It shows
 what the current hero screen shows: power-on, track, now playing with time and playhead.
+The clock ticking repaints it without a flicker.
+
+**Long text comes round (added 2026-10-25).** On every device screen (3D, sprite, dock), a
+line too long for it rests 1.5 s, then scrolls left a dot column at a time (3 font sizes a
+second) until a copy of it comes round to where it began, a 2 em gap behind, and keeps
+coming round for as long as it shows (the owner chose the whole song over three passes,
+2026-10-25); new text starts it afresh, the clock ticking does not. Under reduced motion it
+only rests, cut with an ellipsis, and switching that on stops it at once. The 3D screen
+scrolls its headline only (its second line shrinks, then is cut). Known trade-off: WCAG
+2.2.2 asks that moving content lasting over 5 s can be paused, and the screen has no
+control of its own (it is not interactive; the full text is in the DOM and the `title`).
+The OS reduced-motion setting is the only way to stop it.
 
 **Accessibility.** The 3D canvas is decorative (`aria-hidden`). The keys stay real HTML
 buttons, visually hidden but focusable, placed over the 3D keys, in the same order with the

@@ -148,3 +148,25 @@ test.describe("printing", () => {
     expect(Number(right)).toBeGreaterThan(0);
   });
 });
+
+test.describe("a long title", () => {
+  test.use({ reducedMotion: "no-preference" });
+  test("comes round on the dock's screen, and rests cut short once reduced motion is on", async ({ page }) => {
+    await page.route(API, (route) => route.fulfill({ contentType: "text/javascript", body: STUB }));
+    await gotoReady(page, "/#mixtape");
+    await headingAtTop(page, "mixtape");
+    await page.waitForTimeout(800);
+    await page.getByRole("button", { name: "Play FixtureSongWithAnUnbrokenTitleThatMustTruncate on Spotify" }).click();
+    const row = page.locator("[data-dock] [data-screen] p").first();
+    await expect(row).toHaveAttribute("data-marquee", "");
+    const x = () => row.locator("> span").evaluate((el) => el.getBoundingClientRect().left);
+    const start = await x();
+    // It rests first, then moves left; its copy is hidden from screen readers.
+    await expect.poll(x, { timeout: 5000 }).toBeLessThan(start - 20);
+    await expect(row.locator("[aria-hidden='true']")).toHaveText("FixtureSongWithAnUnbrokenTitleThatMustTruncate");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(row).not.toHaveAttribute("data-marquee");
+    expect(await row.evaluate((el) => getComputedStyle(el).textOverflow)).toBe("ellipsis");
+    expect(await x()).toBeCloseTo(start, 0);
+  });
+});
