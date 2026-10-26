@@ -21,6 +21,7 @@ test("phones get light motion: no Lenis", async ({ page }) => {
 test("on a phone, an event page's dock scrolls its long line without resizing its screen", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   await gotoReady(page, "/events/fixture-event-1");
   const screen = page.locator("[data-dock] [data-screen]");
   await expect(screen.locator("p[data-marquee]")).not.toHaveCount(0);

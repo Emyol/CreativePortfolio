@@ -16,9 +16,9 @@
   user-select: none;
 }
 
-/* A row never sizes its screen (the phone dock's screen is sized by its content): a long row
-   coming round adds its copy, and a screen widened by it would fit the row, drop the copy,
-   shrink, and loop. */
+/* A row never sizes its screen: a long row coming round adds its copy, and a screen widened
+   by it would fit the row, drop the copy, shrink, and loop. Rows take their width from the
+   screen stretching them (its default align-items), never from their text. */
 .primary,
 .secondary {
   contain: inline-size;
