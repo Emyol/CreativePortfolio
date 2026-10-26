@@ -16,8 +16,12 @@
   user-select: none;
 }
 
+/* A row never sizes its screen: a long row coming round adds its copy, and a screen widened
+   by it would fit the row, drop the copy, shrink, and loop. Rows take their width from the
+   screen stretching them (its default align-items), never from their text. */
 .primary,
 .secondary {
+  contain: inline-size;
   margin: 0;
   min-width: 0;
   white-space: nowrap;

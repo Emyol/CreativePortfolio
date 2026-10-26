@@ -125,7 +125,8 @@
     padding: 8px;
     border-radius: 14px;
   }
-  .screen { flex: 1 1 auto; width: auto; min-width: 0; height: 40px; padding: 0 8px; --screen-size: 10px; }
+  /* Never sized by its text (Screen's rows don't size it): a set share, the keys keep theirs. */
+  .screen { flex: 1 1 96px; width: auto; min-width: 0; height: 40px; padding: 0 8px; --screen-size: 10px; }
   .keybed { flex: 0 1 220px; height: 38px; }
   .switches { display: none; }
 }

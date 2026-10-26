@@ -17,3 +17,19 @@ test("phones get light motion: no Lenis", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-tier", "lite");
   await expect(page.locator("html")).not.toHaveClass(/lenis/);
 });
+
+test("on a phone, an event page's dock scrolls its long line without resizing its screen", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  await gotoReady(page, "/events/fixture-event-1");
+  const screen = page.locator("[data-dock] [data-screen]");
+  await expect(screen.locator("p[data-marquee]")).not.toHaveCount(0);
+  const widths = new Set<number>();
+  for (let i = 0; i < 10; i++) {
+    widths.add(Math.round(await screen.evaluate((el) => el.getBoundingClientRect().width)));
+    await page.waitForTimeout(100);
+  }
+  expect([...widths]).toHaveLength(1);
+  expect(errors).toEqual([]);
+});
