@@ -8,10 +8,37 @@ const LABEL_H = 256;
 const PAPER = "#EEF0F2";
 const PAPER_INK = "#16181B";
 const PAPER_MUTED = "#4E525A";
-const BACK = "#1B1C20";
+/** The B-side label's dark print. */
+export const BACK = "#1B1C20";
+const BACK_RGB: Rgb = [0x1b, 0x1c, 0x20];
 const BACK_TEXT = "#D4D4D8";
 
-const rgb = ([r, g, b]: [number, number, number], k = 1) => `rgb(${Math.round(r * k)}, ${Math.round(g * k)}, ${Math.round(b * k)})`;
+type Rgb = [number, number, number];
+const rgb = ([r, g, b]: Rgb, k = 1) => `rgb(${Math.round(r * k)}, ${Math.round(g * k)}, ${Math.round(b * k)})`;
+
+// WCAG 2.x relative luminance and contrast ratio.
+const channel = (c: number) => {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+};
+const luminance = ([r, g, b]: Rgb) => 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+const contrast = (a: Rgb, b: Rgb) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+/**
+ * The track's ink as printed on the dark B-side: the ink itself where it already reads at
+ * 4.5:1 on BACK, otherwise lifted toward white just until it does (events' blue is too dark).
+ * TRACK_INK itself stays as it is for the shell, the dot field and the J-card.
+ */
+export function bsideInk(ink: Rgb): Rgb {
+  for (let k = 0; k <= 1; k += 0.02) {
+    const lifted = ink.map((c) => Math.round(c + (255 - c) * k)) as Rgb;
+    if (contrast(lifted, BACK_RGB) >= 4.5) return lifted;
+  }
+  return [255, 255, 255];
+}
 
 function labelTexture(three: typeof THREE, draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const canvas = Object.assign(document.createElement("canvas"), { width: LABEL_W, height: LABEL_H });
@@ -84,7 +111,7 @@ export function buildTapes(three: typeof THREE, template: THREE.Object3D, tracks
     const back = labelTexture(three, (g) => {
       g.fillStyle = BACK;
       g.fillRect(0, 0, LABEL_W, LABEL_H);
-      g.fillStyle = rgb(ink);
+      g.fillStyle = rgb(bsideInk(ink));
       fit(g, `${number} ${title.toUpperCase()} · B-SIDE`, 700, 46, font, LABEL_W - 72);
       g.fillText(`${number} ${title.toUpperCase()} · B-SIDE`, 36, 72);
       g.fillStyle = BACK_TEXT;
