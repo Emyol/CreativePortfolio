@@ -1,6 +1,6 @@
 # Side A v2: the desk
 
-Status: design, awaiting the owner's approval. Supersedes the scroll page of
+Status: approved by the owner on 2026-10-28. Supersedes the scroll page of
 `2026-10-17-side-a-design.md` (site shape, sections, flip, dock) and most of
 `2026-10-18-motion-design.md` (entrance, holds, hero to dock, flip, section arrivals). What those
 specs say about content rules, the mixtape's Spotify deck, sound, the 3D player's fallbacks and
