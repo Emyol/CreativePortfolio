@@ -161,6 +161,31 @@ export async function createDeskScene(o: {
   const camera = new three.PerspectiveCamera(28, 1, 0.1, 200);
   const frame = deskFraming(three, el, camera, { deskX: -W * 0.22, playerX: device.position.x });
 
+  // ---------- the scene's GSAP ----------
+  // Every tween the scene starts belongs to one context that dispose() reverts. Tweens start
+  // later (a route change, the pointer, the handle), so each entry point runs inside the
+  // context (scoped), and a tween's own callbacks run in its context too (a seat's LED and
+  // clunk dip, the loading counter). Finished tweens are dropped from it now and then, so a
+  // long visit doesn't keep every hover's tween.
+  const ctx = gsap.context(() => {});
+  const running = (a: gsap.core.Animation) => {
+    let top = a;
+    while (top.parent) top = top.parent;
+    return top === gsap.globalTimeline;
+  };
+  const scoped =
+    <A extends unknown[], R>(f: (...a: A) => R) =>
+    (...a: A): R => {
+      if (ctx.data.length > 200) ctx.data = (ctx.data as gsap.core.Animation[]).filter(running);
+      let r!: R;
+      ctx.add(() => {
+        r = f(...a);
+      });
+      return r;
+    };
+  const scopedAll = <T extends object>(o: T): T =>
+    Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === "function" ? scoped(v as (...a: unknown[]) => unknown) : v])) as T;
+
   // ---------- the screen and the LED ----------
   let want: TrackId | null = null; // the tape in, or going in
   let applied: { state: DeskState; want: TrackId | null } | null = null;
@@ -394,15 +419,14 @@ export async function createDeskScene(o: {
 
   frame.applyBox();
   frame.aim(el.getBoundingClientRect());
-  refreshScreen();
+  ctx.add(refreshScreen);
 
   const box = new three.Box3();
   let disposed = false;
-  return {
+  const api = {
     ...pointer,
-    view,
     sync,
-    project(id) {
+    project(id: ProjectId) {
       if (id === "player") return frame.box(box.setFromObject(device));
       if (id.startsWith("key")) {
         const k = device.getObjectByName(`Key${id.slice(3)}`);
@@ -411,7 +435,7 @@ export async function createDeskScene(o: {
       const t = recs.get(id as TrackId);
       return t ? frame.box(box.setFromObject(t.obj)) : null;
     },
-    screen(lines, progress) {
+    screen(lines: Lines, progress?: number) {
       override = { lines, progress };
       refreshScreen();
     },
@@ -425,7 +449,7 @@ export async function createDeskScene(o: {
         .to(mark.rotation, { y: knobTo + 0.2, duration: 0.16, ease: "power2.inOut" })
         .to(mark.rotation, { y: knobTo, duration: 0.3, ease: "back.out(2)" });
     },
-    setNight(on, instant = false) {
+    setNight(on: boolean, instant = false) {
       night = on;
       const duration = instant || still ? 0 : 0.3;
       gsap.to(light, { intensity: on ? 0.1 : 2.4, duration, overwrite: true });
@@ -434,12 +458,16 @@ export async function createDeskScene(o: {
       gsap.to(spot, { intensity: on ? 520 : 0, duration, overwrite: true });
     },
     seatedId: () => all.find((t) => t.seated)?.id ?? null,
+  };
+  return {
+    ...scopedAll(api),
+    view,
     dispose() {
       if (disposed) return;
       disposed = true;
-      all.forEach(motion.kill);
-      loading?.kill();
-      gsap.killTweensOf([frame.mode, device.position, ledMat, mark.rotation, light, ambient, scene, spot]);
+      // Every tween the scene started, running or waiting; without their callbacks (no clunk,
+      // ripple or box write while it is taken down).
+      ctx.revert({ suppressEvents: true });
       frame.dispose();
       screenApi.dispose();
       disposeTapes(tapes);
