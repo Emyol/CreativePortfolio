@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { trackKeysEnabled } from "@/lib/keys";
 import { scrollToId } from "@/lib/motion/navigate";
 import { playKey } from "@/lib/sound";
-import { shouldHandleTrackKey, sideTracks, trackForKey, type SideId, type Track } from "@/lib/tape";
+import { shouldHandleTrackKey, sideTracks, sideTrackForKey, type SideId, type Track } from "@/lib/tape";
 
 const FLASH_MS = 140;
 
@@ -39,7 +39,7 @@ export function useTrackKeys(tracks: Track[], side: SideId): void {
         scrollToId(first.id);
         return;
       }
-      const track = trackForKey(e.key, tracks, sideRef.current);
+      const track = sideTrackForKey(e.key, tracks, sideRef.current);
       if (!track) return;
       e.preventDefault();
       flashKey(Number(e.key) - 1);

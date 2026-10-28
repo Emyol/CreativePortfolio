@@ -8,7 +8,7 @@ import { gsap } from "@/lib/motion/gsap";
 import { getHeroScroll, subscribeHeroScroll } from "@/lib/motion/heroScroll";
 import { marqueeAt } from "@/lib/motion/marquee";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
-import { keySlots, knobAngle, type SideId, type Track, type TrackId } from "@/lib/tape";
+import { sideKeySlots, knobAngle, type SideId, type Track, type TrackId } from "@/lib/tape";
 import { entranceDecision, getHero, setHero, type HeroApi } from "@/lib/three/heroReady";
 import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
@@ -310,7 +310,7 @@ export function Hero3D(props: Props) {
           }
 
           // The keys' labels, printed on the plate (the side's tracks; a blank key, none).
-          const texts = keySlots(now.tracks, now.side).map((s) => s.track?.label.toLowerCase() ?? "");
+          const texts = sideKeySlots(now.tracks, now.side).map((s) => s.track?.label.toLowerCase() ?? "");
           const labels = texts.join("|");
           if (labels !== printedKey) {
             printed.set(texts);

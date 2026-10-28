@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { DEVICE, pct, type Rect } from "@/lib/device/layout";
-import { keySlots, type SideId, type Track, type TrackId } from "@/lib/tape";
+import { sideKeySlots, type SideId, type Track, type TrackId } from "@/lib/tape";
 import { Sprite } from "./Sprite";
 import styles from "./TapeKeys.module.css";
 
@@ -38,7 +38,7 @@ const capSprite: CSSProperties = {
  * is a blank cap. The track being read stays latched down, like a deck's play key.
  */
 export function TapeKeys({ tracks, side, current, interactive, hrefBase = "", rects = DEVICE.keys, labels = "under", className }: Props) {
-  const slots = keySlots(tracks, side);
+  const slots = sideKeySlots(tracks, side);
   // A tape with nothing on this side has no navigation to offer, so no landmark either.
   const Box = slots.some((s) => s.track) ? "nav" : "div";
   // Off the home page the keys lead back to it; next/link keeps that a client-side move.
