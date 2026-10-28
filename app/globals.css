@@ -56,6 +56,8 @@ body { background: var(--table); overflow-x: clip; }
 /* The 3D stage's canvas sits behind the page (z-index -1): body lets it show through, and
    html, the same colour, stays the background. */
 body:has(> canvas[data-stage]) { background: transparent; }
+/* The desk's dot field (z-index -2) sits under the stage too, so body never covers it. */
+body:has([data-desk-root]) { background: transparent; }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
 }
