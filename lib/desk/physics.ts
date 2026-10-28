@@ -53,8 +53,9 @@ export function stepDesk(bodies: Body[], dt: number, o: Options): { impacts: num
       const min = radius * 2;
       if (d >= min) continue;
       // Exactly coincident bodies get an arbitrary but fixed axis.
-      const nx = dx ? dx / d : 1;
-      const nz = dx ? dz / d : 0;
+      const coincident = dx === 0 && dz === 0;
+      const nx = coincident ? 1 : dx / d;
+      const nz = coincident ? 0 : dz / d;
       const push = (min - d) / 2;
       const aHeld = i === held;
       const cHeld = j === held;

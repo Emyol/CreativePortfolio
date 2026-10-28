@@ -12,6 +12,14 @@ describe("stepDesk", () => {
     expect(Math.hypot(bodies[1].x - bodies[0].x, bodies[1].z - bodies[0].z)).toBeGreaterThanOrEqual(2 - 1e-9);
   });
 
+  it("separates two bodies on the same x along z", () => {
+    const bodies = [body({ x: 0, z: 0 }), body({ x: 0, z: 0.5 })];
+    stepDesk(bodies, 1 / 60, { radius: 1, bounds, obstacle: far });
+    expect(bodies[0].x).toBe(0);
+    expect(bodies[1].x).toBe(0);
+    expect(bodies[1].z - bodies[0].z).toBeGreaterThanOrEqual(2 - 1e-9);
+  });
+
   it("bounces a body off the wall, inside bounds, with velocity reversed and halved", () => {
     const bodies = [body({ x: 8.9, vx: 10 })];
     stepDesk(bodies, 0.1, { radius: 1, bounds, obstacle: far });
