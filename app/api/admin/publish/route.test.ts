@@ -43,7 +43,7 @@ test("a draft the tape would refuse is not published, and the reason is given", 
 test("publishing makes the tape live at once", async () => {
   expect(await (await publish(4)).json()).toEqual({ published: true });
   expect(state.tags).toEqual([["tape-content", { expire: 0 }]]);
-  expect(state.paths).toEqual([["/"], ["/tracklist"], ["/events/[slug]", "page"]]);
+  expect(state.paths).toEqual([["/", "layout"], ["/"], ["/tracklist"], ["/events/[slug]", "page"]]);
 });
 
 test("nothing is published before a save", async () => {
