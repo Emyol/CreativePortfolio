@@ -202,3 +202,13 @@
   .number { display: none; }
   .open { grid-column: 2; justify-self: start; }
 }
+/* On the J-card's stand-in screen, the same when the screen is that narrow. */
+@container track-screen (max-width: 900px) {
+  .mixtape { grid-template-columns: 1fr; }
+  .deck { position: static; order: -1; }
+}
+@container track-screen (max-width: 560px) {
+  .song { grid-template-columns: 2.5rem minmax(0, 1fr); }
+  .number { display: none; }
+  .open { grid-column: 2; justify-self: start; }
+}

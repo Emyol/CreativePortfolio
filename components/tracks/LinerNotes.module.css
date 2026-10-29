@@ -36,3 +36,8 @@ html[data-tier="none"] .throwable { cursor: auto; }
   .notes[data-has-photo] { grid-template-columns: 1fr; }
   .candid { width: min(18rem, 80%); justify-self: center; }
 }
+/* On the J-card's stand-in screen, the same when the screen is that narrow. */
+@container track-screen (max-width: 767px) {
+  .notes[data-has-photo] { grid-template-columns: 1fr; }
+  .candid { width: min(18rem, 80%); justify-self: center; }
+}
