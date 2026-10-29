@@ -28,7 +28,7 @@ export async function TrackRoute({ id }: { id: TrackId }) {
   const label = TRACK_ORDER.find((t) => t.id === id)?.label ?? id;
   return (
     <main id="main" tabIndex={-1}>
-      <h2>{label}</h2>
+      <h2 tabIndex={-1}>{label}</h2>
       <Section device={body(id, content)} liner={null} />
     </main>
   );

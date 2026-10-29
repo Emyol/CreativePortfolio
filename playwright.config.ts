@@ -13,10 +13,22 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
+      grepInvert: /@sprite/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 900 },
         launchOptions: { args: ["--use-angle=d3d11", "--enable-gpu", "--ignore-gpu-blocklist"] },
+      },
+    },
+    // No WebGL at all: the desk falls back to the sprite player. Only the tests tagged
+    // @sprite run here, so the suite doesn't run twice.
+    {
+      name: "no-webgl",
+      grep: /@sprite/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+        launchOptions: { args: ["--disable-webgl"] },
       },
     },
   ],

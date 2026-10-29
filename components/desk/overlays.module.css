@@ -1,0 +1,226 @@
+/* The DOM laid over the desk: the tape links and the player's keys, and, where the 3D can't
+   run, the sprite player under them. Before the 3D's first frame, and without it, every box
+   sits where spriteLayout.ts lays the desk out flat (custom properties set inline); once the
+   3D places them (`[data-placed]`), each is fixed at the viewport's origin and moved by its
+   inline transform, width and height. Nothing here may carry a transform, a filter or
+   containment above a placed box: that would move its fixed origin. */
+.layer,
+.stage {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  /* The plate's width on the desk and in the deck's corner (deskFraming's CORNER box). */
+  --u: min(36vw, 62vh);
+  --cw: min(34vw, 420px);
+}
+.layer { z-index: 2; }
+.stage { z-index: 1; }
+
+/* The player's box: on the desk right of centre, in the deck the corner. */
+.player {
+  position: absolute;
+  width: var(--pw);
+  height: calc(var(--pw) * 0.6975);
+}
+.player[data-state="desk"] {
+  --pw: var(--u);
+  left: calc(50% + 0.06 * var(--u));
+  top: calc(50% - 0.46875 * var(--u));
+}
+.player[data-state="deck"] {
+  --pw: var(--cw);
+  left: 18px;
+  top: calc(100% - 18px - 0.6975 * var(--cw));
+}
+
+/* A tape's or a key's box, centred on its spot. */
+.tape,
+.key {
+  position: absolute;
+  left: var(--left);
+  top: var(--top);
+  width: var(--width);
+  height: var(--height);
+  translate: -50% -50%;
+}
+.layer[data-placed] .tape,
+.layer[data-placed] .key {
+  position: fixed;
+  left: 0;
+  top: 0;
+  translate: none;
+}
+.tape[data-off],
+.tape[data-away],
+.key[data-off] {
+  visibility: hidden;
+}
+/* The one being looked at, or about to be, comes over its neighbours with its button. */
+.tape:hover,
+.tape:focus-within { z-index: 1; }
+
+.tapeLink,
+.key {
+  pointer-events: auto;
+  color: var(--device-ink);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.tapeLink {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 10px;
+}
+.key {
+  display: block;
+  border-radius: 8px;
+  touch-action: manipulation;
+}
+/* Over the 3D a press is the 3D's to grab and throw. */
+.layer[data-placed] .tapeLink {
+  touch-action: none;
+  cursor: grab;
+}
+
+/* Inspect: on the tape being hovered or focused. Reachable by Tab from its link, and only
+   shown then, so it is never focusable while unseen. */
+.inspect {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  translate: -50% 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #16181b;
+  border-radius: 8px;
+  background: #eef0f2;
+  color: #16181b;
+  font: 700 13px/1 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgb(22 24 27 / 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms var(--ease-out);
+}
+.tape:hover .inspect,
+.tape:focus-within .inspect {
+  opacity: 1;
+  pointer-events: auto;
+}
+.inspect:hover { background: #ffffff; }
+
+/* ---------- the sprite drawing (no 3D) ---------- */
+
+.full {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.shadow { opacity: 0.82; }
+
+/* Printed and lit text is sized in the plate's own units. */
+.plate { container-type: inline-size; }
+.screen { --screen-size: max(2.85cqw, 9.5px); padding-inline: 0.2cqw; }
+.nameplate {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  font: 700 max(2.55cqw, 10px)/1 var(--font-mono), monospace;
+  letter-spacing: 0.06em;
+  color: var(--device-ink);
+}
+.led {
+  position: absolute;
+  width: 1.2cqw;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle at 40% 35%, #ffd2c2 0 12%, var(--signal) 45%, rgb(255 46 0 / 0) 72%);
+  box-shadow: 0 0 1.2cqw 0.2cqw rgb(255 46 0 / 0.55);
+}
+.led[data-on] { opacity: 1; }
+
+/* A tape lying on the desk, turned as it fell; its label printed on the shell's paper. */
+.spriteTape {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--tape);
+  translate: -50% -50%;
+  rotate: var(--turn);
+  container-type: inline-size;
+  filter: drop-shadow(0 0.6cqw 0.8cqw rgb(22 24 27 / 0.28));
+  pointer-events: none;
+}
+.cassette { width: 100%; }
+.print {
+  position: absolute;
+  left: 13%;
+  right: 13%;
+  top: 8%;
+  height: 12%;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  overflow: hidden;
+  border-bottom: 0.6cqw solid var(--ink);
+  font: 700 6.4cqw/1 var(--font-mono), monospace;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--device-ink);
+}
+.printNumber { font-weight: 400; }
+
+/* A key: the cap at its own size in the middle of its (at least 44 px) box. */
+.cap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--cap-w);
+  height: var(--cap-h);
+  translate: -50% -50%;
+  pointer-events: none;
+}
+.capUp,
+.capDown {
+  position: absolute;
+  max-width: none;
+}
+.capDown { opacity: 0; }
+.key[data-latched] .capDown { opacity: 1; }
+.key[data-latched] .capUp { opacity: 0; }
+/* The plate is darkest along the bottom, so the label under a key is printed light. */
+.keyLabel {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + var(--cap-h) / 2 + 0.02 * var(--pw));
+  translate: -50% 0;
+  color: var(--device-ink-light);
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.35);
+  font: 400 max(calc(0.0132 * var(--pw)), 11px)/1 var(--font-mono), monospace;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* The playing key carries a small lit lamp. */
+.layer[data-sprite] .key[data-latched]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(50% - var(--cap-h) / 2 + 0.14 * var(--cap-h));
+  width: max(4px, calc(0.0042 * var(--pw)));
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow: 0 0 6px rgb(255 46 0 / 0.8);
+}
