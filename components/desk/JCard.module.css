@@ -145,6 +145,13 @@
 .body {
   display: contents;
 }
+/* What a panel holds is its own stacking context, under the reprint's two layers (z-index 1
+   and 2): the v1 events' REC playhead (z-index 2) and a thrown photo (Throwable's rising
+   inline z-index) would otherwise paint over the blank stock and the band. */
+.card [data-panel="device"] > *,
+.card [data-panel="liner"] > * {
+  isolation: isolate;
+}
 
 .card [data-panel="device"] {
   grid-area: device;
