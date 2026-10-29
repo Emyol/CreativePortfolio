@@ -107,6 +107,20 @@ test("eject folds the J-card away and gives focus back to the tape that was in",
   await expect(page.locator("main")).toHaveCount(1);
 });
 
+// Runs only in the "no-webgl" project (playwright.config.ts): the sprite desk, no 3D.
+test("without WebGL, eject gives focus back to the tape that was in", { tag: "@sprite" }, async ({ page }) => {
+  await gotoReady(page, "/");
+  await expect(page.locator("[data-sprite-desk]")).toBeVisible();
+  await page.getByRole("link", { name: "04 people, tape" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { level: 2, name: "people", exact: true })).toBeFocused({ timeout: 10_000 });
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("link", { name: "04 people, tape" })).toBeFocused();
+  await expect(page.locator("[data-panel]")).toHaveCount(0);
+  await expect(page.locator("main")).toHaveCount(1);
+});
+
 for (const size of [
   { width: 1440, height: 900 },
   { width: 1280, height: 800 },
