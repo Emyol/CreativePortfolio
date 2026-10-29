@@ -2,7 +2,8 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/content/fixtures";
 import { TRACK_INK } from "@/lib/desk/tapeLabel";
-import { __resetVisitForTests } from "@/lib/desk/visit";
+import { __resetVisitForTests, isFirstInsert } from "@/lib/desk/visit";
+import { gsap } from "@/lib/motion/gsap";
 import { MotionTierContext } from "@/lib/motion/MotionProvider";
 import { visibleTracks, type TrackId } from "@/lib/tape";
 import { Flap } from "./Flap";
@@ -135,6 +136,22 @@ describe("JCard", () => {
     expect(device).toHaveTextContent("Fixture people");
     expect(device.style.opacity).toBe("0");
     expect(document.querySelector<HTMLElement>('[data-panel="liner"]')!.style.transform).toMatch(/rotateY\(-96deg\)/);
+  });
+
+  it("only reads the first-insert flag: the desk marks it, after the 3D has read it too", () => {
+    __resetVisitForTests();
+    const { rerender } = render(card(null));
+    rerender(card("events", "Fixture device", 1));
+    expect(isFirstInsert()).toBe(true);
+  });
+
+  it("a fold cut short by unmounting leaves nothing running", () => {
+    const { rerender, unmount } = render(card("events"));
+    rerender(card(null));
+    const copy = document.querySelector<HTMLElement>('[data-fold-copy] [data-panel="liner"]')!;
+    expect(copy).not.toBeNull();
+    unmount();
+    expect(gsap.getTweensOf(copy)).toHaveLength(0);
   });
 
   it("wipes the new ink across within 0.4 s", () => {

@@ -1,9 +1,9 @@
 "use client";
-import { Component, createRef, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Component, createRef, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { TRACK_INK } from "@/lib/desk/tapeLabel";
 import { TIMING } from "@/lib/desk/timing";
-import { isFirstInsert, markInserted } from "@/lib/desk/visit";
-import { gsap, useGSAP } from "@/lib/motion/gsap";
+import { isFirstInsert } from "@/lib/desk/visit";
+import { gsap } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { TRACK_ORDER, type Track, type TrackId } from "@/lib/tape";
 import { Flap } from "./Flap";
@@ -61,6 +61,8 @@ function hingeAt(flap: HTMLElement | null, liner: HTMLElement | null, angle: num
   if (liner) gsap.set(liner, { transformOrigin: "0% 50%", transformPerspective: PERSPECTIVE, ...turn(-(angle ?? 0)) });
 }
 
+type Move = { kind: "open" | "wipe" | "fold"; ctx: gsap.Context; tl: gsap.core.Timeline; done: boolean };
+
 type Props = {
   tracks: Track[];
   base: string;
@@ -93,90 +95,104 @@ export function JCard({ tracks, base, current, children, seatDelay = 0 }: Props)
 
   const root = useRef<HTMLElement>(null);
   const was = useRef<{ open: boolean; id: TrackId | null }>({ open: !!current, id: current });
-  const hinge = useRef<gsap.core.Timeline | null>(null);
-  const wipe = useRef<gsap.core.Timeline | null>(null);
-  const folding = useRef(false);
+  // The one move under way. Each move lives in its own GSAP context, killed when the next
+  // move takes over or when it finishes, so nothing it touched (the old panels, the fold's
+  // copies) stays referenced afterwards; the card reverts the last one when it goes.
+  const move = useRef<Move | null>(null);
+  const start = (kind: Move["kind"], build: (finish: () => void) => gsap.core.Timeline) => {
+    move.current?.ctx.kill();
+    const m = { kind, done: false } as Move;
+    const finish = () => {
+      m.done = true;
+      if (move.current === m) move.current = null;
+      m.ctx?.kill();
+    };
+    m.ctx = gsap.context(() => void (m.tl = build(finish)));
+    move.current = m.done ? null : m;
+  };
+  useLayoutEffect(() => () => move.current?.ctx.revert(), []);
 
-  useGSAP(
-    () => {
-      const prev = was.current;
-      const open = !!current;
-      was.current = { open, id: current };
-      const el = root.current;
-      if (!el) return;
-      if (open === prev.open && current === prev.id) {
-        // Only the motion tier changed. Reduced motion came on mid-move: end it where it was going.
-        if (still) {
-          hinge.current?.progress(1);
-          wipe.current?.progress(1);
-        }
-        return;
-      }
-      setSettle(false);
+  useLayoutEffect(() => {
+    const prev = was.current;
+    const open = !!current;
+    was.current = { open, id: current };
+    const el = root.current;
+    if (!el) return;
+    const running = move.current;
+    if (open === prev.open && current === prev.id) {
+      // Only the motion tier changed. Reduced motion came on mid-move: end it where it was going.
+      if (still) running?.tl.progress(1);
+      return;
+    }
+    setSettle(false);
 
-      const flap = el.querySelector<HTMLElement>('[data-panel="flap"]');
-      const liner = el.querySelector<HTMLElement>('[data-panel="liner"]');
-      const face = [el.querySelector<HTMLElement>(":scope > h2"), el.querySelector<HTMLElement>('[data-panel="device"]')].filter((e) => !!e);
-      const panels = [flap, ...face, liner].filter((e) => !!e);
-      const hinged = [flap, liner].filter((e) => !!e);
-      const title = el.querySelector<HTMLElement>(":scope > h2");
-      // Opens the card from wherever its panels are: the centre comes up, the hinges turn flat.
-      const unfold = (delay: number) => {
-        const tl = (hinge.current = gsap.timeline({
-          delay,
-          onComplete: () => {
-            hinge.current = null;
-            gsap.set([el, ...panels], { clearProps: "transform,opacity" });
-          },
-        }));
-        tl.to(el, { opacity: 1, duration: 0.15, ease: "none" }, 0);
-        tl.to(face, { opacity: 1, y: 0, duration: TIMING.unfold * 0.4, ease: "power2.out" }, 0);
-        tl.to(hinged, { rotationY: 0, duration: TIMING.unfold * 0.88, ease: "power3.out" }, TIMING.unfold * 0.12);
-      };
+    const flap = el.querySelector<HTMLElement>('[data-panel="flap"]');
+    const liner = el.querySelector<HTMLElement>('[data-panel="liner"]');
+    const title = el.querySelector<HTMLElement>(":scope > h2");
+    const device = el.querySelector<HTMLElement>('[data-panel="device"]');
+    const face = [title, device].filter((e) => !!e);
+    const panels = [flap, ...face, liner].filter((e) => !!e);
+    const hinged = [flap, liner].filter((e) => !!e);
+    // Opens the card from wherever its panels are: the centre comes up, the hinges turn flat.
+    const unfold = (delay: number, finish: () => void) => {
+      const tl = gsap.timeline({
+        delay,
+        onComplete: () => {
+          gsap.set([el, ...panels], { clearProps: "transform,opacity" });
+          finish();
+        },
+      });
+      tl.to(el, { opacity: 1, duration: 0.15, ease: "none" }, 0);
+      tl.to(face, { opacity: 1, y: 0, duration: TIMING.unfold * 0.4, ease: "power2.out" }, 0);
+      tl.to(hinged, { rotationY: 0, duration: TIMING.unfold * 0.88, ease: "power3.out" }, TIMING.unfold * 0.12);
+      return tl;
+    };
 
-      if (open && !prev.open) {
-        // A tape went in: from the desk, or back in while the card was still folding away.
-        const fromFolding = folding.current;
-        folding.current = false;
-        hinge.current?.kill();
+    if (open && !prev.open) {
+      // A tape went in: from the desk, or back in while the card was still folding away.
+      const fromFolding = running?.kind === "fold";
+      // Read before anything marks it: the desk marks the insert after its children's effects.
+      const first = isFirstInsert();
+      start("open", (finish) => {
         if (fromFolding) takeOverFold(el, still);
         if (still) {
           // The card fades in whole; whatever a fold left on the panels goes at once.
           gsap.set(panels, { rotationY: 0, y: 0, opacity: 1 });
           if (!fromFolding) gsap.set(el, { opacity: 0 });
-          hinge.current = gsap.timeline({ onComplete: () => void (hinge.current = null) }).to(el, { opacity: 1, duration: FADE, ease: "none" });
-        } else {
-          if (!fromFolding) {
-            hingeAt(flap, liner, FOLDED);
-            gsap.set(face, { opacity: 0, y: 12 });
-          }
-          // The first insert of a visit waits for the tape to seat, as the 3D does.
-          unfold(!fromFolding && isFirstInsert() ? seatDelay : 0);
+          return gsap.timeline({ onComplete: finish }).to(el, { opacity: 1, duration: FADE, ease: "none" });
         }
-        title?.focus({ preventScroll: true });
-        return;
-      }
+        if (!fromFolding) {
+          hingeAt(flap, liner, FOLDED);
+          gsap.set(face, { opacity: 0, y: 12 });
+        }
+        // The first insert of a visit waits for the tape to seat, as the 3D does.
+        return unfold(!fromFolding && first ? seatDelay : 0, finish);
+      });
+      title?.focus({ preventScroll: true });
+      return;
+    }
 
-      if (open) {
-        // A later switch: the card stays open and reprints.
-        wipe.current?.kill();
-        const opening = hinge.current;
-        if (opening && !still) {
-          // Still unfolding (quick picks): the new panels join the unfold where the old ones
-          // were, and it carries on, its wait for the tape included.
-          const wait = Math.max(0, opening.startTime() - (opening.parent?.time() ?? 0));
-          opening.kill();
-          const device = el.querySelector<HTMLElement>('[data-panel="device"]');
-          if (liner && flap) hingeAt(null, liner, gsap.getProperty(flap, "rotationY") as number);
-          if (device && title) gsap.set(device, { opacity: gsap.getProperty(title, "opacity"), y: gsap.getProperty(title, "y") });
-          unfold(wait);
-        } else if (still) {
-          hinge.current?.progress(1);
-          wipe.current = gsap.timeline({ onComplete: () => void (wipe.current = null) });
-          wipe.current.fromTo(panels, { opacity: 0 }, { opacity: 1, duration: FADE, ease: "none", clearProps: "opacity" });
-        } else {
-          wipe.current = gsap.timeline({ onComplete: () => void (wipe.current = null) });
-          wipe.current.fromTo(
+    if (open) {
+      // A later switch: the card stays open and reprints.
+      if (running?.kind === "open" && !still) {
+        // Still unfolding (quick picks): the new panels join the unfold where the old ones
+        // were, and it carries on, its wait for the tape included.
+        const wait = Math.max(0, running.tl.startTime() - (running.tl.parent?.time() ?? 0));
+        const turned = flap ? (gsap.getProperty(flap, "rotationY") as number) : 0;
+        const up = title ? { opacity: gsap.getProperty(title, "opacity"), y: gsap.getProperty(title, "y") } : null;
+        start("open", (finish) => {
+          hingeAt(null, liner, turned);
+          if (device && up) gsap.set(device, up);
+          return unfold(wait, finish);
+        });
+      } else if (still) {
+        running?.tl.progress(1);
+        start("wipe", (finish) =>
+          gsap.timeline({ onComplete: finish }).fromTo(panels, { opacity: 0 }, { opacity: 1, duration: FADE, ease: "none", clearProps: "opacity" }),
+        );
+      } else {
+        start("wipe", (finish) =>
+          gsap.timeline({ onComplete: finish }).fromTo(
             panels,
             { "--wipe": "0%" },
             {
@@ -186,38 +202,31 @@ export function JCard({ tracks, base, current, children, seatDelay = 0 }: Props)
               stagger: (_: number, p: HTMLElement) => WIPE.stagger * (p === flap ? 0 : p === liner ? 2 : 1),
               onComplete: () => panels.forEach((p) => p.style.removeProperty("--wipe")),
             },
-          );
-        }
-        title?.focus({ preventScroll: true });
-        return;
+          ),
+        );
       }
+      title?.focus({ preventScroll: true });
+      return;
+    }
 
-      // Eject: fold back along the same path, then hand the desk its content back.
-      folding.current = true;
-      hinge.current?.kill();
-      wipe.current?.progress(1);
-      const done = () => {
-        hinge.current = null;
-        folding.current = false;
-        setShown(null);
-      };
-      const tl = (hinge.current = gsap.timeline({ onComplete: done }));
-      if (still) {
-        tl.to(el, { opacity: 0, duration: FADE, ease: "none" });
-      } else {
-        hingeAt(flap, liner, null);
-        if (flap) tl.to(flap, { rotationY: FOLDED, duration: TIMING.fold * 0.8, ease: "power2.in" }, 0);
-        if (liner) tl.to(liner, { rotationY: -FOLDED, duration: TIMING.fold * 0.8, ease: "power2.in" }, 0);
-        tl.to(face, { opacity: 0, y: 12, duration: TIMING.fold * 0.5, ease: "power1.in" }, TIMING.fold * 0.5);
-      }
-    },
-    { dependencies: [current, still], scope: root, revertOnUpdate: false },
-  );
-
-  // After the 3D's own effect has read the flag for this insert (it comes first in the desk).
-  useEffect(() => {
-    if (current) markInserted();
-  }, [current]);
+    // Eject: fold back along the same path, then hand the desk its content back.
+    if (running?.kind === "wipe") running.tl.progress(1);
+    start("fold", (finish) => {
+      const tl = gsap.timeline({
+        onComplete: () => {
+          finish();
+          setShown(null);
+        },
+      });
+      if (still) return tl.to(el, { opacity: 0, duration: FADE, ease: "none" });
+      hingeAt(flap, liner, null);
+      if (flap) tl.to(flap, { rotationY: FOLDED, duration: TIMING.fold * 0.8, ease: "power2.in" }, 0);
+      if (liner) tl.to(liner, { rotationY: -FOLDED, duration: TIMING.fold * 0.8, ease: "power2.in" }, 0);
+      tl.to(face, { opacity: 0, y: 12, duration: TIMING.fold * 0.5, ease: "power1.in" }, TIMING.fold * 0.5);
+      return tl;
+    });
+    // Follows the route and the motion tier; `seatDelay` and the helpers are read as they are.
+  }, [current, still]);
 
   if (!shown) return <>{children}</>;
   const open = !!current;

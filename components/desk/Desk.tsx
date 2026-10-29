@@ -6,6 +6,7 @@ import type { SiteContent } from "@/lib/content/schema";
 import { deskHref, hashRedirect, parseDeskPath } from "@/lib/desk/location";
 import { TRACK_INK } from "@/lib/desk/tapeLabel";
 import { TIMING } from "@/lib/desk/timing";
+import { markInserted } from "@/lib/desk/visit";
 import { visibleTracks, type TrackId } from "@/lib/tape";
 import { Desk3D, type Desk3DHandle } from "./Desk3D";
 import { DeskContext, knobStack, type DeskApi } from "./deskContext";
@@ -72,6 +73,14 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
     const was = shown.current;
     shown.current = current;
     if (was && !current) tapeLinks.current?.focus(was);
+  }, [current]);
+
+  // A tape is in: the visit's first insert is used up. Marked here, in the parent, because a
+  // parent's effects run after all of its children's: the 3D (its sync) and the J-card (its
+  // layout effect) have each read the flag for this insert by now. The 3D marks it too, when
+  // the tape seats; without the 3D, this is the only mark.
+  useEffect(() => {
+    if (current) markInserted();
   }, [current]);
 
   const project = useCallback<Project>((id) => desk3d.current?.project(id) ?? null, []);
