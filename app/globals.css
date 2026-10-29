@@ -21,6 +21,13 @@ html, body { margin: 0; }
   --device-ink: #17181B;
   --device-ink-light: #F2F3F5;
 
+  /* The J-card's card stock, cool white (never a warm cream), and its black ink and rules.
+     The second ink is the track's own, set on the card. Night is the 3D's lighting, not a
+     dark page: dark appears only on real screens. */
+  --paper: #EEF0F2;
+  --paper-ink: #16181B;
+  --paper-rule: #C9CDD3;
+
   --gutter: clamp(16px, 4vw, 48px);
   --measure-wide: 1180px;
 
@@ -28,18 +35,6 @@ html, body { margin: 0; }
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
   color-scheme: light;
-}
-
-/* The device art is rendered on transparency, so only the table changes in the dark. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --table: #17181B;
-    --ink: #ECEDEF;
-    --ink-muted: #A3A7AF;
-    --alu: #2A2C31;
-    --bezel: #303238;
-    color-scheme: dark;
-  }
 }
 
 html {

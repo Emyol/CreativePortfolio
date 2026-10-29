@@ -7,7 +7,7 @@ import { Mixtape } from "@/components/tracks/Mixtape";
 import { OnRotation } from "@/components/tracks/OnRotation";
 import { getContent } from "@/lib/content/load";
 import type { SiteContent } from "@/lib/content/schema";
-import { TRACK_ORDER, hasContent, type TrackId } from "@/lib/tape";
+import { hasContent, type TrackId } from "@/lib/tape";
 import { Section } from "./Section";
 
 function body(id: TrackId, c: SiteContent) {
@@ -21,15 +21,13 @@ function body(id: TrackId, c: SiteContent) {
   }
 }
 
-/** A track's page: 404 while it is empty, otherwise its section under the track's own heading. */
+/**
+ * A track's page: 404 while it is empty, otherwise its section's panels. The desk's J-card
+ * holds them, and is the page's main region with the track's title. Until a section has its
+ * own device, its v1 body sits on a stand-in screen, dark as the body was designed for.
+ */
 export async function TrackRoute({ id }: { id: TrackId }) {
   const content = await getContent();
   if (!hasContent(id, content)) notFound();
-  const label = TRACK_ORDER.find((t) => t.id === id)?.label ?? id;
-  return (
-    <main id="main" tabIndex={-1}>
-      <h2 tabIndex={-1}>{label}</h2>
-      <Section device={body(id, content)} liner={null} />
-    </main>
-  );
+  return <Section device={<div data-interim-screen>{body(id, content)}</div>} liner={null} />;
 }

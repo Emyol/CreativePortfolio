@@ -1,0 +1,264 @@
+/* The J-card: cool white card stock printed in two inks, near-black (--paper-ink) and the
+   track's (--print-ink, its ink darkened just enough to read on the paper; --ink, the bright
+   shell colour, only for the wipe). Doto never prints here: it is for lit screens.
+
+   Laid out around the deck's corner player (Desk3D.module.css: fixed, 18 px in from the
+   lower left, min(34vw, 420px) wide at 1.35:1). The left column is that box's width plus a
+   fold's gap: the flap sits above the player, the title, the device and the liner to its
+   right, so no panel ever passes over the player, at the top or scrolled. */
+.card {
+  --corner-w: min(34vw, 420px);
+  --corner-h: calc(var(--corner-w) / 1.35);
+  --edge: 18px;
+  --fold-gap: 12px;
+  --pad: clamp(20px, 2.4vw, 36px);
+  /* A tint of the black ink, for the printed rows of empty tracks (6.6:1 on the paper). */
+  --paper-ink-tint: color-mix(in srgb, var(--paper-ink) 72%, var(--paper));
+
+  display: grid;
+  grid-template-columns: calc(var(--corner-w) + var(--fold-gap)) minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "flap title liner"
+    "flap device liner";
+  margin: var(--edge);
+  min-height: calc(100dvh - 2 * var(--edge));
+  color: var(--paper-ink);
+  font: 400 17px/1.6 var(--font-sans), system-ui, sans-serif;
+}
+
+/* A direct load: the card is already open and only settles (before hydration too). */
+@media (prefers-reduced-motion: no-preference) {
+  .card[data-settle] {
+    animation: settle var(--settle, 0.3s) var(--ease-out);
+  }
+}
+@keyframes settle {
+  from {
+    opacity: 0.4;
+    translate: 0 8px;
+  }
+}
+
+/* ---------- the paper ---------- */
+
+/* Every panel is its own piece of the card (each turns on its own hinge): the stock, a faint
+   print grain (two offset dot screens, CSS only), and a soft crease shadow at each fold. */
+.title,
+.flap,
+.card [data-panel="device"],
+.card [data-panel="liner"] {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(rgb(22 24 27 / 0.035) 0.55px, transparent 0.85px),
+    radial-gradient(rgb(22 24 27 / 0.025) 0.55px, transparent 0.85px);
+  background-size: 3px 3px, 5px 7px;
+  background-position: 0 0, 1px 2px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.title,
+.card [data-panel="device"],
+.card [data-panel="liner"] {
+  position: relative;
+}
+.card [data-panel="device"],
+.card [data-panel="liner"] {
+  box-shadow: 0 22px 40px -26px rgb(22 24 27 / 0.35);
+}
+
+/* The centre panel's two folds: shade falling off the crease on either side. */
+.title,
+.card [data-panel="device"] {
+  background-image:
+    linear-gradient(to right, rgb(22 24 27 / 0.09), transparent 18px),
+    linear-gradient(to left, rgb(22 24 27 / 0.06), transparent 14px),
+    radial-gradient(rgb(22 24 27 / 0.035) 0.55px, transparent 0.85px),
+    radial-gradient(rgb(22 24 27 / 0.025) 0.55px, transparent 0.85px);
+  background-size: auto, auto, 3px 3px, 5px 7px;
+  background-position: 0 0, 0 0, 0 0, 1px 2px;
+}
+/* The flap and the liner lift off their creases a little, so their fold edges catch light. */
+.flap {
+  box-shadow: inset -1px 0 0 var(--paper-rule), 0 22px 40px -26px rgb(22 24 27 / 0.35);
+}
+.card [data-panel="liner"] {
+  box-shadow: inset 1px 0 0 var(--paper-rule), 0 22px 40px -26px rgb(22 24 27 / 0.35);
+}
+
+/* A later switch reprints each panel: blank stock ahead of a band of the new ink that sweeps
+   left to right, the new print behind it. JCard.tsx tweens --wipe, the band's leading edge,
+   from 0% to past the far side; at rest (unset) both layers are clipped away to nothing. */
+.title,
+.flap,
+.card [data-panel="device"],
+.card [data-panel="liner"] {
+  --band: 22%;
+  isolation: isolate;
+}
+.title::before,
+.flap::before,
+.card [data-panel="device"]::before,
+.card [data-panel="liner"]::before,
+.title::after,
+.flap::after,
+.card [data-panel="device"]::after,
+.card [data-panel="liner"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.title::before,
+.flap::before,
+.card [data-panel="device"]::before,
+.card [data-panel="liner"]::before {
+  z-index: 1;
+  background: inherit;
+  clip-path: inset(0 0 0 min(100%, var(--wipe, 200%)));
+}
+.title::after,
+.flap::after,
+.card [data-panel="device"]::after,
+.card [data-panel="liner"]::after {
+  z-index: 2;
+  background: var(--ink);
+  clip-path: inset(0 clamp(0%, calc(100% - var(--wipe, 200%)), 100%) 0 clamp(0%, calc(var(--wipe, 200%) - var(--band)), 100%));
+}
+
+/* ---------- the print ---------- */
+
+.title {
+  grid-area: title;
+  margin: 0;
+  padding: var(--pad) var(--pad) 12px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 800;
+  font-stretch: 125%;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--print-ink);
+  overflow-wrap: anywhere;
+}
+
+.body {
+  display: contents;
+}
+
+.card [data-panel="device"] {
+  grid-area: device;
+  min-width: 0;
+  padding: 8px var(--pad) var(--pad);
+}
+
+/* Until a section has its own device (from Task 11), its v1 body sits on a stand-in screen:
+   black glass in a graphite bezel, as the v1 panel it was designed for (the only dark
+   surface on the card). It is a size container, so those bodies can fit its width. */
+.card [data-interim-screen] {
+  container: track-screen / inline-size;
+  padding: clamp(16px, 2.2vw, 32px);
+  border-radius: 14px;
+  background: var(--oled);
+  color: var(--panel-text);
+  box-shadow:
+    inset 0 0 0 3px var(--bezel),
+    0 18px 36px -24px rgb(10 12 16 / 0.55);
+}
+
+.card [data-panel="liner"] {
+  grid-area: liner;
+  min-width: 0;
+  padding: var(--pad);
+}
+
+/* The flap: the spine and tracklist. Sticky at the top of the view, and never taller than
+   the room above the corner player (it scrolls inside past that). */
+.flap {
+  grid-area: flap;
+  align-self: start;
+  position: sticky;
+  top: var(--edge);
+  max-height: calc(100dvh - var(--corner-h) - 2 * var(--edge) - var(--fold-gap));
+  overflow-y: auto;
+  padding: 20px 24px 24px;
+  overscroll-behavior: contain;
+}
+
+.side {
+  margin: 0 0 6px;
+  font: 700 12px/1.6 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  color: var(--paper-ink);
+}
+.list + .side {
+  margin-top: 18px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--paper-rule);
+}
+
+.row {
+  border-bottom: 1px solid var(--paper-rule);
+}
+
+.rowLink,
+.rowText {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 10px;
+  font: 400 13px/1.2 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  color: var(--paper-ink);
+  text-decoration: none;
+}
+.rowText {
+  color: var(--paper-ink-tint);
+}
+.rowLink {
+  border-radius: 4px;
+  transition: background-color 160ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rowLink:hover {
+    background-color: color-mix(in srgb, var(--print-ink) 9%, transparent);
+  }
+}
+/* The track that's in: printed in its ink, with a solid marker ahead of it. */
+.rowLink[aria-current] {
+  font-weight: 700;
+  color: var(--print-ink);
+}
+.rowLink[aria-current]::before {
+  content: "";
+  width: 4px;
+  align-self: stretch;
+  margin: 10px 0;
+  border-radius: 2px;
+  background: var(--print-ink);
+}
+
+/* On paper the focus ring is printed in the track's ink. */
+.flap :focus-visible {
+  outline: 2px solid var(--print-ink);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+/* Narrower desks: the liner goes under the device, the left column still clear of the player. */
+@media (max-width: 959px) {
+  .card {
+    grid-template-columns: calc(var(--corner-w) + var(--fold-gap)) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "flap title"
+      "flap device"
+      "flap liner";
+  }
+}

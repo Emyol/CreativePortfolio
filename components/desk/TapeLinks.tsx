@@ -29,8 +29,11 @@ type Props = {
 const plain = (e: { button: number; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean }) =>
   e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey;
 
-/** Also marks the tape the 3D lifts (`hot`), which shows its inspect button and brings it on top. */
-export type TapeLinksHandle = OverlayHandle & { hot(id: TrackId | null): void };
+/**
+ * Also marks the tape the 3D lifts (`hot`), which shows its inspect button and brings it on
+ * top, and focuses a tape's link (`focus`: after an eject, focus returns to the tape).
+ */
+export type TapeLinksHandle = OverlayHandle & { hot(id: TrackId | null): void; focus(id: TrackId): void };
 
 /**
  * Every tape on the desk as a real link to its track, laid over the 3D tape and moved onto
@@ -73,6 +76,9 @@ export const TapeLinks = forwardRef<TapeLinksHandle, Props>(function TapeLinks({
           if (on && el.dataset.hot === undefined) el.dataset.hot = "";
           else if (!on && el.dataset.hot !== undefined) delete el.dataset.hot;
         });
+      },
+      focus(id) {
+        layer.current?.querySelector<HTMLElement>(`[data-tape="${id}"] a`)?.focus({ preventScroll: true });
       },
     }),
     [],

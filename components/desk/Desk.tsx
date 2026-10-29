@@ -5,10 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { SiteContent } from "@/lib/content/schema";
 import { deskHref, hashRedirect, parseDeskPath } from "@/lib/desk/location";
 import { TRACK_INK } from "@/lib/desk/tapeLabel";
+import { TIMING } from "@/lib/desk/timing";
 import { visibleTracks, type TrackId } from "@/lib/tape";
 import { Desk3D, type Desk3DHandle } from "./Desk3D";
 import { DeskContext, knobStack, type DeskApi } from "./deskContext";
 import { DotField, type DotFieldHandle } from "./DotField";
+import { JCard } from "./JCard";
 import type { OverlayHandle, Project } from "./overlayPlace";
 import { PlayerKeys } from "./PlayerKeys";
 import { SpriteDesk } from "./SpriteDesk";
@@ -19,13 +21,15 @@ const REST_INK: [number, number, number] = [255, 90, 31];
 /**
  * The persistent desk: the dot field, the 3D player and tapes (or, without 3D, the sprite
  * player), the tape and key links over them, and the route's content. The route is the state
- * (a track path is the deck with that tape in), so the 3D follows Back and Forward. When a
- * tape loads, focus moves to its heading. Later tasks add the J-card and dock.
+ * (a track path is the deck with that tape in), so the 3D follows Back and Forward. With a
+ * tape in, the route's panels sit in its J-card, which takes focus when a tape loads; after
+ * an eject, focus goes back to that tape. A later task adds the dock.
  */
 export function Desk({ content, base, children }: { content: SiteContent; base: string; children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const current = parseDeskPath(pathname, base).track;
+  const loc = parseDeskPath(pathname, base);
+  const current = loc.track;
   const state = current ? "deck" : "desk";
   const tracks = useMemo(() => visibleTracks(content), [content]);
   const desk3d = useRef<Desk3DHandle>(null);
@@ -62,22 +66,12 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
     if (p) dots.current?.ripple(p.x, p.y);
   }, []);
 
-  // A tape loaded (not a direct load): focus its heading once the route's content is in.
+  // Ejected: focus goes back to the tape that was in (when a tape loads, the J-card takes it).
   const shown = useRef(current);
   useEffect(() => {
     const was = shown.current;
     shown.current = current;
-    if (!current || current === was) return;
-    let raf = 0;
-    let tries = 0;
-    const seek = () => {
-      const h = document.querySelector<HTMLElement>("main#main h2");
-      // The page's own scroll (top on a push, restored on Back) stands.
-      if (h) h.focus({ preventScroll: true });
-      else if (tries++ < 120) raf = requestAnimationFrame(seek);
-    };
-    seek();
-    return () => cancelAnimationFrame(raf);
+    if (was && !current) tapeLinks.current?.focus(was);
   }, [current]);
 
   const project = useCallback<Project>((id) => desk3d.current?.project(id) ?? null, []);
@@ -137,7 +131,14 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
           onPointer={onPointer}
         />
         <PlayerKeys ref={keyLinks} tracks={tracks} base={base} current={current} project={has3D ? project : null} />
-        {children}
+        {/* Until the live recording is a Section of its own (Task 11), an event's page brings its own main. */}
+        {loc.event ? (
+          children
+        ) : (
+          <JCard tracks={tracks} base={base} current={current} seatDelay={has3D ? TIMING.fly + TIMING.drop + TIMING.load : 0}>
+            {children}
+          </JCard>
+        )}
       </div>
     </DeskContext.Provider>
   );
