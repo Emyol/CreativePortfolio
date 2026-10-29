@@ -12,7 +12,7 @@ import { DotField, type DotFieldHandle } from "./DotField";
 import type { OverlayHandle, Project } from "./overlayPlace";
 import { PlayerKeys } from "./PlayerKeys";
 import { SpriteDesk } from "./SpriteDesk";
-import { TapeLinks } from "./TapeLinks";
+import { TapeLinks, type TapeLinksHandle } from "./TapeLinks";
 
 const REST_INK: [number, number, number] = [255, 90, 31];
 
@@ -31,7 +31,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   const desk3d = useRef<Desk3DHandle>(null);
   const dots = useRef<DotFieldHandle>(null);
   const [has3D, setHas3D] = useState(true);
-  const tapeLinks = useRef<OverlayHandle>(null);
+  const tapeLinks = useRef<TapeLinksHandle>(null);
   const keyLinks = useRef<OverlayHandle>(null);
 
   useEffect(() => {
@@ -72,7 +72,8 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
     let tries = 0;
     const seek = () => {
       const h = document.querySelector<HTMLElement>("main#main h2");
-      if (h) h.focus();
+      // The page's own scroll (top on a push, restored on Back) stands.
+      if (h) h.focus({ preventScroll: true });
       else if (tries++ < 120) raf = requestAnimationFrame(seek);
     };
     seek();
@@ -85,9 +86,11 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
     keyLinks.current?.place();
   }, []);
   const onHover = useCallback((id: TrackId | null) => desk3d.current?.hover(id), []);
+  const onHot = useCallback((id: TrackId | null) => tapeLinks.current?.hot(id), []);
   const onInspect = useCallback((id: TrackId) => desk3d.current?.inspect(id), []);
   // The pointer over a tape link is the 3D's: its view gets the same move or press (a press
-  // then holds the pointer, by pointer capture, for the drag and the release).
+  // then holds the pointer, by pointer capture, for the drag and the release). The copy
+  // bubbles too, so a document-level pointer listener sees such a move or press twice.
   const onPointer = useCallback((e: PointerEvent) => {
     document.querySelector("[data-desk-view]")?.dispatchEvent(new PointerEvent(e.type, e));
   }, []);
@@ -118,6 +121,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
             onKnob={knob.step}
             onInsert={onInsert}
             onFrame={onFrame}
+            onHover={onHot}
             onUnavailable={() => setHas3D(false)}
           />
         )}

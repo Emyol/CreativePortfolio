@@ -30,6 +30,8 @@ type Props = {
   onTapeClick(id: TrackId): void;
   onKnob(steps: number): void;
   onFrame?(): void;
+  /** The tape the 3D lifts changed: under the pointer (its raycast) or focused (`hover`). */
+  onHover?(id: TrackId | null): void;
   /** A tape has just dropped into the slot (the clunk's frame). */
   onInsert?(id: TrackId): void;
   /** No 3D here (no GPU, a failed load, a lost context): the desk falls back. */
@@ -105,6 +107,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
         hooks: {
           onInsert: (id) => latest.current.onInsert?.(id),
           onInspect: (id) => setHeld(id),
+          onHover: (id) => latest.current.onHover?.(id),
           onFrame: () => {
             const seated = s?.seatedId() ?? "";
             if (el.dataset.seated !== seated) el.dataset.seated = seated;

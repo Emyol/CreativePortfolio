@@ -55,9 +55,12 @@
 .key[data-off] {
   visibility: hidden;
 }
-/* The one being looked at, or about to be, comes over its neighbours with its button. */
-.tape:hover,
-.tape:focus-within { z-index: 1; }
+/* The one being looked at comes over its neighbours with its button: over the 3D, the tape
+   the 3D lifts (`data-hot`, its raycast; the links' boxes overlap) or the focused one;
+   laid out flat, the hovered one. */
+.tape[data-hot],
+.tape:focus-within,
+.layer:not([data-placed]) .tape:hover { z-index: 1; }
 
 .tapeLink,
 .key {
@@ -80,14 +83,15 @@
   border-radius: 8px;
   touch-action: manipulation;
 }
-/* Over the 3D a press is the 3D's to grab and throw. */
+/* Over the 3D a press is the 3D's to grab and throw; it can grab only where it hits a tape. */
 .layer[data-placed] .tapeLink {
   touch-action: none;
-  cursor: grab;
+  -webkit-touch-callout: none;
 }
+.layer[data-placed] .tape[data-hot] .tapeLink { cursor: grab; }
 
-/* Inspect: on the tape being hovered or focused. Reachable by Tab from its link, and only
-   shown then, so it is never focusable while unseen. */
+/* Inspect: on the tape the 3D lifts, or the focused one. Reachable by Tab from its link,
+   which shows it, so it is never focused unseen. */
 .inspect {
   position: absolute;
   left: 50%;
@@ -108,7 +112,7 @@
   pointer-events: none;
   transition: opacity 160ms var(--ease-out);
 }
-.tape:hover .inspect,
+.tape[data-hot] .inspect,
 .tape:focus-within .inspect {
   opacity: 1;
   pointer-events: auto;
@@ -162,16 +166,20 @@
   pointer-events: none;
 }
 .cassette { width: 100%; }
+/* Printed over the shell's two ruled lines (14.7% and 21.7% of its height), on the label's
+   own paper, with the track's ink as the rule under it. */
 .print {
   position: absolute;
-  left: 13%;
-  right: 13%;
-  top: 8%;
-  height: 12%;
+  left: 11.5%;
+  right: 11.5%;
+  top: 9.5%;
+  height: 13%;
   display: flex;
   align-items: center;
   gap: 0.5em;
+  padding-inline: 1cqw;
   overflow: hidden;
+  background: #f8f7f3;
   border-bottom: 0.6cqw solid var(--ink);
   font: 700 6.4cqw/1 var(--font-mono), monospace;
   letter-spacing: 0.04em;

@@ -1,11 +1,11 @@
 import { createRef } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES } from "@/lib/content/fixtures";
 import { visibleTracks, type TrackId } from "@/lib/tape";
 import type { ProjectId } from "./deskScene";
 import { PlayerKeys } from "./PlayerKeys";
-import { TapeLinks } from "./TapeLinks";
+import { TapeLinks, type TapeLinksHandle } from "./TapeLinks";
 import type { OverlayHandle } from "./overlayPlace";
 
 const tracks = visibleTracks(FIXTURES);
@@ -35,10 +35,10 @@ describe("TapeLinks", () => {
   });
 
   it("moves each link onto its projected tape, at least 44 px, and hides one off the view", () => {
-    const ref = createRef<OverlayHandle>();
+    const ref = createRef<TapeLinksHandle>();
     const project = (id: ProjectId) => (id === "about" ? rect(100, 200, 120, 30) : id === "events" ? null : rect(0, 0, 80, 60));
     render(<TapeLinks ref={ref} tracks={tracks} base="" current={null} project={project} onHover={() => {}} />);
-    ref.current!.place();
+    act(() => ref.current!.place());
     const box = (id: TrackId) => document.querySelector<HTMLElement>(`[data-tape="${id}"]`)!;
     expect(box("about").style.transform).toBe("translate3d(100px, 193px, 0)");
     expect(box("about").style.width).toBe("120px");
@@ -65,43 +65,84 @@ describe("TapeLinks", () => {
     expect(onHover).toHaveBeenLastCalledWith("mixtape");
   });
 
-  it("hands a plain press to the 3D once placed, but leaves middle and modified clicks to the link", () => {
-    const ref = createRef<OverlayHandle>();
+  it("over the 3D, the pointer's hover is the 3D's: moves go on to it, entering lifts nothing", () => {
+    const ref = createRef<TapeLinksHandle>();
+    const onHover = vi.fn();
     const onPointer = vi.fn();
-    render(<TapeLinks ref={ref} tracks={tracks} base="" current={null} project={() => rect(0, 0, 50, 50)} onHover={() => {}} onPointer={onPointer} />);
-    const link = screen.getByRole("link", { name: "01 about, tape" });
-    fireEvent.pointerDown(link, { button: 0 });
-    expect(onPointer).not.toHaveBeenCalled(); // not on the 3D yet: a link is a link
-    ref.current!.place();
-    fireEvent.pointerDown(link, { button: 1 });
-    fireEvent.pointerDown(link, { button: 0, ctrlKey: true });
-    expect(onPointer).not.toHaveBeenCalled();
-    fireEvent.pointerDown(link, { button: 0 });
-    expect(onPointer).toHaveBeenCalledTimes(1);
-    expect(onPointer.mock.calls[0][0].type).toBe("pointerdown");
-    // The 3D loads the tape on a pointer click; Enter (a click with no detail) still navigates.
-    // (Seen last, on window; then stopped, as jsdom can't navigate.)
+    render(<TapeLinks ref={ref} tracks={tracks} base="" current={null} project={() => rect(0, 0, 50, 50)} onHover={onHover} onPointer={onPointer} />);
+    act(() => ref.current!.place());
+    const link = screen.getByRole("link", { name: "03 mixtape, tape" });
+    fireEvent.pointerEnter(link);
+    expect(onHover).not.toHaveBeenCalled();
+    fireEvent.pointerMove(link);
+    expect(onPointer.mock.calls.map(([e]) => e.type)).toEqual(["pointermove"]);
+    fireEvent.focus(link);
+    expect(onHover).toHaveBeenLastCalledWith("mixtape");
+  });
+
+  // Seen last, on window, whether the link's click was cancelled; then stopped there, as
+  // jsdom can't navigate.
+  const clicks = (link: HTMLElement, ...details: number[]) => {
     const prevented: boolean[] = [];
     const seen = (e: Event) => {
       prevented.push(e.defaultPrevented);
       e.preventDefault();
     };
     window.addEventListener("click", seen);
-    fireEvent.click(link, { button: 0, detail: 1 });
-    fireEvent.click(link, { button: 0, detail: 0 });
+    details.forEach((detail) => fireEvent.click(link, { button: 0, detail }));
     window.removeEventListener("click", seen);
-    expect(prevented).toEqual([true, false]);
+    return prevented;
+  };
+
+  it("hands a plain press to the 3D once placed, but leaves middle and modified clicks to the link", () => {
+    const ref = createRef<TapeLinksHandle>();
+    const onPointer = vi.fn();
+    render(<TapeLinks ref={ref} tracks={tracks} base="" current={null} project={() => rect(0, 0, 50, 50)} onHover={() => {}} onPointer={onPointer} />);
+    const link = screen.getByRole("link", { name: "01 about, tape" });
+    fireEvent.pointerDown(link, { button: 0 });
+    expect(onPointer).not.toHaveBeenCalled(); // not on the 3D yet: a link is a link
+    act(() => ref.current!.place());
+    fireEvent.pointerDown(link, { button: 1 });
+    fireEvent.pointerDown(link, { button: 0, ctrlKey: true });
+    expect(onPointer).not.toHaveBeenCalled();
+    fireEvent.pointerDown(link, { button: 0 });
+    expect(onPointer.mock.calls.map(([e]) => e.type)).toEqual(["pointerdown"]);
+    // The handed press's click is the 3D's (a load); the next click, with no press handed
+    // over (assistive tech, Enter), is the link's.
+    expect(clicks(link, 1, 1, 0)).toEqual([true, false, false]);
   });
 
-  it("offers an inspect button on each tape while the 3D is there and no tape is in", () => {
+  it("never swallows a click whose press began before the 3D placed the links", () => {
+    const ref = createRef<TapeLinksHandle>();
+    const onPointer = vi.fn();
+    render(<TapeLinks ref={ref} tracks={tracks} base="" current={null} project={() => rect(0, 0, 50, 50)} onHover={() => {}} onPointer={onPointer} />);
+    const link = screen.getByRole("link", { name: "02 events, tape" });
+    fireEvent.pointerDown(link, { button: 0 });
+    act(() => ref.current!.place());
+    fireEvent.pointerUp(link, { button: 0 });
+    expect(clicks(link, 1)).toEqual([false]);
+    expect(onPointer).not.toHaveBeenCalled();
+  });
+
+  it("offers inspect only once the 3D is ready, on the tape it lifts or the focused one", () => {
+    const ref = createRef<TapeLinksHandle>();
     const onInspect = vi.fn();
-    const { rerender } = render(<TapeLinks tracks={tracks} base="" current={null} project={() => null} onHover={() => {}} onInspect={onInspect} />);
+    const { rerender } = render(<TapeLinks ref={ref} tracks={tracks} base="" current={null} project={() => rect(0, 0, 50, 50)} onHover={() => {}} onInspect={onInspect} />);
+    expect(screen.queryAllByRole("button")).toHaveLength(0); // the scene isn't drawn yet
+    act(() => ref.current!.place());
+    act(() => ref.current!.hot("made"));
+    const box = (id: TrackId) => document.querySelector(`[data-tape="${id}"]`)!;
+    expect(box("made")).toHaveAttribute("data-hot");
+    act(() => ref.current!.hot("people"));
+    expect(box("made")).not.toHaveAttribute("data-hot");
+    expect(box("people")).toHaveAttribute("data-hot");
     fireEvent.click(screen.getByRole("button", { name: "inspect 05 made" }));
     expect(onInspect).toHaveBeenCalledWith("made");
-    rerender(<TapeLinks tracks={tracks} base="" current="made" project={() => null} onHover={() => {}} onInspect={onInspect} />);
+    rerender(<TapeLinks ref={ref} tracks={tracks} base="" current="made" project={() => rect(0, 0, 50, 50)} onHover={() => {}} onInspect={onInspect} />);
     expect(screen.queryAllByRole("button")).toHaveLength(0);
-    rerender(<TapeLinks tracks={tracks} base="" current={null} project={null} onHover={() => {}} onInspect={onInspect} />);
+    rerender(<TapeLinks ref={ref} tracks={tracks} base="" current={null} project={null} onHover={() => {}} onInspect={onInspect} />);
     expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(box("people")).not.toHaveAttribute("data-hot");
   });
 
   it("draws sprite tapes only without the 3D", () => {

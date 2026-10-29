@@ -107,3 +107,15 @@ test("a double-click picks a tape up and Esc puts it back", async ({ page }) => 
   await page.waitForTimeout(400);
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("hovering a tape offers inspect on the tape the 3D lifts, and only there", async ({ page }) => {
+  await deskReady(page);
+  // Driven by the 3D's raycast (the link boxes are upright and overlap), not CSS :hover.
+  const p = await tapeAt(page, "about");
+  await page.mouse.move(p.x, p.y);
+  await expect(page.locator('[data-tape][data-hot]')).toHaveAttribute("data-tape", "about");
+  await expect(page.getByRole("button", { name: "inspect 01 about" })).toHaveCSS("opacity", "1");
+  await expect(page.getByRole("button", { name: "inspect 03 mixtape" })).toHaveCSS("opacity", "0");
+  await page.mouse.move(5, 5);
+  await expect(page.locator("[data-tape][data-hot]")).toHaveCount(0);
+});

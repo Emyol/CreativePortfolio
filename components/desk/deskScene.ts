@@ -29,6 +29,8 @@ const DIP = 0.08; // how far the deck dips as a tape drops in
 export type SceneHooks = {
   onInsert(id: TrackId): void;
   onInspect(id: TrackId | null): void;
+  /** The tape the pointer or focus lifts changed (null: none). */
+  onHover?(id: TrackId | null): void;
   onFrame?(): void;
   fail(): void;
 };
@@ -324,6 +326,7 @@ export async function createDeskScene(o: {
     const t = id ? recs.get(id) : null;
     if (t && t.mode === "free") motion.raise(t, true, hoverH);
     refreshScreen();
+    hooks.onHover?.(id);
   };
   const pointer: PointerScene = {
     el,
