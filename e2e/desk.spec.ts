@@ -3,8 +3,8 @@ import { gotoReady } from "./helpers";
 
 type Rect = { x: number; y: number; width: number; height: number };
 
-// The tape links over the 3D arrive in Task 8; until then a tape is clicked where the 3D
-// draws it (window.__deskProject, a dev-only hook).
+// Where the 3D draws a tape (window.__deskProject, a dev-only hook), for the hands-on tests:
+// the drag and the double-click aim at the tape itself, not at its link's box.
 async function tapeAt(page: Page, id: string): Promise<{ x: number; y: number }> {
   const r = await page.evaluate((t) => {
     const rect = (window as unknown as { __deskProject?: (id: string) => DOMRect | null }).__deskProject?.(t);
@@ -36,8 +36,7 @@ test.beforeAll(async ({ request }) => {
 test("the desk state follows the route", async ({ page }) => {
   await deskReady(page);
   await expect(page.locator("html")).toHaveAttribute("data-desk", "desk");
-  const about = await tapeAt(page, "about");
-  await page.mouse.click(about.x, about.y);
+  await page.getByRole("link", { name: "01 about, tape" }).click();
   await expect(page).toHaveURL(/\/about$/, { timeout: 10_000 });
   await expect(page.locator("html")).toHaveAttribute("data-desk", "deck");
   await expect(page.locator("html")).toHaveAttribute("data-loaded", "about");
@@ -46,9 +45,11 @@ test("the desk state follows the route", async ({ page }) => {
 test("three quick picks end on the last one, with the 3D matching", async ({ page }) => {
   await deskReady(page);
   const spots = [];
-  for (const id of ["about", "events", "people"]) spots.push(await tapeAt(page, id));
-  // Pressed in the page at 0, 100 and 200 ms through the view's own pointer handlers: the
-  // driver's round trips alone can take longer than 300 ms on a loaded machine.
+  for (const id of ["about", "events", "people"]) spots.push({ id, ...(await tapeAt(page, id)) });
+  // The about, events and people links pressed in the page at 0, 100 and 200 ms: the
+  // driver's round trips alone can take longer than 300 ms on a loaded machine. A press on
+  // a link goes on to the 3D's view, which then holds the pointer (capture), so the release
+  // lands on the view.
   const spread = await page.evaluate(
     (points) =>
       new Promise<number>((done) => {
@@ -56,8 +57,9 @@ test("three quick picks end on the last one, with the 3D matching", async ({ pag
         const t0 = performance.now();
         points.forEach((p, i) =>
           setTimeout(() => {
+            const link = document.querySelector<HTMLElement>(`[data-tape="${p.id}"] a`)!;
             const init = { bubbles: true, clientX: p.x, clientY: p.y, button: 0, pointerId: 1, pointerType: "mouse", isPrimary: true };
-            el.dispatchEvent(new PointerEvent("pointerdown", { ...init, buttons: 1 }));
+            link.dispatchEvent(new PointerEvent("pointerdown", { ...init, buttons: 1 }));
             el.dispatchEvent(new PointerEvent("pointerup", { ...init, buttons: 0 }));
             if (i === points.length - 1) done(performance.now() - t0);
           }, i * 100),
