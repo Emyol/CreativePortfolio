@@ -177,14 +177,17 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
           __deskProject?: (id: ProjectId) => DOMRect | null;
           __deskPrint?: DeskScene["printQuad"];
           __deskSwatch?: DeskScene["printSwatch"];
+          __deskKeyLabels?: DeskScene["keyLabelFit"];
         };
         w.__deskProject = (id) => s.project(id);
         w.__deskPrint = (id) => s.printQuad(id);
         w.__deskSwatch = (id, mode) => s.printSwatch(id, mode);
+        w.__deskKeyLabels = () => s.keyLabelFit();
         undo.push(() => {
           delete w.__deskProject;
           delete w.__deskPrint;
           delete w.__deskSwatch;
+          delete w.__deskKeyLabels;
         });
       }
       // Drawn once unseen (shaders compile, the screen paints), then it counts as ready.

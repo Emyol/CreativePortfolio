@@ -108,6 +108,20 @@ for (const path of ["/events", "/events/fixture-event-1", "/people", "/mixtape"]
   });
 }
 
+// The 3D prints the keys' labels on the plate, larger on a phone; neighbours keep a clear
+// gap (at least 15% of the distance between their keys), measured on their canvases.
+test("the player's key labels print clear of each other", async ({ page }) => {
+  await ready(page, "/events");
+  const fit = await page.evaluate(() => (window as unknown as { __deskKeyLabels: () => { centres: number[]; widths: number[] } }).__deskKeyLabels());
+  const printed = fit.centres.map((x, i) => ({ x, w: fit.widths[i] })).filter((l) => l.w > 0).sort((a, b) => a.x - b.x);
+  expect(printed.length).toBeGreaterThan(1);
+  for (let i = 1; i < printed.length; i++) {
+    const [a, b] = [printed[i - 1], printed[i]];
+    const gap = b.x - a.x - (a.w + b.w) / 2;
+    expect(gap, `labels ${i - 1} and ${i}: ${JSON.stringify({ a, b })}`).toBeGreaterThanOrEqual(0.15 * (b.x - a.x));
+  }
+});
+
 test("on the desk the lamp cord and the hint cover no tape", async ({ page }) => {
   await ready(page, "/");
   await expect(page.locator("[data-desk-hint][data-placed]")).toBeVisible();

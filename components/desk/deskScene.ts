@@ -77,6 +77,8 @@ export type DeskScene = PointerScene & {
    * key's label on the plate (`key0` is the first) or of a tape's sub-line on its label.
    */
   printQuad(id: `key${number}` | TrackId): { x: number; y: number }[] | null;
+  /** For tests: each key label's centre across the plate and printed width, in model units. */
+  keyLabelFit(): { centres: number[]; widths: number[] };
   dispose(): void;
 };
 
@@ -598,6 +600,7 @@ export async function createDeskScene(o: {
       const t = recs.get(id as TrackId);
       if (t) tapeSwatch(t.obj, mode);
     },
+    keyLabelFit: () => keyLabels.measure(),
     printQuad(id: `key${number}` | TrackId) {
       const key = id.startsWith("key");
       const mesh = key ? keyLabels.meshes[Number(id.slice(3))] : recs.get(id as TrackId)?.obj.getObjectByName("PrintedLabel");

@@ -13,21 +13,32 @@ const SIZE = 54; // px: Space Mono at the plate's printed size (device.py: 0.15 
 const MIN = 30;
 const CHAR = 0.6; // Space Mono's advance as a share of its size
 
+/** The share of the keys' pitch a label may take, so neighbours keep a clear gap. */
+export const PITCH_SHARE = 0.8;
+
+/** The canvas px a label may take on a plate whose keys stand `pitch` model units apart. */
+export const pitchFit = (pitch: number): number => Math.floor(((pitch * PITCH_SHARE) / PLANE_W) * LABEL_W);
+
 /**
- * The label's font size: the plate's (times `scale`: phones print larger, as the whole
- * player is smaller there), shrunk for a long label so it fits under its own key.
+ * The label's font size: the plate's, shrunk for a long label so it fits under its own key.
+ * A phone (`scale` > 1) prints larger, as the whole player is smaller there, but only as far
+ * as the keys' pitch leaves room (`fit`, canvas px: pitchFit), and never smaller than the
+ * desk's own print.
  */
-export function labelSize(text: string, scale = 1): number {
-  return Math.max(MIN, Math.min(Math.round(SIZE * scale), Math.floor(LABEL_FIT / Math.max(1, text.length * CHAR))));
+export function labelSize(text: string, scale = 1, fit = LABEL_FIT): number {
+  const advance = Math.max(1, text.length * CHAR);
+  const desk = Math.max(MIN, Math.min(SIZE, Math.floor(LABEL_FIT / advance)));
+  if (scale <= 1) return desk;
+  return Math.max(desk, Math.min(Math.round(SIZE * scale), Math.floor(Math.min(fit, LABEL_FIT) / advance)));
 }
 
 /** Draws a label centred, in white: the material colours it with the device's ink. */
-function drawLabel(ctx: CanvasRenderingContext2D, text: string, family: string, scale: number): void {
+function drawLabel(ctx: CanvasRenderingContext2D, text: string, family: string, scale: number, fit: number): void {
   ctx.clearRect(0, 0, LABEL_W, LABEL_H);
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `400 ${labelSize(text, scale)}px ${family}, monospace`;
+  ctx.font = `400 ${labelSize(text, scale, fit)}px ${family}, monospace`;
   ctx.fillText(text, LABEL_W / 2, LABEL_H / 2);
 }
 
@@ -48,6 +59,11 @@ export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: TH
   root.updateMatrixWorld(true);
   const box = new three.Box3();
   const geometry = new three.PlaneGeometry(PLANE_W, PLANE_H);
+  // How far apart the keys stand: a label never takes more than its share of that.
+  const centres = keys.map((key) => box.setFromObject(key).getCenter(new three.Vector3()).x);
+  const across = [...centres].sort((a, b) => a - b);
+  const pitch = Math.min(...across.slice(1).map((x, i) => x - across[i]));
+  const fit = pitchFit(pitch);
   const labels = keys.map((key, i) => {
     const canvas = Object.assign(document.createElement("canvas"), { width: LABEL_W, height: LABEL_H });
     const ctx = canvas.getContext("2d");
@@ -75,6 +91,19 @@ export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: TH
     return { ctx, tex, material, mesh, text: null as string | null };
   });
   return {
+    /**
+     * For tests: each label's centre across the plate and its printed width, in model units
+     * (as drawn, measured on its canvas), in the keys' order.
+     */
+    measure() {
+      return {
+        centres,
+        widths: labels.map((l) => {
+          l.ctx.font = `400 ${labelSize(l.text ?? "", scale, fit)}px ${family}, monospace`;
+          return (l.ctx.measureText(l.text ?? "").width / LABEL_W) * PLANE_W;
+        }),
+      };
+    },
     /** The printed labels' planes, one per key. */
     meshes: labels.map((l) => l.mesh),
     materials: labels.map((l) => l.material),
@@ -85,7 +114,7 @@ export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: TH
     swatch(i: number, mode: "print" | "ground" | null) {
       const l = labels[i];
       if (!l) return;
-      if (mode === null) drawLabel(l.ctx, l.text ?? "", family, scale);
+      if (mode === null) drawLabel(l.ctx, l.text ?? "", family, scale, fit);
       else {
         l.ctx.clearRect(0, 0, LABEL_W, LABEL_H);
         if (mode === "print") {
@@ -100,7 +129,7 @@ export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: TH
         const text = texts[i] ?? "";
         if (text === l.text) return;
         l.text = text;
-        drawLabel(l.ctx, text, family, scale);
+        drawLabel(l.ctx, text, family, scale, fit);
         l.tex.needsUpdate = true;
       });
     },
