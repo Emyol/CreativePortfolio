@@ -73,28 +73,108 @@ test("a click opens an event, and the wheel over the list moves the cursor witho
   await option(page, 1).click();
   await expect(page).toHaveURL(/\/events\/fixture-event-4$/, { timeout: 10_000 });
   await expect(page.getByRole("heading", { level: 1, name: "Fixture event 4" })).toBeFocused();
+  // Browser Back: the list again, the row still under the cursor and focus on the list.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
+  await expect(option(page, 1)).toHaveAttribute("aria-selected", "true");
+  await expect(listbox(page)).toBeFocused();
 });
 
-test("the screen's dim hint reads at 4.5:1 or more, at 13 px or larger", async ({ page }) => {
+test("every text on the screen reads at 4.5:1 or more, on the darkest scanline too, the hint at 13 px or larger", async ({ page }) => {
   for (const url of ["/events", `/events/${THIRD.slug}`]) {
     await gotoReady(page, url);
-    const hint = page.locator("[data-hint]").first();
-    await expect(hint).toBeVisible();
-    const { ratio, size } = await hint.evaluate((el) => {
-      const rgb = (c: string) => c.match(/[\d.]+/g)!.slice(0, 3).map(Number);
+    await expect(page.locator("[data-hint]").first()).toBeVisible();
+    const found = await page.locator("[data-device-screen]").evaluate((screen) => {
+      const rgba = (c: string) => c.match(/[\d.]+/g)!.map(Number);
       const lum = (c: number[]) =>
         c
+          .slice(0, 3)
           .map((v) => v / 255)
           .map((s) => (s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4))
           .reduce((sum, s, i) => sum + s * [0.2126, 0.7152, 0.0722][i], 0);
-      const style = getComputedStyle(el);
-      const fg = lum(rgb(style.color));
-      const bg = lum([5, 5, 6]); // the screen's glass, #050506
-      return { ratio: (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05), size: parseFloat(style.fontSize) };
+      const ratio = (a: number[], b: number[]) => {
+        const [x, y] = [lum(a), lum(b)];
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+      };
+      // Nothing may be painted over the lettering: the scanlines are in the glass's own
+      // background, under everything lit on it.
+      const over = ["::before", "::after"].map((p) => getComputedStyle(screen, p).content).filter((c) => c !== "none" && c !== "normal");
+      const glassStyle = getComputedStyle(screen);
+      const glass = rgba(glassStyle.backgroundColor);
+      // The darkest stripe: the scanline's black at its alpha over the glass.
+      const stripeAlpha = Number(/rgba\(0, 0, 0, ([\d.]+)\)/.exec(glassStyle.backgroundImage)?.[1] ?? 0);
+      const stripe = glass.slice(0, 3).map((v) => v * (1 - stripeAlpha));
+      const rows: { text: string; worst: number; size: number; hint: boolean }[] = [];
+      const walker = document.createTreeWalker(screen, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const el = n.parentElement!;
+        const text = n.textContent!.trim();
+        const box = el.getBoundingClientRect();
+        if (!text || box.width < 2 || box.height < 2 || el.closest("noscript")) continue;
+        // The nearest painted background under it, or the glass and its darkest stripe.
+        let under: number[][] = [glass, stripe];
+        for (let a: Element | null = el; a && a !== screen; a = a.parentElement) {
+          const bg = rgba(getComputedStyle(a).backgroundColor);
+          if (bg.length < 4 || bg[3] > 0) {
+            under = [bg];
+            break;
+          }
+        }
+        const style = getComputedStyle(el);
+        const fg = rgba(style.color);
+        rows.push({ text, worst: Math.min(...under.map((bg) => ratio(fg, bg))), size: parseFloat(style.fontSize), hint: !!el.closest("[data-hint]") });
+      }
+      return { over, stripeAlpha, rows };
     });
-    expect(ratio, url).toBeGreaterThanOrEqual(4.5);
-    expect(size, url).toBeGreaterThanOrEqual(13);
+    expect(found.over, `${url}: a layer over the screen's text`).toEqual([]);
+    expect(found.stripeAlpha, `${url}: the scanlines are in the glass`).toBeGreaterThan(0);
+    expect(found.rows.length).toBeGreaterThan(5);
+    for (const r of found.rows) expect(r.worst, `${url}: "${r.text}"`).toBeGreaterThanOrEqual(4.5);
+    for (const r of found.rows.filter((r) => r.hint)) expect(r.size, `${url}: hint "${r.text}"`).toBeGreaterThanOrEqual(13);
   }
+});
+
+test("the live recording wipes in when opened from the list, never on a direct load or under reduced motion", async ({ page, request }) => {
+  // A direct load: not in the server's HTML, nor after hydration (it only settles).
+  const html = await (await request.get(`/events/${THIRD.slug}`)).text();
+  expect(html).toContain("data-live-rec");
+  expect(html).not.toContain("data-wipe");
+  await gotoReady(page, `/events/${THIRD.slug}`);
+  await expect(page.locator("[data-live-rec]")).not.toHaveAttribute("data-wipe");
+  // From the list: it wipes.
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
+  await listbox(page).press("Enter");
+  await expect(page).toHaveURL(new RegExp(`/events/${THIRD.slug}$`), { timeout: 10_000 });
+  await expect(page.locator("[data-live-rec]")).toHaveAttribute("data-wipe", "");
+  // Under reduced motion, from the list too: it doesn't.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator("html")).toHaveAttribute("data-tier", "none");
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
+  await listbox(page).press("Enter");
+  await expect(page).toHaveURL(new RegExp(`/events/${THIRD.slug}$`), { timeout: 10_000 });
+  await expect(page.locator("[data-live-rec]")).toBeVisible();
+  await expect(page.locator("[data-live-rec]")).not.toHaveAttribute("data-wipe");
+});
+
+test("from the desk straight to an event, its heading takes focus; the browser on to the list leaves focus on the list", async ({ page }) => {
+  // History: the event, its list, the desk. Two steps back from the desk is the event.
+  await deskReady(page, `/events/${THIRD.slug}`);
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
+  await expect(page.locator("html")).toHaveAttribute("data-desk", "desk");
+  await page.evaluate(() => history.go(-2));
+  await expect(page).toHaveURL(new RegExp(`/events/${THIRD.slug}$`), { timeout: 10_000 });
+  await expect(page.getByRole("heading", { level: 1, name: THIRD.name })).toBeFocused({ timeout: 10_000 });
+  // The event is the first entry now; the list is the next one (browser Back from an event
+  // to its list is in the click test above).
+  await page.goForward();
+  await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
+  await expect(listbox(page)).toBeFocused();
+  await expect(option(page, 2)).toHaveAttribute("aria-selected", "true");
 });
 
 test("the screen's lines show on a tape loaded from the desk, whatever order the 3D and the section take", async ({ page }) => {
