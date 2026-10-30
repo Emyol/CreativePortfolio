@@ -25,7 +25,8 @@ type Props = {
 const mmss = (s: number) => `${formatTrackNumber(Math.floor(s / 60))}:${formatTrackNumber(s % 60)}`;
 
 /**
- * An opened event on the Events device: the screen wipes to a live recording, `● LIVE REC`
+ * An opened event on the Events device: the screen wipes to a live recording (when opened
+ * from within the site, motion allowing), `● LIVE REC`
  * with its row's number and a clock running from the moment it opened (held still under
  * reduced motion), the event's first photo dithered into the screen's dots, its date, place
  * and summary. The story is printed on the liner beside it (EventStory), whose heading takes
@@ -38,6 +39,10 @@ export function LiveRec({ event, number, base = "" }: Props) {
   const still = useMotionTier() === "none";
   const nn = formatTrackNumber(number);
   const list = `${base}/events`;
+  // The wipe is for opening an event by a move within the site, decided once as it opens:
+  // never on the server or the page a visit lands on (a direct load only settles), never
+  // under reduced motion, and not replayed if the motion setting changes while it is open.
+  const [wipes] = useState(() => typeof window !== "undefined" && hasLanded() && !still);
 
   useEffect(() => {
     rememberEvent(event.slug);
@@ -69,7 +74,7 @@ export function LiveRec({ event, number, base = "" }: Props) {
   const where = [formatDate(event.date), event.place].filter(Boolean).join(" · ");
   return (
     <DeviceFrame id="events" label={`Live recording ${nn}`}>
-      <div className={styles.rec} data-live-rec data-wipe={still ? undefined : ""}>
+      <div className={styles.rec} data-live-rec data-wipe={wipes ? "" : undefined}>
         <p className={styles.head}>
           <span>● LIVE REC {nn}</span>
           <span aria-hidden="true" data-rec-clock>

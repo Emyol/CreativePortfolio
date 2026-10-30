@@ -20,9 +20,12 @@
   color: var(--oled-text);
 }
 
-/* Opened: the screen wipes down to the recording in a few hard steps, as a dot screen redraws. */
-.rec[data-wipe] {
-  animation: wipe 420ms steps(14) both;
+/* Opened from within the site: the screen wipes down to the recording in a few hard steps,
+   as a dot screen redraws. Never under reduced motion, the system's or the site's (live). */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-tier="none"]) .rec[data-wipe] {
+    animation: wipe 420ms steps(14) both;
+  }
 }
 @keyframes wipe {
   from {

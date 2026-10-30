@@ -7,6 +7,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 import { DeskContext, knobStack, type DeskApi } from "@/components/desk/deskContext";
 import { FIXTURES } from "@/lib/content/fixtures";
 import { __resetBackForTests, runBack } from "@/lib/desk/back";
+import { __resetVisitForTests, markLanded } from "@/lib/desk/visit";
 import { __resetEventsMemoryForTests, recalledEvent } from "@/lib/devices/events";
 import { MotionTierContext } from "@/lib/motion/MotionProvider";
 import type { MotionTier } from "@/lib/motion/tier";
@@ -31,6 +32,7 @@ describe("LiveRec", () => {
   beforeEach(() => {
     __resetBackForTests();
     __resetEventsMemoryForTests();
+    __resetVisitForTests();
     push.mockClear();
     vi.useFakeTimers();
   });
@@ -63,5 +65,34 @@ describe("LiveRec", () => {
     renderRec("none");
     act(() => vi.advanceTimersByTime(3_100));
     expect(clock()).toBe("00:00");
+  });
+
+  it("wipes in only when opened from within the site, and never under reduced motion", () => {
+    const wipe = () => document.querySelector("[data-live-rec]")!.hasAttribute("data-wipe");
+    // The page the visit landed on (a direct load): it only settles.
+    const landing = renderRec("full");
+    expect(wipe()).toBe(false);
+    landing.unmount();
+    markLanded();
+    const moved = renderRec("full");
+    expect(wipe()).toBe(true);
+    moved.unmount();
+    renderRec("none");
+    expect(wipe()).toBe(false);
+  });
+
+  it("does not wipe again when the motion setting changes while it is open", () => {
+    markLanded();
+    const api: DeskApi = { setScreen() {}, wiggleKnob() {}, useKnob: knobStack().useKnob };
+    const tree = (tier: MotionTier) => (
+      <MotionTierContext.Provider value={tier}>
+        <DeskContext.Provider value={api}>
+          <LiveRec event={event} number={3} base="" />
+        </DeskContext.Provider>
+      </MotionTierContext.Provider>
+    );
+    const { rerender } = render(tree("none"));
+    rerender(tree("full"));
+    expect(document.querySelector("[data-live-rec]")).not.toHaveAttribute("data-wipe");
   });
 });
