@@ -66,6 +66,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   const [gone, setGone] = useState(false);
   const [ready, setReady] = useState(false);
   const putBack = useRef<HTMLButtonElement>(null);
+  const fullHead = useRef<HTMLParagraphElement>(null);
   const before = useRef<Element | null>(null);
   const wiggleWaiting = useRef(false);
   useEffect(() => {
@@ -126,6 +127,16 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
             if (el.dataset.seated !== seated) el.dataset.seated = seated;
             const shown = s?.screenText() ?? "";
             if (el.dataset.screen !== shown) el.dataset.screen = shown;
+            // A headline cut short (reduced motion, too long even set smaller): its full text
+            // for assistive tech, since the drawing is hidden from it.
+            const head = s?.screenHeadline();
+            const whole = shown.split("\n")[0];
+            const full = head && head.text !== whole ? whole : "";
+            if (fullHead.current && fullHead.current.textContent !== full) fullHead.current.textContent = full;
+            if (process.env.NODE_ENV !== "production" && head) {
+              const drawn = `${head.text}@${head.size}`;
+              if (el.dataset.screenHead !== drawn) el.dataset.screenHead = drawn;
+            }
             latest.current.onFrame?.();
           },
           fail,
@@ -169,6 +180,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
         delete el.dataset.ready;
         delete el.dataset.seated;
         delete el.dataset.screen;
+        delete el.dataset.screenHead;
       });
     })().catch((e) => {
       console.warn("[3D] the desk fell back:", e);
@@ -233,6 +245,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
     <>
       {/* Lenis would scroll the page under the knob's wheel (it ignores a cancelled wheel). */}
       <div ref={view} className={styles.view} data-desk-view data-state={props.state} aria-hidden="true" data-lenis-prevent-wheel />
+      <p ref={fullHead} className="sr-only" aria-live="polite" data-screen-full />
       {heldTrack && (
         <div className={styles.inspect} role="group" aria-label={`Holding ${formatTrackNumber(heldTrack.number)} ${heldTrack.label}`} data-holding>
           <span className={styles.name}>

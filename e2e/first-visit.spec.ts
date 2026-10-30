@@ -202,3 +202,33 @@ test("a tape held up to read hides the hint, which comes back as it is put down"
   await page.keyboard.press("Escape");
   await expect(hint).toHaveCSS("opacity", "1");
 });
+
+test.describe("under reduced motion the screen's headline rests whole", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("the 3D screen sets PICK A TAPE smaller to fit, not cut", async ({ page }) => {
+    await deskReady(page);
+    const view = page.locator("[data-desk-view]");
+    await expect(view).toHaveAttribute("data-screen-head", /^PICK A TAPE@\d+$/);
+    const size = Number((await view.getAttribute("data-screen-head"))!.split("@")[1]);
+    expect(size).toBeLessThan(150);
+    expect(size).toBeGreaterThanOrEqual(120);
+    // Nothing cut, so nothing for the hidden full-text line to say.
+    await expect(page.locator("[data-screen-full]")).toHaveText("");
+  });
+
+  test("the sprite screen sets PICK A TAPE smaller to fit, not cut @sprite", async ({ page }) => {
+    await gotoReady(page, "/");
+    const row = page.locator("[data-sprite-desk] [data-screen] p").first();
+    await expect(row).toHaveAttribute("title", "PICK A TAPE");
+    await expect(row).toHaveAttribute("data-fit", "");
+    await expect(row).not.toHaveAttribute("data-marquee", "");
+    await expect(row).toHaveText("PICK A TAPE");
+    const fits = await row.evaluate((p) => {
+      const text = p.querySelector("span span")!.getBoundingClientRect().width;
+      return { text, room: p.clientWidth, scroll: p.scrollWidth };
+    });
+    expect(fits.text, JSON.stringify(fits)).toBeLessThanOrEqual(fits.room);
+    expect(fits.scroll, JSON.stringify(fits)).toBeLessThanOrEqual(fits.room);
+  });
+});

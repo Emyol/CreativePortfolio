@@ -42,6 +42,8 @@ export type DeskScene = PointerScene & {
   screen(lines: Lines, progress?: number): void;
   /** The lines the screen shows now, one per line of text. */
   screenText(): string;
+  /** The headline as drawn: whole, set smaller to fit, or cut short (ending in `…`). */
+  screenHeadline(): { text: string; size: number } | null;
   led(on: boolean): void;
   slotOnScreen(): { x: number; y: number };
   wiggle(): void;
@@ -452,6 +454,7 @@ export async function createDeskScene(o: {
       refreshScreen();
     },
     screenText: () => screenApi.text(),
+    screenHeadline: () => screenApi.headline(),
     led,
     slotOnScreen: () => frame.point(slotP),
     wiggle() {

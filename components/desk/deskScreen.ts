@@ -1,13 +1,13 @@
 import type * as THREE from "three";
 import { addScreenPlane } from "@/components/three/screenPlane";
-import { HEAD_SIZE, drawScreen, headlineShift, measureHead } from "@/components/three/screenTexture";
+import { HEAD_SIZE, drawScreen, headlineShift, measureHead, type ScreenLine } from "@/components/three/screenTexture";
 import { gsap } from "@/lib/motion/gsap";
 import { marqueeAt } from "@/lib/motion/marquee";
 
 /**
  * The desk player's screen: live text on the OLED glass (as Hero3D's), flickering to new
  * text, a headline too long coming round. `still` (reduced motion) swaps without a flicker
- * and rests a long headline cut short.
+ * and rests a long headline set smaller to fit, or past that cut short (screenLayout).
  */
 export function deskScreen(three: typeof THREE, root: THREE.Object3D, family: string, still: boolean) {
   const { ctx, update, dispose } = addScreenPlane(three, root);
@@ -18,9 +18,10 @@ export function deskScreen(three: typeof THREE, root: THREE.Object3D, family: st
   let headShift = 0;
   let headScroll: number | null = null;
   let flicker: gsap.core.Timeline | null = null;
+  let head: ScreenLine | null = null;
 
   const paint = (dim = 1, lines = shown) => {
-    drawScreen(ctx, lines, { dim, progress, family, scroll: headScroll ?? undefined });
+    head = drawScreen(ctx, lines, { dim, progress, family, scroll: headScroll ?? undefined })[0] ?? null;
     update();
   };
   const take = (lines: string[]) => {
@@ -54,6 +55,8 @@ export function deskScreen(three: typeof THREE, root: THREE.Object3D, family: st
     },
     /** What it shows now (after any flicker), a line of text per line. */
     text: () => shown.join("\n"),
+    /** The headline as last drawn: its text (cut short ends in `…`) and type size, in canvas px. */
+    headline: () => (head ? { text: head.text, size: head.size } : null),
     /** Moves a long headline on (call every frame). */
     tick(dt: number) {
       time += dt;

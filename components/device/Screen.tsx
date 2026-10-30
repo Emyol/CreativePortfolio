@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { MARQUEE, marqueePass } from "@/lib/motion/marquee";
+import { MARQUEE, fitScale, marqueePass } from "@/lib/motion/marquee";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import styles from "./Screen.module.css";
 
@@ -55,7 +55,9 @@ export function Screen({ lines, className, style, progress }: Props) {
 /**
  * One row. Too long for the screen, its text and a copy (hidden from screen readers) move
  * left as one strip until the copy stands where the text began, again and again
- * (lib/motion/marquee.ts); under reduced motion it rests cut with an ellipsis.
+ * (lib/motion/marquee.ts). Under reduced motion it rests: set smaller to fit when a little
+ * too long (`--fit`, its share of its own size), cut with an ellipsis past that, the full
+ * text in the title.
  * The copy has the gap on both sides, so the strip is two equal halves and moves by half
  * its width: still exact after a resize, the dot face loading, or the clock widening.
  */
@@ -63,12 +65,24 @@ function Row({ text, className, still }: { text: string; className: string; stil
   const row = useRef<HTMLParagraphElement>(null);
   const own = useRef<HTMLSpanElement>(null);
   const [long, setLong] = useState(false);
+  const [fit, setFit] = useState(1);
+  const fitNow = useRef(1);
   const runs = long && !still;
 
   // Measured before paint (no ellipsis shows first), on every render (the clock may widen
-  // it), as the screen scales with the render, and once the dot face loads.
+  // it), as the screen scales with the render, and once the dot face loads. The text's own
+  // width is its width at its full size: what it measures now, over the fit it is set at.
   const measure = () => {
-    if (row.current && own.current) setLong(own.current.offsetWidth > row.current.clientWidth + 1);
+    if (!row.current || !own.current) return;
+    const width = own.current.getBoundingClientRect().width / fitNow.current;
+    const room = row.current.clientWidth;
+    const over = width > room + 1;
+    setLong(over);
+    let next = still && over ? (fitScale(width, room) ?? 1) : 1;
+    // A hundredth either way is the measuring, not a change: no setting it back and forth.
+    if (next < 1 && Math.abs(next - fitNow.current) <= 0.01) next = fitNow.current;
+    fitNow.current = next;
+    setFit(next);
   };
   useLayoutEffect(measure);
   const remeasure = useRef(measure);
@@ -102,7 +116,14 @@ function Row({ text, className, still }: { text: string; className: string; stil
   }, [runs]);
 
   return (
-    <p ref={row} className={className} title={text} data-marquee={runs ? "" : undefined}>
+    <p
+      ref={row}
+      className={className}
+      title={text}
+      data-marquee={runs ? "" : undefined}
+      data-fit={fit < 1 ? "" : undefined}
+      style={fit < 1 ? ({ "--fit": fit } as CSSProperties) : undefined}
+    >
       <span>
         <span ref={own}>{text}</span>
         {runs && (
