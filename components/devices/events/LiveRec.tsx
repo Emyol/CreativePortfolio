@@ -61,7 +61,7 @@ export function LiveRec({ event, number, base = "" }: Props) {
   // Opened by a move within the site (from the list, from the desk, by Back or Forward):
   // focus goes to the event's heading, after the J-card has given its own title focus.
   useEffect(() => {
-    if (hasLanded()) document.querySelector<HTMLElement>("#main [data-event-heading]")?.focus({ preventScroll: true });
+    if (hasLanded()) document.querySelector<HTMLElement>("#jcard [data-event-heading]")?.focus({ preventScroll: true });
   }, [event.slug]);
 
   const [seconds, setSeconds] = useState(0);

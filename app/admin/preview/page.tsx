@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function Preview() {
   await previewDraft();
   return (
-    <main id="main" tabIndex={-1}>
+    <main id="jcard" tabIndex={-1}>
       <h1 className="sr-only">Miel</h1>
     </main>
   );

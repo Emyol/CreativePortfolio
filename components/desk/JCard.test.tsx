@@ -66,15 +66,15 @@ describe("paperInk", () => {
 const card = (current: TrackId | null, body = "Fixture device", seatDelay = 0) => (
   <JCard tracks={tracks} base="" current={current} seatDelay={seatDelay}>
     {/* Keyed as a route's page is: a new track's panels are new elements. */}
-    {current ? <Section key={current} device={<p>{body}</p>} liner={<p>Fixture liner</p>} /> : <main id="main">the desk</main>}
+    {current ? <Section key={current} device={<p>{body}</p>} liner={<p>Fixture liner</p>} /> : <main id="jcard">the desk</main>}
   </JCard>
 );
 
 describe("JCard", () => {
-  it("is the main region: the track's heading, the flap and the two panels, in the track's ink", () => {
+  it("is the main region, the skip link's #jcard: the track's heading, the flap and the two panels, in the track's ink", () => {
     render(card("events"));
     const main = screen.getByRole("main");
-    expect(main).toHaveAttribute("id", "main");
+    expect(main).toHaveAttribute("id", "jcard");
     expect(main.style.getPropertyValue("--ink")).toBe("rgb(70 110 255)");
     expect(main.style.getPropertyValue("--print-ink")).toBe(`rgb(${paperInk(TRACK_INK.events).join(" ")})`);
     const h2 = within(main).getByRole("heading", { level: 2, name: "events" });
@@ -116,7 +116,7 @@ describe("JCard", () => {
     rerender(card(null));
     rerender(card("people", "Fixture people"));
     expect(screen.getByRole("main")).toBe(main);
-    expect(main).toHaveAttribute("id", "main");
+    expect(main).toHaveAttribute("id", "jcard");
     expect(main).not.toHaveAttribute("inert");
     expect(main).toHaveTextContent("Fixture people");
     expect(main).not.toHaveTextContent("Fixture device");

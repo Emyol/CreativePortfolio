@@ -8,9 +8,9 @@ import styles from "./Made.module.css";
 const ANGLES = [-3, 2, -1.5, 3, -2];
 
 /**
- * Things Miel does and makes, set down on a dark table. As the track arrives they're
- * dropped on, scattered (arrivals.ts); with a mouse they can be thrown around the table,
- * a tap moves one on a touch screen, and "Tidy up" puts them all back.
+ * Things Miel does and makes, set down on a dark table, scattered. With a mouse they can be
+ * thrown around the table, a tap moves one on a touch screen, and "Tidy up" puts them all
+ * back.
  */
 export function Made({ hobbies }: { hobbies: Hobby[] }) {
   return (

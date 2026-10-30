@@ -23,9 +23,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * How far the screen has powered on, 0 (dark) to 1 (fully lit): the About arrival's
- * scanline (components/tracks/arrivals.ts). Kept on the element, so it holds even if the
- * arrival is made before the screen has drawn.
+ * How far the screen has powered on, 0 (dark) to 1 (fully lit), for a power-on scanline.
+ * Kept on the element, so it holds even if it is set before the screen has drawn.
  */
 export function revealDots(screen: Element | null, reveal: number): void {
   if (!(screen instanceof HTMLElement)) return;

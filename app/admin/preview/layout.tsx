@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Desk } from "@/components/desk/Desk";
+import { SkipLinks } from "@/components/desk/SkipLinks";
 import { PREVIEW_BASE, previewDraft } from "./draft";
 import { PreviewLabel } from "./PreviewLabel";
 import styles from "./preview.module.css";
@@ -14,6 +15,7 @@ export default async function PreviewLayout({ children }: { children: ReactNode 
   const { content, hidden } = await previewDraft();
   return (
     <div className={styles.room} data-notes={hidden > 0 ? "" : undefined}>
+      <SkipLinks base={PREVIEW_BASE} />
       <PreviewLabel hidden={hidden} />
       <Desk content={content} base={PREVIEW_BASE} preview>
         {children}

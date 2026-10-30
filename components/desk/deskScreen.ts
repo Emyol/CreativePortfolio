@@ -5,7 +5,7 @@ import { gsap } from "@/lib/motion/gsap";
 import { marqueeAt } from "@/lib/motion/marquee";
 
 /**
- * The desk player's screen: live text on the OLED glass (as Hero3D's), flickering to new
+ * The desk player's screen: live text on the OLED glass, flickering to new
  * text, a headline too long coming round. Still (reduced motion, `setStill`, live) it swaps
  * without a flicker and rests a long headline set smaller to fit, or past that cut short
  * (screenLayout).

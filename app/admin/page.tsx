@@ -19,7 +19,12 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
  * admin layout's: the preview's desk draws under the page, where a shell would cover it.
  */
 export default async function AdminPage(props: { searchParams: Promise<{ error?: string }> }) {
-  return <div className={styles.shell}>{await body(props)}</div>;
+  return (
+    <div className={styles.shell}>
+      <a className="skip-link" href="#main">Skip to content</a>
+      {await body(props)}
+    </div>
+  );
 }
 
 async function body({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

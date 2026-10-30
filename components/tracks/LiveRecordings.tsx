@@ -6,8 +6,7 @@ import { EventPhoto } from "./EventPhoto";
 import styles from "./LiveRecordings.module.css";
 
 /**
- * Events Miel attended, newest first, each a "live recording" that opens its own page. As
- * the track arrives, a REC playhead sweeps across and records each photo in (arrivals.ts);
+ * Events Miel attended, newest first, each a "live recording" that opens its own page;
  * each print tilts toward the cursor.
  */
 export function LiveRecordings({ events, eventHref = (slug) => `/events/${slug}` }: { events: EventItem[]; eventHref?: (slug: string) => string }) {

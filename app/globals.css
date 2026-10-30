@@ -129,31 +129,6 @@ main:focus, main:focus-visible { outline: none; }
 /* Nor does the heading a loaded tape moves focus to. */
 main h2[tabindex="-1"]:focus { outline: none; box-shadow: none; }
 
-/* Room at the end of the page so the dock never covers the last lines, and room at the
-   bottom of the viewport so focus and jumps never land under it (WCAG 2.4.11). */
-body:has([data-dock]) { padding-bottom: 6.5rem; }
-html:has([data-dock]) { scroll-padding-bottom: 7rem; }
-
-/* The entrance (set before paint): the page opens as the player's dark screen, until the
-   entrance takes over. If JS never does, the dark lifts and the screen lights after 5 s. */
-html[data-boot="pending"]::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 95;
-  background: var(--oled);
-  animation: boot-failsafe-lift 0s linear 5s forwards;
-}
-html:is([data-boot="pending"], [data-boot="running"]) [data-hero] [data-screen] > * {
-  visibility: hidden;
-  animation: boot-failsafe 0s linear 5s forwards;
-}
-@keyframes boot-failsafe { to { visibility: visible; } }
-@keyframes boot-failsafe-lift { to { visibility: hidden; } }
-
-/* CSS smooth scrolling fights Lenis. */
-html.lenis { scroll-behavior: auto !important; }
-
 /* Event card -> event page morph (React ViewTransition). Reduced motion swaps instantly. */
 ::view-transition-group(.morph) { animation-duration: 420ms; animation-timing-function: var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {

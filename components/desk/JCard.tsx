@@ -267,7 +267,7 @@ export function JCard({ tracks, base, current, children, seatDelay = 0 }: Props)
   return (
     <main
       ref={root}
-      id={open ? "main" : undefined}
+      id={open ? "jcard" : undefined}
       tabIndex={-1}
       aria-hidden={open ? undefined : true}
       inert={!open}

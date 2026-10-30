@@ -37,7 +37,7 @@ export function Flap({ tracks, base, current }: Props) {
   };
   const side = (s: SideId) => TRACK_ORDER.filter((t) => t.side === s);
   return (
-    <nav aria-label="Tape" className={styles.flap} data-panel="flap">
+    <nav id="flap" tabIndex={-1} aria-label="Tape" className={styles.flap} data-panel="flap">
       <h3 className={styles.side}>SIDE A</h3>
       <ol className={styles.list}>{side("a").map((t) => row(t.id, t.label))}</ol>
       <h3 className={styles.side}>SIDE B</h3>

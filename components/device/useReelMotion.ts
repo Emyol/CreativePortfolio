@@ -3,8 +3,8 @@ import { useEffect, useRef } from "react";
 import { DEVICE } from "@/lib/device/layout";
 import { gsap, ScrollTrigger } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
-import { getLenis } from "@/lib/motion/navigate";
 import { stepReel, type ReelState } from "@/lib/motion/reels";
+import { trackScroll } from "@/lib/motion/scrollSpeed";
 import { getPlayback, isPlaying } from "@/lib/playback";
 import { packDiameters, sideTracks, type Track } from "@/lib/tape";
 
@@ -26,7 +26,7 @@ export function boostReels(v: number): void {
 
 /**
  * Drives every reel and tape pack on the page (hero and dock) outside React: reels turn on
- * the GSAP ticker from Lenis's scroll velocity, or at tape speed while a song plays; packs
+ * the GSAP ticker from the scroll's speed, or at tape speed while a song plays; packs
  * trade tape as the visitor reads through each side. Reduced motion freezes both in place.
  */
 export function useReelMotion(tracks: Track[]): void {
@@ -39,9 +39,10 @@ export function useReelMotion(tracks: Track[]): void {
     if (tier === "none") return; // frozen where they are; nothing writes
     const reels = () => document.querySelectorAll<HTMLElement>("[data-reel]");
     let last = NaN;
+    const scroll = trackScroll();
     const tick = (_time: number, deltaMs: number) => {
       const next = stepReel(reel.current, deltaMs / 1000, {
-        velocity: (getLenis()?.velocity ?? 0) + boost,
+        velocity: scroll.read() + boost,
         playing: isPlaying(getPlayback()),
         tier,
       });
@@ -54,7 +55,10 @@ export function useReelMotion(tracks: Track[]): void {
       reels().forEach((el) => (el.style.transform = t));
     };
     gsap.ticker.add(tick);
-    return () => gsap.ticker.remove(tick);
+    return () => {
+      gsap.ticker.remove(tick);
+      scroll.stop();
+    };
   }, [tier]);
 
   // Tape packs.

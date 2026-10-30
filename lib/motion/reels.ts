@@ -7,7 +7,7 @@ export type ReelState = { angle: number; omega: number };
 export const PLAY_RPS = 0.6;
 export const MAX_OMEGA = 1080;
 
-/** Lenis reports velocity in px per frame; this turns a brisk scroll into a lively spin. */
+/** Scroll speed comes in px per frame (lib/motion/scrollSpeed); this turns a brisk scroll into a lively spin. */
 const SCROLL_GAIN = 12;
 /** Spin-up is quick, so the reels answer the wheel; the run-down is slower, like a flywheel. */
 const SPIN_UP = 0.12;

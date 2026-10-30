@@ -73,9 +73,6 @@ export function Desk({ content, base, preview = false, children }: { content: Si
   useEffect(() => {
     const to = hashRedirect(location.pathname, location.hash, base);
     if (to) router.replace(to);
-    // v1's power-on prepaint still darkens `/` until its entrance lifts it, and the desk has
-    // no such entrance: lift it now (Task 15 removes the prepaint).
-    delete document.documentElement.dataset.boot;
   }, [router, base]);
 
   useEffect(() => {

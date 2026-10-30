@@ -15,6 +15,7 @@ vi.mock("@/lib/content/repository", () => ({ getDraft: () => getDraft() }));
 
 import { Desk } from "@/components/desk/Desk";
 import { Section } from "@/components/desk/Section";
+import { SkipLinks } from "@/components/desk/SkipLinks";
 import { TrackRoute } from "@/components/desk/TrackRoute";
 import { LiveRec } from "@/components/devices/events/LiveRec";
 import { FIXTURES } from "@/lib/content/fixtures";
@@ -51,11 +52,13 @@ describe("the preview", () => {
     expect(getDraft).not.toHaveBeenCalled();
   });
 
-  it("is the desk with the draft under /admin/preview, labelled as a preview", async () => {
+  it("is the desk with the draft under /admin/preview, labelled as a preview, its skip links first", async () => {
     const el = (await PreviewLayout({ children: "route" })) as ReactElement<{ children: ReactElement[]; "data-notes"?: string }>;
     // Two rows on the label (the note on unfinished entries): the flap leaves room for both.
     expect(el.props["data-notes"]).toBe("");
-    const [label, desk] = el.props.children;
+    const [skip, label, desk] = el.props.children;
+    expect(skip.type).toBe(SkipLinks);
+    expect(skip.props).toEqual({ base: "/admin/preview" });
     expect(label.type).toBe(PreviewLabel);
     expect(label.props).toEqual({ hidden: 1 });
     expect(desk.type).toBe(Desk);

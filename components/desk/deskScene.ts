@@ -134,7 +134,7 @@ export async function createDeskScene(o: {
   light.shadow.camera.updateProjectionMatrix();
   scene.add(device);
   const screenApi = deskScreen(three, device, family, still);
-  // The keys' labels, printed live on the plate (as Hero3D's), placed while the model is
+  // The keys' labels, printed live on the plate, placed while the model is
   // still where it was made: the model's own prints are side A's four names whatever the
   // content, so they hide, and an empty track's key stays blank.
   const keyNodes = [0, 1, 2, 3].map((i) => node(`Key${i}`));
