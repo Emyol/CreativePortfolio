@@ -1,6 +1,12 @@
-// The desk itself is the layout; the home route only supplies the skip link's target.
+// The desk itself is the layout. The home route is its main region (the skip link's target)
+// with the desk's one heading: Miel's name, as the player prints it on its plate (the 3D or
+// the sprite drawing), so it is read rather than shown twice.
 export const revalidate = 3600;
 
 export default function Page() {
-  return <main id="main" tabIndex={-1} />;
+  return (
+    <main id="main" tabIndex={-1}>
+      <h1 className="sr-only">Miel</h1>
+    </main>
+  );
 }
