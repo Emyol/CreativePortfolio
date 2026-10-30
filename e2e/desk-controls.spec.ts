@@ -176,3 +176,31 @@ test("the wheel over a player key turns the knob instead of scrolling the page",
   await page.mouse.wheel(0, 300);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before);
 });
+
+// In the deck the corner player can show a tape still on the desk at its left edge (the 3D
+// draws only inside the corner box). Neither that tape nor its link may sit under the
+// transport above the corner.
+for (const width of [1280, 1100]) {
+  test(`at ${width}×800 the tapes peeking in at the corner player clear the transport`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await deskReady(page, "/events");
+    await page.waitForTimeout(500); // the direct load's settle
+    const t = (await page.getByRole("navigation", { name: "Transport" }).boundingBox())!;
+    const view = (await page.locator("[data-desk-view]").boundingBox())!;
+    for (const id of ["about", "mixtape", "people", "made", "on-rotation"]) {
+      const drawn = await page.evaluate((tape) => {
+        const r = (window as unknown as { __deskProject: (id: string) => DOMRect | null }).__deskProject(tape);
+        return r && { x: r.x, y: r.y, width: r.width, height: r.height };
+      }, id);
+      if (drawn) {
+        // What of it is drawn: the part inside the corner box.
+        const x = Math.max(drawn.x, view.x);
+        const y = Math.max(drawn.y, view.y);
+        const seen = { x, y, width: Math.min(drawn.x + drawn.width, view.x + view.width) - x, height: Math.min(drawn.y + drawn.height, view.y + view.height) - y };
+        if (seen.width > 0 && seen.height > 0) expect(overlaps(t, seen), `${id} ${JSON.stringify(seen)} clear of the transport ${JSON.stringify(t)}`).toBe(false);
+      }
+      const link = page.locator(`[data-tape="${id}"] a`);
+      if (await link.isVisible()) expect(overlaps(t, (await link.boundingBox())!), `${id}'s link clear of the transport`).toBe(false);
+    }
+  });
+}
