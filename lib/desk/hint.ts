@@ -15,10 +15,14 @@ export function hintSeen(): boolean {
   return seenHere || readStorage("local", KEY) === SEEN;
 }
 
-export function markHintSeen(): void {
+/**
+ * The hint is used up. `remember: false` uses it up for this visit only: the admin's preview
+ * shares the browser with the public site, and loading a tape there isn't a first visit seen.
+ */
+export function markHintSeen({ remember = true }: { remember?: boolean } = {}): void {
   if (hintSeen()) return;
   seenHere = true;
-  writeStorage("local", KEY, SEEN);
+  if (remember) writeStorage("local", KEY, SEEN);
   listeners.forEach((l) => l());
 }
 

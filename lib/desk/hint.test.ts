@@ -17,6 +17,17 @@ describe("the desk's hint", () => {
     expect(hintSeen()).toBe(true);
   });
 
+  it("can be seen for this visit only, leaving the browser's storage alone (the admin's preview)", () => {
+    const l = vi.fn();
+    subscribeHint(l);
+    markHintSeen({ remember: false });
+    expect(hintSeen()).toBe(true);
+    expect(l).toHaveBeenCalledOnce();
+    expect(localStorage.getItem("side-a:hint")).toBeNull();
+    __resetHintForTests(); // a reload, or the public site in another tab
+    expect(hintSeen()).toBe(false);
+  });
+
   it("tells its subscribers once it is seen", () => {
     const l = vi.fn();
     const off = subscribeHint(l);
