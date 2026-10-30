@@ -7,7 +7,7 @@ import { gotoReady } from "./helpers";
 // Back, focus, the wheel, the knob's screen lines, contrast and the transport are in
 // events-screen.spec.ts. v1's card grid, its dock, the photo morph and write-in, and the
 // scroll page's holds and arrivals are gone with the scroll page; their tests went with them.
-// The admin preview's event page is still v1 until Task 14 (e2e/admin.spec.ts covers it then).
+// The admin preview's event pages are in e2e/admin.spec.ts.
 
 test.beforeEach(() => test.setTimeout(60_000));
 

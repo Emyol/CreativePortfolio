@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { packScales } from "@/components/device/useReelMotion";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { loadDevice } from "@/lib/three/loadDevice";
@@ -90,9 +89,7 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
       drawScreen(screen.ctx, ["SIDE B"], { family });
       screen.update();
       const cassette = root.getObjectByName("Cassette");
-      const packL = cassette?.getObjectByName("PackL");
-      const packR = cassette?.getObjectByName("PackR");
-      if (!cassette || !packL || !packR) throw new Error("device.glb has no Cassette with packs");
+      if (!cassette) throw new Error("device.glb has no Cassette");
       const before = new three.Box3().setFromObject(cassette).min.y;
       cassette.rotation.z = -Math.PI;
       cassette.updateMatrixWorld(true);
@@ -165,10 +162,6 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
           const e = t * t * (3 - 2 * t);
           pivot.rotation.set(Math.PI * e, deg(-3) * Math.sin(2 * Math.PI * t), deg(-5) * Math.sin(Math.PI * t));
           pivot.position.y = H / 2 + LIFT * Math.sin(Math.PI * t);
-          // Turned to its B half, the cassette shows its right pack on the left.
-          const s = packScales();
-          packL.scale.set(s.right, 1, s.right);
-          packR.scale.set(s.left, 1, s.left);
           const label = t.toFixed(2);
           if (label !== shown) box.dataset.turn = shown = label;
           const now = t >= LANDED;

@@ -14,9 +14,6 @@ export const TRACK_ORDER: readonly { id: TrackId; side: SideId; label: string }[
   { id: "on-rotation", side: "b", label: "on rotation" },
 ];
 
-const KEYS = 4;
-const SWEEP = 270;
-
 export function hasContent(id: TrackId, c: SiteContent): boolean {
   switch (id) {
     case "about": return c.about.letter.length > 0;
@@ -64,23 +61,6 @@ export function neighbours(tracks: Track[], id: TrackId): { prev: Track | null; 
   const i = tracks.findIndex((t) => t.id === id);
   if (i < 0 || tracks.length < 2) return { prev: null, next: null };
   return { prev: tracks[(i - 1 + tracks.length) % tracks.length], next: tracks[(i + 1) % tracks.length] };
-}
-
-export type SideKeySlot = { index: 0 | 1 | 2 | 3; track: Track | null };
-
-/** v1 only (deleted with the v1 device): four keys showing the current side's tracks. */
-export function sideKeySlots(tracks: Track[], side: SideId): SideKeySlot[] {
-  const own = sideTracks(tracks, side);
-  return ([0, 1, 2, 3] as const).map((index) => ({ index, track: own[index] ?? null }));
-}
-
-/** One detent per track on the side, spread evenly over a 270° sweep; 0° points up. */
-export function knobAngle(tracks: Track[], side: SideId, current: TrackId | null): number {
-  const own = sideTracks(tracks, side).slice(0, KEYS);
-  const i = own.findIndex((t) => t.id === current);
-  if (own.length === 1 && i === 0) return 0;
-  if (i < 0) return -SWEEP / 2;
-  return -SWEEP / 2 + (i * SWEEP) / (own.length - 1);
 }
 
 /** "1".."6" are fixed positions; an empty track's key does nothing. */

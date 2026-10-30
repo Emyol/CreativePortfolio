@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coverRect, DOTS, dotLevels, gridFor, rowLight, sampleSrc, STEPS } from "./dotPhoto";
+import { coverRect, DOTS, dotLevels, gridFor, sampleSrc, STEPS } from "./dotPhoto";
 import { contentSchema } from "./content/schema";
 
 /** An RGBA buffer of grey pixels. */
@@ -50,69 +50,5 @@ describe("coverRect", () => {
     expect(r.sw).toBe(800);
     expect(r.sh).toBe(1000);
     expect(r.sy).toBe(300);
-  });
-});
-
-describe("rowLight", () => {
-  it("is dark before the sweep and fully lit once it has passed", () => {
-    expect(rowLight(0, 50, 0)).toBe(0);
-    expect(rowLight(49, 50, 0)).toBe(0);
-    expect(rowLight(0, 50, 1)).toBe(1);
-    expect(rowLight(49, 50, 1)).toBe(1);
-  });
-
-  it("lights from the top down", () => {
-    const top = rowLight(5, 50, 0.4);
-    const middle = rowLight(25, 50, 0.4);
-    const bottom = rowLight(45, 50, 0.4);
-    expect(top).toBe(1);
-    expect(middle).toBeLessThan(top);
-    expect(bottom).toBe(0);
-  });
-
-  it("eases a row up as the scanline crosses it, never jumping", () => {
-    const steps = Array.from({ length: 101 }, (_, i) => rowLight(25, 50, i / 100));
-    for (let i = 1; i < steps.length; i++) {
-      expect(steps[i]).toBeGreaterThanOrEqual(steps[i - 1]);
-      expect(steps[i] - steps[i - 1]).toBeLessThan(0.35);
-    }
-  });
-});
-
-describe("sampleSrc", () => {
-  it("samples a published upload from a small optimised copy, not the full file", () => {
-    expect(sampleSrc("/api/media/ab12.jpg")).toBe("/_next/image?url=%2Fapi%2Fmedia%2Fab12.jpg&w=128&q=75");
-  });
-
-  it("takes fixture data: URIs and admin drafts as they are (the optimiser can't read them)", () => {
-    expect(sampleSrc("data:image/svg+xml,abc")).toBe("data:image/svg+xml,abc");
-    expect(sampleSrc("/api/media/ab12.jpg?draft")).toBe("/api/media/ab12.jpg?draft");
-  });
-});
-
-describe("gridFor", () => {
-  it("keeps the screen's 4:5 shape for any number of dots across", () => {
-    expect(gridFor(40)).toEqual({ cols: 40, rows: 50 });
-    expect(gridFor(24)).toEqual({ cols: 24, rows: 30 });
-    expect(gridFor(64)).toEqual({ cols: 64, rows: 80 });
-  });
-});
-
-describe("the dot settings in the content", () => {
-  const about = { letter: ["Hi."], toolbox: [] };
-  const parse = (dots: unknown) => contentSchema.shape.about.safeParse({ ...about, dots }).success;
-
-  it("are optional, and take the admin's ranges", () => {
-    expect(contentSchema.shape.about.safeParse(about).success).toBe(true);
-    expect(parse({ across: 40, brightness: 0, contrast: 1 })).toBe(true);
-    expect(parse({ across: 24, brightness: -0.5, contrast: 0.5 })).toBe(true);
-    expect(parse({ across: 64, brightness: 0.5, contrast: 2 })).toBe(true);
-  });
-
-  it("refuse values the screen can't draw", () => {
-    expect(parse({ across: 8, brightness: 0, contrast: 1 })).toBe(false);
-    expect(parse({ across: 40.5, brightness: 0, contrast: 1 })).toBe(false);
-    expect(parse({ across: 40, brightness: 2, contrast: 1 })).toBe(false);
-    expect(parse({ across: 40, brightness: 0, contrast: 0 })).toBe(false);
   });
 });

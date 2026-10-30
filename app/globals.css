@@ -129,8 +129,6 @@ main:focus, main:focus-visible { outline: none; }
 /* Nor does the heading a loaded tape moves focus to. */
 main h2[tabindex="-1"]:focus { outline: none; box-shadow: none; }
 
-/* Event card -> event page morph (React ViewTransition). Reduced motion swaps instantly. */
-::view-transition-group(.morph) { animation-duration: 420ms; animation-timing-function: var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 0s !important; animation-delay: 0s !important; }
 }

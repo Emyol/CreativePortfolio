@@ -8,11 +8,9 @@ import {
   hasSide,
   KEY_COUNT,
   keySlots,
-  knobAngle,
   neighbours,
   packDiameters,
   shouldHandleTrackKey,
-  sideKeySlots,
   sideTrackForKey,
   sideOf,
   sideTracks,
@@ -83,29 +81,9 @@ describe("tracks", () => {
     expect(neighbours(t, "about").prev?.id).toBe("on-rotation");
     expect(neighbours(t, "on-rotation").next?.id).toBe("about");
   });
-  test("legacy side b keys use two slots and blank the rest", () => {
-    const t = visibleTracks(FIXTURES);
-    expect(sideKeySlots(t, "b").map((k) => k.track?.id ?? null)).toEqual(["made", "on-rotation", null, null]);
-    expect(sideKeySlots(t, "b").map((k) => k.index)).toEqual([0, 1, 2, 3]);
-  });
   test("track numbers print with two digits", () => {
     expect(formatTrackNumber(1)).toBe("01");
     expect(formatTrackNumber(12)).toBe("12");
-  });
-});
-
-describe("knob", () => {
-  test("detents spread over 270 degrees", () => {
-    const t = visibleTracks(FIXTURES);
-    expect(knobAngle(t, "a", null)).toBe(-135);
-    expect(knobAngle(t, "a", "about")).toBe(-135);
-    expect(knobAngle(t, "a", "people")).toBe(135);
-    expect(knobAngle(t, "a", "events")).toBe(-45);
-    expect(knobAngle(t, "b", "made")).toBe(-135);
-    expect(knobAngle(visibleTracks({ ...FIXTURES, shelf: [] }), "b", "made")).toBe(0); // one detent points up
-  });
-  test("a track on the other side leaves the knob at rest", () => {
-    expect(knobAngle(visibleTracks(FIXTURES), "a", "made")).toBe(-135);
   });
 });
 

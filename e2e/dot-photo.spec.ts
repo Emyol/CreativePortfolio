@@ -12,7 +12,6 @@ const lit = (page: Page) =>
     for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 60) n++;
     return n / (data.length / 4);
   });
-const reveal = async (page: Page) => Number(await screen(page).getAttribute("data-reveal"));
 
 test("the About photo is a dot-matrix screen, named for screen readers", async ({ page }) => {
   await gotoReady(page, "/about");
@@ -27,11 +26,9 @@ test.describe("full motion", () => {
 
   test("a resize after it has come on leaves it lit", async ({ page }) => {
     await gotoReady(page, "/about");
-    await expect.poll(() => reveal(page)).toBe(1);
     await expect.poll(() => lit(page)).toBeGreaterThan(0.1);
     await page.setViewportSize({ width: 1300, height: 860 });
     await page.waitForTimeout(800);
-    expect(await reveal(page)).toBe(1);
     expect(await lit(page)).toBeGreaterThan(0.1);
   });
 });
@@ -39,9 +36,8 @@ test.describe("full motion", () => {
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 
-  test("the screen is fully lit at once, with no sweep", async ({ page }) => {
+  test("the screen is lit", async ({ page }) => {
     await gotoReady(page, "/about");
-    await expect.poll(() => reveal(page)).toBe(1);
     await expect.poll(() => lit(page)).toBeGreaterThan(0.02);
   });
 });
