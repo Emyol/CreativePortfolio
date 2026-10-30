@@ -47,13 +47,13 @@ export function tapeOnDesk(number: number): Vars {
   };
 }
 
-/** The tape in the slot of the corner player (the deck). */
+/** The tape in the slot of the deck's player (`--deck-left`, `--deck-top`: overlays.module.css). */
 export function tapeInDeck(): Vars {
   const cw = (k: number) => `calc(${n(k)} * var(--cw))`;
   const cx = cassette.x + cassette.w / 2;
   const cy = (cassette.y + cassette.h / 2) * PLATE_RATIO;
   return {
-    ...box(`calc(18px + ${n(cx)} * var(--cw))`, `calc(100% - 18px - ${n(PLATE_RATIO)} * var(--cw) + ${n(cy)} * var(--cw))`, cw(TAPE_W), cw(TAPE_H)),
+    ...box(`calc(var(--deck-left) + ${n(cx)} * var(--cw))`, `calc(var(--deck-top) + ${n(cy)} * var(--cw))`, cw(TAPE_W), cw(TAPE_H)),
     "--tape": cw(TAPE_W),
     "--turn": "0rad",
   };

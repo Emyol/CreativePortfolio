@@ -1,6 +1,7 @@
 "use client";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { HINT_TEXT, useHintSeen } from "@/lib/desk/hint";
+import { PHONE } from "./deskFraming";
 import type { OverlayHandle, Project } from "./overlayPlace";
 import styles from "./DeskHint.module.css";
 
@@ -12,7 +13,8 @@ const EDGE = 16; // px the hint keeps from the viewport's sides
  * visitor wouldn't find by looking (spec "First visit and discoverability"). Shown on the
  * desk until the first tape goes in, then never again in this browser (lib/desk/hint).
  * Over the 3D it follows the player's drawing (`place`, every frame) and waits unseen for
- * the first one; without the 3D it sits under the sprite player by CSS.
+ * the first one; without the 3D it sits under the sprite player by CSS. On a phone the tapes
+ * lie under the player too, so there it sits at the foot of the screen, clear of them.
  */
 export const DeskHint = forwardRef<OverlayHandle, { project: Project | null }>(function DeskHint({ project }, ref) {
   const seen = useHintSeen();
@@ -37,8 +39,9 @@ export const DeskHint = forwardRef<OverlayHandle, { project: Project | null }>(f
         const r = latest.current?.("player");
         if (!p || !r) return;
         const half = p.offsetWidth / 2;
-        const x = Math.round(Math.min(Math.max(r.x + r.width / 2, half + EDGE), window.innerWidth - half - EDGE));
-        const y = Math.round(r.bottom + GAP);
+        const phone = window.innerWidth <= PHONE.max;
+        const x = Math.round(phone ? window.innerWidth / 2 : Math.min(Math.max(r.x + r.width / 2, half + EDGE), window.innerWidth - half - EDGE));
+        const y = Math.round(phone ? window.innerHeight - EDGE - p.offsetHeight : r.bottom + GAP);
         const key = `${x} ${y}`;
         if (last.current === key) return;
         last.current = key;

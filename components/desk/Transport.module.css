@@ -84,3 +84,15 @@
   border-color: var(--paper-rule);
   font-size: 12px;
 }
+
+/* On a phone the player sits on top (deskFraming's PHONE): the strip goes under it, across
+   the screen, with the J-card below. */
+@media (max-width: 640px) {
+  .transport {
+    --corner-w: min(calc(100vw - 24px), 300px);
+    top: calc(12px + var(--corner-w) / 1.35 + 12px);
+    bottom: auto;
+    left: 12px;
+    width: calc(100vw - 24px);
+  }
+}

@@ -31,6 +31,15 @@
   translate: -50% 0;
 }
 
+/* On a phone the tapes lie under the player: the foot of the screen (deskFraming's PHONE). */
+@media (max-width: 640px) {
+  .hint:not([data-over3d]) {
+    top: auto;
+    bottom: 16px;
+    left: 50%;
+  }
+}
+
 /* Over the 3D: unseen until the player's first frame places it (DeskHint.tsx), and while
    a tape is held up to read (Desk3D's bar), which the 3D draws across the player. */
 .hint[data-over3d]:not([data-placed]),

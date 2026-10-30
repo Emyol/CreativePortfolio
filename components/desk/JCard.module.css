@@ -272,3 +272,46 @@
       "flap liner";
   }
 }
+
+/* A phone: the player on top and the transport under it (deskFraming's PHONE,
+   Transport.module.css), the card below them in one column, scrolling on its own so that
+   nothing fixed ever passes over its print. The flap lays its two sides side by side. The
+   sheet with detents comes with phones' own phase. */
+@media (max-width: 640px) {
+  .card {
+    --corner-w: min(calc(100vw - 24px), 300px);
+    --edge: 12px;
+    position: fixed;
+    top: calc(var(--edge) + var(--corner-w) / 1.35 + var(--fold-gap) + var(--transport-h) + var(--fold-gap));
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: 0;
+    min-height: 0;
+    padding: 0 var(--edge) var(--edge);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      "title"
+      "flap"
+      "device"
+      "liner";
+  }
+  .flap {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    grid-auto-flow: column;
+    column-gap: 16px;
+    max-height: none;
+    margin-top: 0;
+    overflow: visible;
+    padding: 12px var(--pad) 16px;
+  }
+  .list + .side {
+    margin-top: 0;
+  }
+}

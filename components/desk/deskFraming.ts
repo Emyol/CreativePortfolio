@@ -2,13 +2,31 @@ import type * as THREE from "three";
 
 /** The corner box in the deck state: the player's aspect, `min(34vw, 420px)` wide, 18 px in. */
 export const CORNER = { share: 0.34, max: 420, gap: 18, aspect: 1.35 } as const;
+/**
+ * On a phone (up to `max` wide) the deck's player sits on top instead, centred, at most
+ * `width` wide and `gap` in, with the transport and the J-card stacked below it (their CSS
+ * has the same numbers: Transport.module.css, JCard.module.css, overlays.module.css). The
+ * sheet with detents is phase 4's.
+ */
+export const PHONE = { max: 640, width: 300, gap: 12 } as const;
+
+/** Where the deck's player is drawn in a `vw` × `vh` viewport. */
+export function deckBox(vw: number, vh: number) {
+  if (vw <= PHONE.max) {
+    const width = Math.min(vw - 2 * PHONE.gap, PHONE.width);
+    return { left: (vw - width) / 2, top: PHONE.gap, width, height: width / CORNER.aspect };
+  }
+  const width = Math.min(vw * CORNER.share, CORNER.max);
+  const height = width / CORNER.aspect;
+  return { left: CORNER.gap, top: vh - CORNER.gap - height, width, height };
+}
 
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
 /**
  * Where the desk is drawn and from where: `mode.k` blends the desk (0: the whole viewport,
- * the camera over the desk) into the deck (1: the corner box, the camera close on the
- * player). The box is measured and written as left/top/width/height, never a CSS transition.
+ * the camera over the desk) into the deck (1: the player's box, `deckBox`, the camera close
+ * on the player). The box is measured and written as left/top/width/height, never a CSS transition.
  * Also projects the scene back onto the page, for the DOM laid over it.
  */
 export function deskFraming(three: typeof THREE, el: HTMLElement, camera: THREE.PerspectiveCamera, at: { deskX: number; playerX: number }) {
@@ -17,9 +35,8 @@ export function deskFraming(three: typeof THREE, el: HTMLElement, camera: THREE.
   const boxAt = (k: number) => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const w = Math.min(vw * CORNER.share, CORNER.max);
-    const h = w / CORNER.aspect;
-    return { left: lerp(0, CORNER.gap, k), top: lerp(0, vh - CORNER.gap - h, k), width: lerp(vw, w, k), height: lerp(vh, h, k) };
+    const d = deckBox(vw, vh);
+    return { left: lerp(0, d.left, k), top: lerp(0, d.top, k), width: lerp(vw, d.width, k), height: lerp(vh, d.height, k) };
   };
   const applyBox = () => {
     const b = boxAt(mode.k);

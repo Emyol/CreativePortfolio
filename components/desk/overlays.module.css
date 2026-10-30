@@ -9,9 +9,21 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  /* The plate's width on the desk and in the deck's corner (deskFraming's CORNER box). */
+  /* The plate's width on the desk and in the deck's corner (deskFraming's CORNER box), and
+     where the deck's plate sits: its left edge and its top. */
   --u: min(36vw, 62vh);
   --cw: min(34vw, 420px);
+  --deck-left: 18px;
+  --deck-top: calc(100% - 18px - 0.6975 * var(--cw));
+}
+/* On a phone the deck's player sits on top, centred (deskFraming's PHONE). */
+@media (max-width: 640px) {
+  .layer,
+  .stage {
+    --cw: min(calc(100vw - 24px), 300px);
+    --deck-left: calc(50% - var(--cw) / 2);
+    --deck-top: 12px;
+  }
 }
 .layer { z-index: 2; }
 .stage { z-index: 1; }
@@ -29,8 +41,8 @@
 }
 .player[data-state="deck"] {
   --pw: var(--cw);
-  left: 18px;
-  top: calc(100% - 18px - 0.6975 * var(--cw));
+  left: var(--deck-left);
+  top: var(--deck-top);
 }
 
 /* A tape's or a key's box, centred on its spot. */
