@@ -59,9 +59,23 @@ export function LiveRec({ event, number, base = "" }: Props) {
   );
 
   // Opened by a move within the site (from the list, from the desk, by Back or Forward):
-  // focus goes to the event's heading, after the J-card has given its own title focus.
+  // focus goes to the event's heading, after the J-card has given its own title focus. While
+  // the card's panels turn to face the reader they are inert (JCard), so it waits for that,
+  // and gives up if focus has moved on meanwhile.
   useEffect(() => {
-    if (hasLanded()) document.querySelector<HTMLElement>("#jcard [data-event-heading]")?.focus({ preventScroll: true });
+    if (!hasLanded()) return;
+    const heading = document.querySelector<HTMLElement>("#jcard [data-event-heading]");
+    if (!heading) return;
+    const turned = heading.closest<HTMLElement>("[inert]");
+    if (!turned) return heading.focus({ preventScroll: true });
+    const had = document.activeElement;
+    const watch = new MutationObserver(() => {
+      if (heading.closest("[inert]")) return;
+      watch.disconnect();
+      if (document.activeElement === had) heading.focus({ preventScroll: true });
+    });
+    watch.observe(turned, { attributes: true, attributeFilter: ["inert"] });
+    return () => watch.disconnect();
   }, [event.slug]);
 
   const [seconds, setSeconds] = useState(0);
