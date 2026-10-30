@@ -47,8 +47,11 @@ export type DeskScene = PointerScene & {
   led(on: boolean): void;
   slotOnScreen(): { x: number; y: number };
   wiggle(): void;
-  /** The first visit's nudge: the tape lifts a little and settles, once. Not under reduced motion. */
-  nudge(id: TrackId): void;
+  /**
+   * The first visit's nudge: the tape lifts a little and settles. False when it can't now
+   * (reduced motion, the tape in a hand or lifted, a tape held up, off the desk).
+   */
+  nudge(id: TrackId): boolean;
   /** Input arrived: a nudge still going settles now. */
   calm(): void;
   setNight(on: boolean, instant?: boolean): void;
@@ -465,9 +468,9 @@ export async function createDeskScene(o: {
         .to(mark.rotation, { y: knobTo + 0.2, duration: 0.16, ease: "power2.inOut" })
         .to(mark.rotation, { y: knobTo, duration: 0.3, ease: "back.out(2)" });
     },
-    nudge(id: TrackId) {
+    nudge(id: TrackId): boolean {
       const t = recs.get(id);
-      if (still || !t || t.mode !== "free" || t === grabbed || hovered === id || applied?.state !== "desk") return;
+      if (still || !t || t.mode !== "free" || t === grabbed || hovered === id || motion.held() || applied?.state !== "desk") return false;
       // A small hop off the desk and back down onto it, a touch of bounce as it lands. A hover
       // (motion.raise overwrites the tween) or a grab takes the tape over at once.
       const tl = gsap
@@ -475,6 +478,7 @@ export async function createDeskScene(o: {
         .to(t.hover, { y: hoverH * 0.7, duration: 0.24, ease: "power2.out" })
         .to(t.hover, { y: 0, duration: 0.6, ease: "bounce.out" });
       nudging = { t, tl };
+      return true;
     },
     calm() {
       if (!nudging) return;

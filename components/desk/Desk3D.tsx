@@ -46,6 +46,7 @@ type Props = {
 
 const TIMEOUT = 10_000; // without the scene by then, the desk falls back
 const NUDGE_IDLE = 2000; // ms of no input on a first visit's desk before the first tape nudges
+const NUDGE_LENGTH = 1000; // ms the nudge takes, with room to spare
 const INPUT = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
 
 /**
@@ -207,20 +208,24 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   useEffect(() => {
     if (!ready || props.state !== "desk" || tier === "none" || !first || nudged.current || !isFirstInsert()) return;
     let timer = 0;
+    const stop = () => {
+      window.clearTimeout(timer);
+      INPUT.forEach((type) => window.removeEventListener(type, onInput, { capture: true }));
+    };
     const wait = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
+        // Not now (the tape lifted or in a hand, a tape held up): wait for the next quiet spell.
+        if (!scene.current?.nudge(first)) return wait();
         nudged.current = true;
-        scene.current?.nudge(first);
+        // Input may still settle it while it hops; then nothing is left to listen for.
+        timer = window.setTimeout(stop, NUDGE_LENGTH);
       }, NUDGE_IDLE);
     };
     const onInput = () => (nudged.current ? scene.current?.calm() : wait());
     INPUT.forEach((type) => window.addEventListener(type, onInput, { capture: true, passive: true }));
     wait();
-    return () => {
-      window.clearTimeout(timer);
-      INPUT.forEach((type) => window.removeEventListener(type, onInput, { capture: true }));
-    };
+    return stop;
   }, [ready, props.state, tier, first]);
 
   // Picked up: the bar takes focus, and the first step back (Esc) puts the tape back; put
