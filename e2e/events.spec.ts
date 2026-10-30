@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 // The public events pages as v2 has them: /events is the Events device's screen menu and
@@ -28,7 +28,8 @@ test("an event's page is its live recording, with its story printed beside it", 
   await expect(rec.getByRole("link", { name: /back to the list/ })).toHaveAttribute("href", "/events");
 });
 
-test("unknown events are a 404 with the device and a way home", async ({ page }) => {
+test("unknown events are a 404 with the device and a way home", async ({ page, allowConsole }) => {
+  allowConsole(/status of 404/);
   const res = await page.goto("/events/not-a-real-event");
   expect(res?.status()).toBe(404);
   await expect(page.locator("img[src*='/device/beauty']")).toHaveAttribute("alt", "");

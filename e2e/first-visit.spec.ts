@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 type Rect = { x: number; y: number; width: number; height: number };
@@ -88,10 +88,10 @@ test("without 3D the sprite player welcomes a visit the same way @sprite", async
 test("/ has one main, the skip link's target, with the desk's h1", async ({ page }) => {
   await gotoReady(page, "/");
   await expect(page.locator("main")).toHaveCount(1);
-  await expect(page.locator("main")).toHaveAttribute("id", "main");
+  await expect(page.locator("main")).toHaveAttribute("id", "jcard");
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName("Miel");
-  await expect(page.getByRole("link", { name: "Skip to content" })).toHaveAttribute("href", "#main");
+  await expect(page.getByRole("link", { name: "Skip to content" })).toHaveAttribute("href", "#jcard");
 });
 
 /** The cord and the hint clear every tape, key, the player (its print) and each other. */

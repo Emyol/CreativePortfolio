@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 type Rect = { x: number; y: number; width: number; height: number };
@@ -25,14 +25,26 @@ test("Tab from the skip links reaches the about tape first, and Enter loads it",
   await deskReady(page, "/");
   await page.keyboard.press("Tab");
   await expect(page.locator(":focus")).toHaveText("Skip to content");
+  await expect(page.locator(":focus")).toHaveAttribute("href", "#jcard");
   await page.keyboard.press("Tab");
   await expect(page.locator(":focus")).toHaveText("Skip to the track list");
+  await expect(page.locator(":focus")).toHaveAttribute("href", "/tracklist");
   await page.keyboard.press("Tab");
   await expect(page.locator(":focus")).toHaveAttribute("aria-label", "01 about, tape");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/about$/, { timeout: 10_000 });
   // The J-card's title (Task 9); until then the route's own h2.
   await expect(page.getByRole("heading", { level: 2, name: "about", exact: true })).toBeFocused();
+});
+
+// Folded from v1's structure.spec: the skip links come first and the first lands on the
+// main region, here the J-card.
+test("on a track page the first skip link lands on the J-card", async ({ page }) => {
+  await gotoReady(page, "/people");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main#jcard[data-jcard=people]")).toBeFocused();
 });
 
 test("a focused tape link offers inspect, which picks the tape up", async ({ page }) => {

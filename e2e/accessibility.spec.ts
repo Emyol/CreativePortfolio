@@ -1,22 +1,18 @@
-import { devices, expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "./fixtures";
 import { gotoReady } from "./helpers";
 
-test.describe("full motion, before anything is scrolled into view", () => {
-  test.use({ reducedMotion: "no-preference" });
+// Folded from v1's structure.spec: the desk and a track's J-card, judged in their final
+// states. The events pages and the track list have their own (events.spec, tracklist.spec).
+test.use({ reducedMotion: "reduce" });
 
-  test("content waiting below the fold stays in the accessibility tree and the tab order", async ({ page }) => {
-    await gotoReady(page, "/#top");
-    await expect(page.getByRole("link", { name: "More about Fixture hobby two" })).toHaveCount(1);
-    await expect(page.getByRole("link", { name: "Fixture person B" })).toHaveCount(1);
+for (const url of ["/", "/about", "/mixtape", "/people", "/made", "/on-rotation"]) {
+  test(`${url} has no axe violations at WCAG 2.1 AA`, async ({ page }) => {
+    await gotoReady(page, url);
+    // The 3D or the sprite player is in, and a track's J-card has faded in.
+    await page.waitForSelector("[data-desk-view][data-ready], [data-sprite-desk]", { state: "attached", timeout: 30_000 });
+    await page.waitForTimeout(400);
+    const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+    expect(results.violations).toEqual([]);
   });
-});
-
-test.describe("phones", () => {
-  const { defaultBrowserType: _ignored, ...iphone } = devices["iPhone 13"];
-  test.use({ ...iphone });
-
-  test("every track heading is reachable", async ({ page }) => {
-    await gotoReady(page, "/");
-    await expect(page.locator("section[data-track] h2")).toHaveCount(6);
-  });
-});
+}

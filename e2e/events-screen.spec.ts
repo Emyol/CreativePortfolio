@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 type Rect = { x: number; y: number; width: number; height: number };

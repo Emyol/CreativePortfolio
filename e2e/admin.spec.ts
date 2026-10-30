@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 test("the admin opens (fixtures make it ready) and stays out of search engines", async ({ page }) => {
@@ -6,12 +6,7 @@ test("the admin opens (fixtures make it ready) and stays out of search engines",
   expect(res?.status()).toBe(200);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.getByRole("heading", { level: 1, name: "Edit the tape" })).toBeVisible();
-  await expect(page.locator("[data-device], [data-dock]")).toHaveCount(0);
-});
-
-test("no smooth scrolling in the admin", async ({ page }) => {
-  await gotoReady(page, "/admin");
-  await expect(page.locator("html")).not.toHaveClass(/lenis/);
+  await expect(page.locator("[data-desk-root]")).toHaveCount(0);
 });
 
 test.describe("the preview", () => {
@@ -19,12 +14,13 @@ test.describe("the preview", () => {
   test.beforeEach(() => test.setTimeout(60_000));
 
   const label = (page: Page) => page.getByText("Preview: not published");
-  // Every link in the preview stays in it, or leaves for the editor or another site. The
-  // root layout's skip link to the public track list is the one exception (Task 15).
+  // Every link in the preview stays in it, or leaves for the editor or another site: its
+  // skip links too.
   const strays = (page: Page) =>
-    page.locator("a[href]:not(.skip-link)").evaluateAll((links) =>
+    page.locator("a[href]").evaluateAll((links) =>
       links.map((a) => a.getAttribute("href") ?? "").filter((h) => h.startsWith("/") && h !== "/admin" && h !== "/admin/preview" && !h.startsWith("/admin/preview/")),
     );
+  const skipLinks = (page: Page) => page.locator("a.skip-link").evaluateAll((links) => links.map((a) => [a.textContent, a.getAttribute("href")]));
 
   test("is the desk with the draft, marked as unpublished, and every move stays in it", async ({ page }) => {
     await gotoReady(page, "/admin/preview");
@@ -65,7 +61,26 @@ test.describe("the preview", () => {
     await expect(page.locator("html")).toHaveAttribute("data-desk", "desk");
   });
 
-  test("opens a track directly, and 404s for one that isn't on the tape", async ({ page }) => {
+  test("its skip links come first and stay in it: the J-card, then the flap once a tape is in", async ({ page }) => {
+    await gotoReady(page, "/admin/preview");
+    // With no tape in, no flap to skip to.
+    expect(await skipLinks(page)).toEqual([["Skip to content", "#jcard"]]);
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+    await gotoReady(page, "/admin/preview/people");
+    expect(await skipLinks(page)).toEqual([
+      ["Skip to content", "#jcard"],
+      ["Skip to the track list", "#flap"],
+    ]);
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Skip to the track list" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("main[data-jcard=people] nav#flap")).toBeFocused();
+  });
+
+  test("opens a track directly, and 404s for one that isn't on the tape", async ({ page, allowConsole }) => {
+    allowConsole(/status of 404/);
     const res = await gotoReady(page, "/admin/preview/people");
     expect(res?.status()).toBe(200);
     await expect(page.locator("main[data-jcard=people]").getByRole("heading", { level: 2, name: "people" })).toBeVisible();
@@ -86,7 +101,7 @@ test.describe("the preview", () => {
 });
 
 import AxeBuilder from "@axe-core/playwright";
-import { devices, type Page } from "@playwright/test";
+import { devices, type Page } from "./fixtures";
 
 // A 4 x 3 px PNG, small enough to inline; the browser decodes, shrinks and re-encodes it.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEElEQVQImWM40+ECRww4OQB7hhMhQLrF8gAAAABJRU5ErkJggg==", "base64");
@@ -134,7 +149,8 @@ for (const [name, use] of [["desktop", {}], ["phone", iphone]] as const) {
       await expect(page.getByText("Published")).toBeVisible();
     });
 
-    test("a save from a stale device says so and offers a reload", async ({ page }) => {
+    test("a save from a stale device says so and offers a reload", async ({ page, allowConsole }) => {
+      allowConsole(/status of 409/);
       await stubBackend(page, { conflict: true });
       await gotoReady(page, "/admin");
       const links = page.getByRole("region", { name: "links" });

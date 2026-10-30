@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 // Reduced motion on the desk (spec "Reduced motion (live, switching mid-visit)"): no throws

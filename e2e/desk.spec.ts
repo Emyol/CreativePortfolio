@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 type Rect = { x: number; y: number; width: number; height: number };
@@ -118,4 +118,42 @@ test("hovering a tape offers inspect on the tape the 3D lifts, and only there", 
   await expect(page.getByRole("button", { name: "inspect 03 mixtape" })).toHaveCSS("opacity", "0");
   await page.mouse.move(5, 5);
   await expect(page.locator("[data-tape][data-hot]")).toHaveCount(0);
+});
+
+// Folded from v1's hero3d.spec: what held for the hero's 3D holds for the desk's.
+test("three.js loads only after the page has painted, and the desk turns 3D without moving the page", async ({ page }) => {
+  // The tape and key links are clear hit boxes over the drawing: placing them on the 3D's
+  // first frame moves no pixel, so shifts made only of them are not counted.
+  await page.addInitScript(() => {
+    (window as unknown as { __cls: number }).__cls = 0;
+    type Shift = PerformanceEntry & { value: number; hadRecentInput: boolean; sources?: { node?: Node | null }[] };
+    const hitBox = (n?: Node | null) => n instanceof Element && !!n.closest("[data-tape-links], [data-player-keys]");
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries() as Shift[]) {
+        if (e.hadRecentInput || (e.sources?.length && e.sources.every((s) => hitBox(s.node)))) continue;
+        (window as unknown as { __cls: number }).__cls += e.value;
+      }
+    }).observe({ type: "layout-shift", buffered: true });
+  });
+  // (In dev, Turbopack's tiny async-loader stub for three is in the page; the library isn't.)
+  const three: number[] = [];
+  page.on("request", (r) => /three_build|three_examples|device\.glb/.test(r.url()) && three.push(Date.now()));
+  const start = Date.now();
+  await deskReady(page);
+  const paint = await page.evaluate(() => performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? 0);
+  expect(three.length).toBeGreaterThan(0);
+  expect(Math.min(...three) - start).toBeGreaterThan(paint);
+  expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThan(0.01);
+  // One stage, exactly the visible viewport.
+  await expect(page.locator("canvas[data-stage]")).toHaveCount(1);
+  const [h, css] = await page.locator("canvas[data-stage]").evaluate((c) => [innerHeight, (c as HTMLElement).style.height]);
+  expect(css).toBe(`${h}px`);
+});
+
+test("losing the GPU hands the desk to the sprite player, its tape links still there", async ({ page }) => {
+  await deskReady(page);
+  await page.locator("canvas[data-stage]").evaluate((c) => (c as HTMLCanvasElement).getContext("webgl2")!.getExtension("WEBGL_lose_context")!.loseContext());
+  await expect(page.locator("[data-sprite-desk]")).toBeVisible();
+  await expect(page.locator("[data-desk-view]")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "01 about, tape" })).toBeVisible();
 });

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const ROUTES = [
   ["about", "about"],
@@ -32,3 +32,19 @@ test("/#events ends on /events", async ({ page }) => {
   await page.goto("/#events");
   await expect(page).toHaveURL(/\/events$/);
 });
+
+// Folded from v1's navigation.spec: a cold deep link to a track lands on it, its heading focused.
+test("/#mixtape ends on /mixtape with the J-card's heading focused", async ({ page }) => {
+  await page.goto("/#mixtape");
+  await expect(page).toHaveURL(/\/mixtape$/);
+  await expect(page.getByRole("heading", { level: 2, name: "mixtape", exact: true })).toBeFocused();
+});
+
+// Folded from v1's structure.spec.
+for (const path of ["/", "/about"]) {
+  test(`no Kakejiku left on ${path}: no Japanese characters, no KanjiVG credit`, async ({ page }) => {
+    await page.goto(path);
+    expect(await page.locator("body").innerText()).not.toMatch(/[぀-ヿ㐀-鿿]/);
+    await expect(page.getByText("KanjiVG")).toHaveCount(0);
+  });
+}
