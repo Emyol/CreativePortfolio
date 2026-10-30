@@ -6,10 +6,12 @@ import { marqueeAt } from "@/lib/motion/marquee";
 
 /**
  * The desk player's screen: live text on the OLED glass (as Hero3D's), flickering to new
- * text, a headline too long coming round. `still` (reduced motion) swaps without a flicker
- * and rests a long headline set smaller to fit, or past that cut short (screenLayout).
+ * text, a headline too long coming round. Still (reduced motion, `setStill`, live) it swaps
+ * without a flicker and rests a long headline set smaller to fit, or past that cut short
+ * (screenLayout).
  */
-export function deskScreen(three: typeof THREE, root: THREE.Object3D, family: string, still: boolean) {
+export function deskScreen(three: typeof THREE, root: THREE.Object3D, family: string, initiallyStill: boolean) {
+  let still = initiallyStill;
   const { ctx, update, dispose } = addScreenPlane(three, root);
   let shown: string[] = [];
   let progress: number | undefined;
@@ -52,6 +54,17 @@ export function deskScreen(three: typeof THREE, root: THREE.Object3D, family: st
         .call(() => paint(1, old), undefined, 0.04)
         .call(() => paint(0.15, old), undefined, 0.08)
         .call(() => (take(lines), paint()), undefined, 0.12);
+    },
+    /** Reduced motion on or off: a flicker under way ends now, a long headline rests or comes round from the start. */
+    setStill(on: boolean) {
+      if (on === still) return;
+      still = on;
+      flicker?.progress(1);
+      flicker = null;
+      headAt = time;
+      headShift = still || !shown.length ? 0 : headlineShift(shown, measureHead(ctx, family));
+      headScroll = headShift ? 0 : null;
+      if (shown.length) paint();
     },
     /** What it shows now (after any flicker), a line of text per line. */
     text: () => shown.join("\n"),

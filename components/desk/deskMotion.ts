@@ -19,16 +19,24 @@ export type Tape = {
   seated: boolean;
   tl: gsap.core.Timeline | null;
   hubs: THREE.Object3D[];
+  /** How much of the tape shows (reduced motion's cross-fade), on its own `mats`. */
+  alpha: { k: number };
+  /** The tape's own copies of its materials, each with its own `opacity` and `transparent` in `userData`. */
+  mats: THREE.Material[];
 };
 export type InsertKind = "full" | "switch";
 
 /** A later switch: the old tape lifts out as the new one drops in, all within TIMING.switchMax. */
 export const SWITCH = { out: 0.25, home: 0.5, fly: 0.4, drop: 0.2, gap: 0.15, box: 0.6 };
 export const EJECT = { lift: 0.3, home: 0.55, box: 0.8 };
+/** Reduced motion: a tape fades out where it is and in where it goes, 0.25 s in all. */
+export const FADE = { out: 0.1, in: 0.15 };
 
 /**
  * The tapes' moves between the desk, the slot and the hand. Every move first kills what is
  * moving the tape and starts from where it is, so a new route mid-flight retargets smoothly.
+ * Still (reduced motion, read live) nothing flies: a move is a cross-fade, the tape fading
+ * out where it is and in where it goes (FADE), and a hover lifts at once.
  */
 export function tapeMotion(o: {
   three: typeof THREE;
@@ -39,7 +47,7 @@ export function tapeMotion(o: {
   aboveY: number;
   homeY(t: Tape): number;
   yawQ(yaw: number): THREE.Quaternion;
-  still: boolean;
+  still(): boolean;
   /** Whether the desk is in the deck state now (a switch, not an eject, times the lift out). */
   deck(): boolean;
   onSeat(t: Tape, kind: InsertKind): void;
@@ -50,12 +58,40 @@ export function tapeMotion(o: {
   let inspectBase: THREE.Quaternion | null = null;
   const turn = { yaw: 0, pitch: 0, from: { yaw: 0, pitch: 0 } };
 
+  const show = (t: Tape, k: number) => {
+    t.alpha.k = k;
+    for (const m of t.mats) {
+      m.opacity = (m.userData.opacity as number) * k;
+      // Blended only while it fades (a material drawn opaque otherwise, as the rest of the desk).
+      const blend = k < 1 || (m.userData.transparent as boolean);
+      if (m.transparent !== blend) {
+        m.transparent = blend;
+        m.needsUpdate = true;
+      }
+    }
+  };
   const kill = (t: Tape) => {
     t.tl?.kill();
     t.tl = null;
-    gsap.killTweensOf([t.obj.position, t.mix, t.hover]);
+    gsap.killTweensOf([t.obj.position, t.mix, t.hover, t.alpha]);
+    show(t, 1);
   };
-  const raise = (t: Tape, on: boolean, h: number) => gsap.to(t.hover, { y: on ? h : 0, duration: 0.35, ease: "power3.out", overwrite: true });
+  /** Reduced motion's move: out where it is, `place` it, in there; `then` once it shows. */
+  const crossFade = (t: Tape, place: () => void, then?: () => void) => {
+    const tl = gsap
+      .timeline()
+      .to(t.alpha, { k: 0, duration: FADE.out, ease: "none", onUpdate: () => show(t, t.alpha.k) })
+      .call(place)
+      .to(t.alpha, { k: 1, duration: FADE.in, ease: "none", onUpdate: () => show(t, t.alpha.k) });
+    if (then) tl.call(then);
+    return tl;
+  };
+  const placeHome = (t: Tape) => () => {
+    t.obj.position.set(t.body.x, o.homeY(t), t.body.z);
+    t.obj.quaternion.copy(o.yawQ(t.body.yaw));
+  };
+  const raise = (t: Tape, on: boolean, h: number) =>
+    gsap.to(t.hover, { y: on ? h : 0, duration: o.still() ? 0 : 0.35, ease: "power3.out", overwrite: true });
   const turnTo = (t: Tape, to: THREE.Quaternion, duration: number, ease: string) => {
     const q0 = t.obj.quaternion.clone();
     t.mix.k = 0;
@@ -76,6 +112,11 @@ export function tapeMotion(o: {
     t.mode = "in";
     t.seated = false;
     t.hover.y = 0;
+    if (o.still()) {
+      // In the slot as it appears there: the clunk on the frame it shows.
+      t.tl = crossFade(t, () => o.onSeat(t, kind));
+      return;
+    }
     const fly = kind === "full" ? TIMING.fly : SWITCH.fly;
     const drop = kind === "full" ? TIMING.drop : SWITCH.drop;
     t.tl = gsap
@@ -90,6 +131,10 @@ export function tapeMotion(o: {
     kill(t);
     t.mode = "out";
     t.seated = false;
+    if (o.still()) {
+      t.tl = crossFade(t, placeHome(t), freed(t));
+      return;
+    }
     const { out, back } = o.deck() ? { out: SWITCH.out, back: SWITCH.home } : { out: EJECT.lift, back: EJECT.home };
     t.tl = gsap
       .timeline()
@@ -105,7 +150,7 @@ export function tapeMotion(o: {
     inspectBase = null;
     kill(t);
     t.mode = "out";
-    t.tl = gsap.timeline().add(home(t, 0.55, "power3.inOut")).call(freed(t));
+    t.tl = o.still() ? crossFade(t, placeHome(t), freed(t)) : gsap.timeline().add(home(t, 0.55, "power3.inOut")).call(freed(t));
     o.onInspect(null);
   };
 
@@ -121,6 +166,19 @@ export function tapeMotion(o: {
     const p = camera.position.clone().add(dir.multiplyScalar(12));
     const toCam = camera.position.clone().sub(p).normalize();
     const base = new three.Quaternion().setFromUnitVectors(new three.Vector3(0, 1, 0), toCam).multiply(slotQ);
+    if (o.still()) {
+      t.tl = crossFade(
+        t,
+        () => {
+          t.obj.position.copy(p);
+          t.obj.quaternion.copy(base);
+          inspectBase = base;
+        },
+        () => void (t.tl = null),
+      );
+      o.onInspect(t.id);
+      return;
+    }
     t.tl = gsap
       .timeline()
       .to(t.obj.position, { x: p.x, y: p.y, z: p.z, duration: 0.6, ease: "power3.out" })
@@ -153,7 +211,7 @@ export function tapeMotion(o: {
     qa.setFromAxisAngle(camUp, turn.yaw);
     qb.setFromAxisAngle(right, turn.pitch);
     turnQ.copy(qa).multiply(qb).multiply(inspectBase);
-    inspecting.obj.quaternion.slerp(turnQ, o.still ? 1 : 0.2);
+    inspecting.obj.quaternion.slerp(turnQ, o.still() ? 1 : 0.2);
   };
 
   return {

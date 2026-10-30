@@ -154,6 +154,31 @@ describe("JCard", () => {
     expect(gsap.getTweensOf(copy)).toHaveLength(0);
   });
 
+  it("while the first insert waits for the tape to seat, the turned-away panels can't be reached", () => {
+    __resetVisitForTests();
+    const { rerender } = render(card(null));
+    rerender(card("events", "Fixture device", 1));
+    const flap = document.querySelector<HTMLElement>('[data-panel="flap"]')!;
+    const liner = document.querySelector<HTMLElement>('[data-panel="liner"]')!;
+    expect(flap).toHaveAttribute("inert");
+    expect(liner).toHaveAttribute("inert");
+    // The move finished (here at once): they turn to face the reader and can be reached.
+    gsap.getTweensOf(flap).forEach((t) => (t.parent ?? t).progress(1));
+    expect(flap).not.toHaveAttribute("inert");
+    expect(liner).not.toHaveAttribute("inert");
+  });
+
+  it("under reduced motion an insert cross-fades and leaves nothing inline on the card", async () => {
+    const tiered = (current: TrackId | null) => <MotionTierContext.Provider value="none">{card(current)}</MotionTierContext.Provider>;
+    const { rerender } = render(tiered(null));
+    rerender(tiered("events"));
+    const main = screen.getByRole("main");
+    expect(main.style.opacity).toBe("0");
+    const inline = () =>
+      [main, ...main.querySelectorAll<HTMLElement>("[data-panel], :scope > h2")].filter((el) => el.style.transform || el.style.opacity || el.hasAttribute("inert"));
+    await waitFor(() => expect(inline()).toEqual([]), { timeout: 1000 });
+  });
+
   it("wipes the new ink across within 0.4 s", () => {
     // Three in turn: the flap, the centre (title and device) and the liner.
     expect(WIPE.sweep + WIPE.stagger * 2).toBeLessThanOrEqual(0.4);

@@ -55,6 +55,11 @@ export type DeskScene = PointerScene & {
   /** Input arrived: a nudge still going settles now. */
   calm(): void;
   setNight(on: boolean, instant?: boolean): void;
+  /**
+   * Reduced motion on or off, in place (no rebuild: the tapes stay where they are). On, what
+   * is moving ends where it was going, now, and a sliding tape stops.
+   */
+  setStill(on: boolean): void;
   seatedId(): TrackId | null;
   dispose(): void;
 };
@@ -64,7 +69,9 @@ export type DeskScene = PointerScene & {
  * the player right of centre, the six tapes scattered to its left on a physics desk, a lamp
  * for the night. Drawn by the shared stage into `el`'s box: the whole viewport on the desk,
  * the corner box on the deck (deskFraming). The route drives it through `sync`; the tapes'
- * moves are deskMotion's. Returns null if `dead()` turns true while loading.
+ * moves are deskMotion's. `tier` sets the drawing's quality and whether it starts still
+ * (reduced motion); `setStill` switches the motion live. Returns null if `dead()` turns true
+ * while loading.
  */
 export async function createDeskScene(o: {
   el: HTMLElement;
@@ -87,7 +94,7 @@ export async function createDeskScene(o: {
     document.fonts.load(`700 120px ${mono}`).catch(() => []),
   ]);
   if (o.dead()) return null;
-  const still = tier === "none";
+  let still = tier === "none";
 
   // The player, its feet on the desk. Its underside is for turning over (later): hidden.
   const device = model.clone();
@@ -147,8 +154,30 @@ export async function createDeskScene(o: {
     const lift = groundY - new three.Box3().setFromObject(obj).min.y;
     const [sx, sz, yaw] = SCATTER[track.number - 1];
     const hubs = ["HubLPivot", "HubRPivot"].map((n) => obj.getObjectByName(n)).filter((h): h is THREE.Object3D => !!h);
-    recs.set(track.id, { id: track.id, track, obj, lift, hubs, body: { x: sx * W, z: sz * D, yaw, vx: 0, vz: 0, va: 0 }, hover: { y: 0 }, mix: { k: 0 }, mode: "free", seated: false, tl: null });
+    recs.set(track.id, { id: track.id, track, obj, lift, hubs, body: { x: sx * W, z: sz * D, yaw, vx: 0, vz: 0, va: 0 }, hover: { y: 0 }, mix: { k: 0 }, mode: "free", seated: false, tl: null, alpha: { k: 1 }, mats: [] });
     scene.add(obj);
+  }
+  // Each tape's own copies of its materials, so it can fade alone (reduced motion's
+  // cross-fade, deskMotion), the rest of the desk untouched.
+  const fadeMats: THREE.Material[] = [];
+  for (const t of recs.values()) {
+    const copies = new Map<THREE.Material, THREE.Material>();
+    const own = (m: THREE.Material) => {
+      let c = copies.get(m);
+      if (!c) {
+        c = m.clone();
+        c.userData.opacity = m.opacity;
+        c.userData.transparent = m.transparent;
+        copies.set(m, c);
+      }
+      return c;
+    };
+    t.obj.traverse((x) => {
+      const mesh = x as THREE.Mesh;
+      if (mesh.isMesh) mesh.material = Array.isArray(mesh.material) ? mesh.material.map(own) : own(mesh.material);
+    });
+    t.mats = [...copies.values()];
+    fadeMats.push(...t.mats);
   }
   const all = [...recs.values()];
   const freeTapes = () => all.filter((t) => t.mode === "free");
@@ -231,8 +260,10 @@ export async function createDeskScene(o: {
     led(true);
     if (kind !== "instant") {
       playClunk(); // the same frame as the drop
-      gsap.fromTo(device.position, { y: -DIP }, { y: 0, duration: 0.35, ease: "power2.out", overwrite: true });
-      gsap.fromTo(t.obj.position, { y: slotP.y - DIP }, { y: slotP.y, duration: 0.35, ease: "power2.out" });
+      if (!still) {
+        gsap.fromTo(device.position, { y: -DIP }, { y: 0, duration: 0.35, ease: "power2.out", overwrite: true });
+        gsap.fromTo(t.obj.position, { y: slotP.y - DIP }, { y: slotP.y, duration: 0.35, ease: "power2.out" });
+      }
       hooks.onInsert(t.id);
     }
     if (kind === "full" && !still) {
@@ -258,7 +289,7 @@ export async function createDeskScene(o: {
     aboveY: slotP.y + size.y * LIFT,
     homeY,
     yawQ,
-    still,
+    still: () => still,
     deck: () => applied?.state === "deck",
     onSeat: seat,
     onInspect: hooks.onInspect,
@@ -301,13 +332,20 @@ export async function createDeskScene(o: {
     }
     const full = !from?.want && isFirstInsert();
     const t = next ? recs.get(next) : null;
-    if (t && t.mode !== "in") motion.insert(t, full ? "full" : "switch", leaving ? SWITCH.gap : 0);
+    if (t && t.mode !== "in") motion.insert(t, full ? "full" : "switch", leaving && !still ? SWITCH.gap : 0);
     if (!t) led(false);
     const toDeck = state === "deck";
+    if (still) {
+      // The view jumps to where it rests.
+      frame.mode.k = toDeck ? 1 : 0;
+      frame.applyBox();
+      refreshScreen();
+      return;
+    }
     // The first insert of a visit loads before the view eases back into the corner.
     const delay = toDeck && t && full ? TIMING.fly + TIMING.drop + TIMING.load : 0;
     const duration = toDeck ? (full ? TIMING.unfold : SWITCH.box) : EJECT.box;
-    gsap.to(frame.mode, { k: toDeck ? 1 : 0, duration: still ? 0 : duration, delay: still ? 0 : delay, ease: "power3.inOut", onUpdate: frame.applyBox });
+    gsap.to(frame.mode, { k: toDeck ? 1 : 0, duration, delay, ease: "power3.inOut", onUpdate: frame.applyBox });
     refreshScreen();
   };
 
@@ -379,7 +417,8 @@ export async function createDeskScene(o: {
       const t = grabbed;
       grabbed = null;
       if (t?.mode !== "free") return;
-      const { vx, vz } = releaseVelocity(samples, at);
+      // Thrown with the release velocity; still, it stays where it is let go.
+      const { vx, vz } = still ? { vx: 0, vz: 0 } : releaseVelocity(samples, at);
       samples = [];
       t.body.vx = vx;
       t.body.vz = vz;
@@ -421,6 +460,8 @@ export async function createDeskScene(o: {
       if (free.length) {
         const held = grabbed ? free.indexOf(grabbed) : -1;
         stepDesk(free.map((t) => t.body), Math.min(dt, 1 / 30), { radius, bounds, obstacle, held: held >= 0 ? held : undefined });
+        // Still, a tape pushed aside by the one in hand moves only as far as it is pushed.
+        if (still) free.forEach(({ body }) => void (body.vx = body.vz = body.va = 0));
         free.forEach(settle);
       }
       motion.turnHeld();
@@ -496,6 +537,18 @@ export async function createDeskScene(o: {
       gsap.to(scene, { environmentIntensity: on ? 0.1 : 0.9, duration, overwrite: true });
       gsap.to(spot, { intensity: on ? 520 : 0, duration, overwrite: true });
     },
+    setStill(on: boolean) {
+      if (on === still) return;
+      still = on;
+      screenApi.setStill(on);
+      if (!on) return;
+      api.calm();
+      for (const t of all) t.body.vx = t.body.vz = t.body.va = 0;
+      // Every move started (running or waiting), at its end, callbacks and all: a tape on its
+      // way to the slot seats, the view reaches its box, the screen its lines.
+      const moves = (ctx.data as gsap.core.Animation[]).filter((a) => a.parent === gsap.globalTimeline && a.progress() < 1);
+      moves.forEach((a) => a.progress(1));
+    },
     seatedId: () => all.find((t) => t.seated)?.id ?? null,
   };
   return {
@@ -511,6 +564,7 @@ export async function createDeskScene(o: {
       screenApi.dispose();
       disposeTapes(tapes);
       ledMat.dispose();
+      fadeMats.forEach((m) => m.dispose());
       spot.dispose();
       disposeTable();
     },

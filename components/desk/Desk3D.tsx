@@ -4,7 +4,7 @@ import type { SiteContent } from "@/lib/content/schema";
 import { pushBack } from "@/lib/desk/back";
 import { isFirstInsert } from "@/lib/desk/visit";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
-import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
+import { computeTier, NARROW_QUERY, REDUCE_QUERY, type MotionTier } from "@/lib/motion/tier";
 import { formatTrackNumber, type Track, type TrackId } from "@/lib/tape";
 import { getStage } from "@/lib/three/stage";
 import { canDraw3D } from "@/lib/three/support";
@@ -57,9 +57,16 @@ const INPUT = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] a
  * lines (`screen`) are applied after the route is (a change of tape clears the last tape's)
  * and again when the scene is ready, so they show whatever order those come in. What the
  * screen shows is on the view as `data-screen`, for tests.
+ *
+ * The scene is built once, for the first tier that is really this browser's (hydration
+ * renders "full" first). Reduced motion switched mid-visit then changes its motion in place,
+ * on the next frame: the tapes, the view and the screen stay as they are.
  */
 export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref) {
   const tier = useMotionTier();
+  const [built, setBuilt] = useState<MotionTier | null>(null);
+  if (built === null && typeof window !== "undefined" && tier === computeTier(matchMedia(REDUCE_QUERY).matches, matchMedia(NARROW_QUERY).matches)) setBuilt(tier);
+  const tierNow = useRef(tier);
   const view = useRef<HTMLDivElement>(null);
   const scene = useRef<DeskScene | null>(null);
   const latest = useRef(props);
@@ -72,6 +79,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   const wiggleWaiting = useRef(false);
   useEffect(() => {
     latest.current = props;
+    tierNow.current = tier;
   });
 
   useImperativeHandle(
@@ -96,8 +104,8 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       latest.current.onUnavailable?.();
     };
     if (!canDraw3D()) return giveUp();
-    // Hydration renders with the "full" tier first; the right one remounts this straight after.
-    if (tier !== computeTier(matchMedia(REDUCE_QUERY).matches, matchMedia(NARROW_QUERY).matches)) return;
+    if (!built) return;
+    const tier = built;
     let dead = false;
     const undo: (() => void)[] = [];
     const stop = () => {
@@ -153,6 +161,8 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       await stage.prepare(s.view);
       if (dead) return;
       scene.current = s;
+      // Reduced motion may have changed while it loaded.
+      s.setStill(tierNow.current === "none");
       // The lines first, so the first paint is already theirs (no flicker from the player's own).
       const written = latest.current.screen;
       if (written) s.screen(written.lines, written.progress);
@@ -188,7 +198,8 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       fail();
     });
     return stop;
-  }, [tier, gone]);
+  }, [built, gone]);
+  useEffect(() => scene.current?.setStill(tier === "none"), [tier]);
 
   // The route drives the 3D, so Back and Forward animate as a click does. The section's lines
   // go on after it: a new tape clears the last one's, never the new section's own.

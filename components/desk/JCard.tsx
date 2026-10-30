@@ -61,6 +61,23 @@ function hingeAt(flap: HTMLElement | null, liner: HTMLElement | null, angle: num
   if (liner) gsap.set(liner, { transformOrigin: "0% 50%", transformPerspective: PERSPECTIVE, ...turn(-(angle ?? 0)) });
 }
 
+/**
+ * Turned away (folded past edge-on, or faded out waiting for the tape to seat), a panel's
+ * links can't be reached: inert until it turns to face the reader. Marked, so only what the
+ * card set is lifted.
+ */
+function turnAway(els: HTMLElement[], away: boolean) {
+  for (const el of els) {
+    if (away) {
+      el.setAttribute("inert", "");
+      el.dataset.turnedAway = "";
+    } else if ("turnedAway" in el.dataset) {
+      el.removeAttribute("inert");
+      delete el.dataset.turnedAway;
+    }
+  }
+}
+
 type Move = { kind: "open" | "wipe" | "fold"; ctx: gsap.Context; tl: gsap.core.Timeline; done: boolean };
 
 type Props = {
@@ -135,13 +152,18 @@ export function JCard({ tracks, base, current, children, seatDelay = 0 }: Props)
     const hinged = [flap, liner].filter((e) => !!e);
     // Opens the card from wherever its panels are: the centre comes up, the hinges turn flat.
     const unfold = (delay: number, finish: () => void) => {
+      const reached = [...hinged, ...(device ? [device] : [])];
       const tl = gsap.timeline({
         delay,
         onComplete: () => {
           gsap.set([el, ...panels], { clearProps: "transform,opacity" });
+          turnAway(reached, false);
           finish();
         },
       });
+      // Until the hinges start to turn, the panels face away (the seat wait included).
+      turnAway(reached, true);
+      tl.call(() => turnAway(reached, false), undefined, TIMING.unfold * 0.12);
       tl.to(el, { opacity: 1, duration: 0.15, ease: "none" }, 0);
       tl.to(face, { opacity: 1, y: 0, duration: TIMING.unfold * 0.4, ease: "power2.out" }, 0);
       tl.to(hinged, { rotationY: 0, duration: TIMING.unfold * 0.88, ease: "power3.out" }, TIMING.unfold * 0.12);
@@ -156,10 +178,17 @@ export function JCard({ tracks, base, current, children, seatDelay = 0 }: Props)
       start("open", (finish) => {
         if (fromFolding) takeOverFold(el, still);
         if (still) {
-          // The card fades in whole; whatever a fold left on the panels goes at once.
-          gsap.set(panels, { rotationY: 0, y: 0, opacity: 1 });
+          // The card fades in whole; whatever a fold or a wait left on the panels goes at
+          // once, and the fade leaves nothing inline behind it.
+          gsap.set(panels, { clearProps: "transform,opacity" });
+          turnAway(panels, false);
           if (!fromFolding) gsap.set(el, { opacity: 0 });
-          return gsap.timeline({ onComplete: finish }).to(el, { opacity: 1, duration: FADE, ease: "none" });
+          return gsap.timeline({
+            onComplete: () => {
+              gsap.set(el, { clearProps: "opacity" });
+              finish();
+            },
+          }).to(el, { opacity: 1, duration: FADE, ease: "none" });
         }
         if (!fromFolding) {
           hingeAt(flap, liner, FOLDED);

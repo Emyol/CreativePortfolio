@@ -152,8 +152,8 @@ test("under reduced motion, switched on mid-visit, a tape's J-card cross-fades i
   await deskReady(page, "/");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator("html")).toHaveAttribute("data-tier", "none");
-  await page.waitForTimeout(500); // the 3D remounts for the new tier
-  await page.waitForSelector("[data-desk-view][data-ready]", { state: "attached", timeout: 30_000 });
+  // The 3D switches its motion in place: still ready, nothing to wait for.
+  await expect(page.locator("[data-desk-view]")).toHaveAttribute("data-ready", "");
   await page.getByRole("link", { name: "02 events, tape" }).focus();
   await watch(page, "events");
   await page.keyboard.press("Enter");
