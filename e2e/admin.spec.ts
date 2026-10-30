@@ -30,8 +30,10 @@ test.describe("the preview", () => {
     await expect(page.locator("main")).toHaveCount(1);
     expect(await strays(page)).toEqual([]);
 
-    // Loading the events tape: the J-card, with the draft's newest event on its liner.
-    await page.getByRole("link", { name: "02 events, tape" }).click();
+    // Loading the events tape: the J-card, with the draft's newest event on its liner. By the
+    // keyboard: a click leaves the pointer where the list lands, and hover moves its cursor.
+    await page.getByRole("link", { name: "02 events, tape" }).focus();
+    await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/admin\/preview\/events$/, { timeout: 15_000 });
     const card = page.locator("main[data-jcard=events]");
     await expect(card.getByRole("heading", { level: 2, name: "events" })).toBeFocused();
