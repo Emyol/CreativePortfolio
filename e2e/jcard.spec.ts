@@ -160,13 +160,14 @@ test("under reduced motion, switched on mid-visit, a tape's J-card cross-fades i
   await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
   const load = await times(page);
   expect(load.turned, "a panel turned").toBe(false);
-  // The route's own fetch, then a 0.2 s fade: no seating wait and no unfold, which alone take
-  // TIMING.fly + drop + load + unfold. Counted from when the route is in, as above: on the
-  // dev server, with two browsers drawing 3D, the new route's work can stall the main thread
-  // for most of a second (traced: in at 0.93 s, readable 0.17 s later when idle; the
-  // production build's numbers are in the Task 15 report). No panel turned is the check.
-  const seated = (TIMING.fly + TIMING.drop + TIMING.load + TIMING.unfold) * 1000;
-  expect(load.readableAfterShown, "readable after the route is in").toBeLessThan(seated);
+  // The route's own fetch, then a 0.2 s fade, with no wait for the tape to seat: readable
+  // before a seat alone (TIMING.fly + drop + load) could have passed, counted from when the
+  // route is in, as above. A fade that waited for the seat would take that plus its 0.2 s. On
+  // the dev server, with two browsers drawing 3D, the new route's work can stall the main
+  // thread (traced: in at 0.93 s, readable 0.17 s later when idle, 1.03 s at worst under load;
+  // the production build's numbers are in the Task 15 report).
+  const seat = (TIMING.fly + TIMING.drop + TIMING.load) * 1000;
+  expect(load.readableAfterShown, "readable after the route is in, before a seat could finish").toBeLessThan(seat);
   expect(load.shown, "shown").toBeLessThanOrEqual(2400);
   expect(load.focused, "focused").toBeLessThanOrEqual(2400);
 });
