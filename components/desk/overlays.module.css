@@ -100,10 +100,10 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid #16181b;
+  border: 1px solid var(--paper-ink);
   border-radius: 8px;
-  background: #eef0f2;
-  color: #16181b;
+  background: var(--paper);
+  color: var(--paper-ink);
   font: 700 13px/1 var(--font-mono), ui-monospace, monospace;
   letter-spacing: 0.04em;
   cursor: pointer;
@@ -129,6 +129,12 @@
   max-width: none;
 }
 .shadow { opacity: 0.82; }
+/* At night the drawn player and tapes take the lamp's light (globals.css), never new art.
+   On the images themselves, so no box above a placed one carries a filter. */
+.full,
+.capUp,
+.capDown,
+.cassette { filter: var(--lamp-filter); }
 
 /* Printed and lit text is sized in the plate's own units. */
 .plate { container-type: inline-size; }
@@ -179,7 +185,8 @@
   gap: 0.5em;
   padding-inline: 1cqw;
   overflow: hidden;
-  background: #f8f7f3;
+  /* The label's own paper, warmed by the lamp at night as the J-card's is. */
+  background: color-mix(in srgb, var(--paper) calc(var(--lamp) * 100%), #f8f7f3);
   border-bottom: 0.6cqw solid var(--ink);
   font: 700 6.4cqw/1 var(--font-mono), monospace;
   letter-spacing: 0.04em;

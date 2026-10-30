@@ -14,9 +14,26 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* At night the lamp's light, on the render itself: no night renders (globals.css). */
+  filter: var(--lamp-filter);
 }
 .inCutOut {
   position: absolute;
+}
+
+/* The stand-in under the lamp: its warm light laid over the bezel (none by day), under the
+   screen, which is lit already. */
+.standIn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--lamp-tint);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.standIn > .screen {
+  z-index: 1;
 }
 
 /* Until the body is rendered: a slim aluminium bezel, brushed (two fine stripes over a soft

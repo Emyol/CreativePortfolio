@@ -7,7 +7,7 @@ import { runBack } from "@/lib/desk/back";
 import { deskScreenLines, markHintSeen } from "@/lib/desk/hint";
 import { deskKeyAction } from "@/lib/desk/keyboard";
 import { deskHref, hashRedirect, parseDeskPath } from "@/lib/desk/location";
-import { useNight } from "@/lib/desk/night";
+import { nightOn, useNight } from "@/lib/desk/night";
 import { TRACK_INK } from "@/lib/desk/tapeLabel";
 import { TIMING } from "@/lib/desk/timing";
 import { markInserted, markLanded } from "@/lib/desk/visit";
@@ -37,8 +37,8 @@ type Written = ScreenText & { track: TrackId | null };
  * tape in, the route's panels sit in its J-card, which takes focus when a tape loads; after
  * an eject, focus goes back to that tape. The keys drive it too (lib/desk/keyboard: 1 to 6,
  * Esc and Backspace one level back, ←/→ on the J-card), as do the transport under the flap
- * and, on the desk, the lamp cord, which with the transport's night key switches the 3D's
- * lighting (night is lighting, not a dark page).
+ * and, on the desk, the lamp cord, which with the transport's night key switches the
+ * lighting: the 3D's, and the room's (night is lighting, not a dark page).
  *
  * A section writes to the player's screen through the desk (DeskContext). The desk keeps
  * the latest lines with the track they were written for and hands them to the player as a
@@ -79,10 +79,21 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
     if (current) html.dataset.loaded = current;
     else delete html.dataset.loaded;
   }, [state, current]);
+  // Night darkens the room (globals.css). A switch eases the light; a visit that starts at
+  // night is simply dark, without easing in from the day the server drew. So the first time,
+  // the store's own value (while hydrating, the render still has the server's day) goes on
+  // with the transition off, its style taken before the transition is back.
+  const nightSet = useRef(false);
   useEffect(() => {
     const html = document.documentElement;
-    if (night) html.dataset.night = "";
+    const first = !nightSet.current;
+    nightSet.current = true;
+    if (first) html.dataset.nightInstant = "";
+    if (first ? nightOn() : night) html.dataset.night = "";
     else delete html.dataset.night;
+    if (!first) return;
+    void getComputedStyle(html).backgroundColor;
+    delete html.dataset.nightInstant;
   }, [night]);
   useEffect(
     () => () => {

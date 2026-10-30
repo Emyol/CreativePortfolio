@@ -32,10 +32,17 @@ function drawLabel(ctx: CanvasRenderingContext2D, text: string, family: string, 
 }
 
 /**
+ * The print's night ink: at night the plate falls dark under the lamp, so the labels light
+ * up like a luminous legend (the material's emissive, 0 by day), a pale warm white.
+ */
+export const LEGEND = "#F4EFE6";
+
+/**
  * Lays a printed label under each of `keys` on the plate of `root` (the device's model,
  * untransformed when this is called), where the model's own side-A prints are (`prints`,
  * one per key). Returns `set(labels)` to print new text (an empty string leaves a key
- * blank) and `dispose`.
+ * blank), the labels' `materials` (their emissive lights the legend, see LEGEND) and
+ * `dispose`.
  */
 export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: THREE.Object3D[], prints: THREE.Object3D[], family: string, scale = 1) {
   root.updateMatrixWorld(true);
@@ -50,6 +57,8 @@ export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: TH
     tex.anisotropy = 8;
     const material = new three.MeshStandardMaterial({
       color: "#16171A",
+      emissive: LEGEND,
+      emissiveIntensity: 0,
       map: tex,
       transparent: true,
       depthWrite: false,
@@ -68,6 +77,24 @@ export function addKeyLabels(three: typeof THREE, root: THREE.Object3D, keys: TH
   return {
     /** The printed labels' planes, one per key. */
     meshes: labels.map((l) => l.mesh),
+    materials: labels.map((l) => l.material),
+    /**
+     * For measuring the print as lit: key `i`'s whole label painted in its ink (`print`) or
+     * left bare to the plate (`ground`); null prints its text again.
+     */
+    swatch(i: number, mode: "print" | "ground" | null) {
+      const l = labels[i];
+      if (!l) return;
+      if (mode === null) drawLabel(l.ctx, l.text ?? "", family, scale);
+      else {
+        l.ctx.clearRect(0, 0, LABEL_W, LABEL_H);
+        if (mode === "print") {
+          l.ctx.fillStyle = "#fff";
+          l.ctx.fillRect(0, 0, LABEL_W, LABEL_H);
+        }
+      }
+      l.tex.needsUpdate = true;
+    },
     set(texts: string[]) {
       labels.forEach((l, i) => {
         const text = texts[i] ?? "";

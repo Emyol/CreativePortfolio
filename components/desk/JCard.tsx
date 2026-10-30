@@ -11,7 +11,10 @@ import styles from "./JCard.module.css";
 
 type Rgb = [number, number, number];
 
-/** The card stock (`--paper` in globals.css). */
+/**
+ * The card stock (`--paper` in globals.css), by day. Night's is warmed by the lamp and never
+ * dimmer, so an ink that reads on this one reads at night too.
+ */
 export const PAPER = "#EEF0F2";
 const PAPER_RGB: Rgb = [0xee, 0xf0, 0xf2];
 

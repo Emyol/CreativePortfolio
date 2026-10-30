@@ -1,15 +1,16 @@
 "use client";
 import type * as THREE from "three";
-import { buildTapes, disposeTapes } from "@/components/three/tapes";
+import { addKeyLabels, LEGEND, PLANE_H, PLANE_W } from "@/components/three/keyLabels";
+import { buildTapes, disposeTapes, labelPoint, SUB_LINE, tapeSwatch, type Swatch } from "@/components/three/tapes";
 import { makeTable } from "@/components/three/table";
 import type { SiteContent } from "@/lib/content/schema";
 import { SCATTER, releaseVelocity, stepDesk, type Bounds, type Box } from "@/lib/desk/physics";
 import { TIMING } from "@/lib/desk/timing";
 import { isFirstInsert, markInserted } from "@/lib/desk/visit";
 import { gsap } from "@/lib/motion/gsap";
-import type { MotionTier } from "@/lib/motion/tier";
+import { NARROW_QUERY, type MotionTier } from "@/lib/motion/tier";
 import { playClunk } from "@/lib/sound";
-import { formatTrackNumber, type Track, type TrackId } from "@/lib/tape";
+import { formatTrackNumber, keySlots, type Track, type TrackId } from "@/lib/tape";
 import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
 import { deskFraming } from "./deskFraming";
@@ -25,6 +26,14 @@ type Lines = [string, string];
 const LIFT = 3; // how high a tape flies over the slot, in player heights
 const DETENT = (24 * Math.PI) / 180; // the knob turns this far a step
 const DIP = 0.08; // how far the deck dips as a tape drops in
+
+// Day's light, and night's: the room's light all but out and the lamp's warm pool following
+// the pointer. The pool stays below where the tapes' paper clips white, so the print in it
+// keeps its contrast; out of it, what is printed catches a little light (`print`, the labels'
+// own emissive) and the plate's print lights as a legend (`legend`), so every word reads in
+// the dark room too.
+const DAY = { key: 2.4, ambient: 0.35, environment: 0.9 } as const;
+const NIGHT = { key: 0.1, ambient: 0.04, environment: 0.1, lamp: 120, print: 0.35, legend: 1 } as const;
 
 export type SceneHooks = {
   onInsert(id: TrackId): void;
@@ -61,6 +70,13 @@ export type DeskScene = PointerScene & {
    */
   setStill(on: boolean): void;
   seatedId(): TrackId | null;
+  /** For measuring the print as lit (tests): paints a key's label or a tape's sub-line as a swatch (tapes.ts), or as its words again. */
+  printSwatch(id: `key${number}` | TrackId, mode: Swatch | null): void;
+  /**
+   * Where printed text lies on the page, for measuring it as drawn: the four corners of a
+   * key's label on the plate (`key0` is the first) or of a tape's sub-line on its label.
+   */
+  printQuad(id: `key${number}` | TrackId): { x: number; y: number }[] | null;
   dispose(): void;
 };
 
@@ -92,6 +108,7 @@ export async function createDeskScene(o: {
     loadDevice(three, tier),
     document.fonts.load(`900 150px ${family}`).catch(() => []),
     document.fonts.load(`700 120px ${mono}`).catch(() => []),
+    document.fonts.load(`400 54px ${mono}`).catch(() => []),
   ]);
   if (o.dead()) return null;
   let still = tier === "none";
@@ -117,6 +134,24 @@ export async function createDeskScene(o: {
   light.shadow.camera.updateProjectionMatrix();
   scene.add(device);
   const screenApi = deskScreen(three, device, family, still);
+  // The keys' labels, printed live on the plate (as Hero3D's), placed while the model is
+  // still where it was made: the model's own prints are side A's four names whatever the
+  // content, so they hide, and an empty track's key stays blank.
+  const keyNodes = [0, 1, 2, 3].map((i) => node(`Key${i}`));
+  const prints = ["about", "events", "mixtape", "people"].map((n) => node(`Print_${n}`));
+  prints.forEach((p) => (p.visible = false));
+  const keyLabels = addKeyLabels(three, device, keyNodes, prints, mono, matchMedia(NARROW_QUERY).matches ? 1.5 : 1);
+  keyLabels.set(keySlots(tracks).slice(0, keyNodes.length).map((s) => s.track?.label ?? ""));
+  // The nameplate is printed in the model; its ink lights at night like the keys' legend
+  // (its own copy of the ink: other views share the model's materials).
+  const nameplate: THREE.Mesh[] = [];
+  node("Print_miel").traverse((x) => (x as THREE.Mesh).isMesh && nameplate.push(x as THREE.Mesh));
+  const nameInk = (nameplate[0]?.material as THREE.MeshStandardMaterial | undefined)?.clone();
+  if (nameInk) {
+    nameInk.emissive.set(LEGEND);
+    nameInk.emissiveIntensity = 0;
+    nameplate.forEach((m) => (m.material = nameInk));
+  }
   device.position.x = W * 0.34;
   device.updateMatrixWorld(true);
   deviceBox.setFromObject(device);
@@ -180,6 +215,9 @@ export async function createDeskScene(o: {
     fadeMats.push(...t.mats);
   }
   const all = [...recs.values()];
+  // What lights at night: the plate's print, and the tapes' printed labels (their copies).
+  const legends = nameInk ? [...keyLabels.materials, nameInk] : keyLabels.materials;
+  const printed = fadeMats.filter((m) => m.userData.printed);
   const freeTapes = () => all.filter((t) => t.mode === "free");
   // Any overlap in the scatter settles before the first frame.
   for (let n = 0; n < 90; n++) stepDesk(freeTapes().map((t) => t.body), 1 / 60, { radius, bounds, obstacle });
@@ -467,7 +505,9 @@ export async function createDeskScene(o: {
       motion.turnHeld();
       const playing = want ? recs.get(want) : null;
       if (playing?.seated && !still) playing.hubs.forEach((h) => (h.rotation.y -= dt * 3));
-      spot.target.position.lerp(lampAt, 0.15);
+      // The pool eases after the pointer; still (reduced motion), it is where the pointer is.
+      if (still) spot.target.position.copy(lampAt);
+      else spot.target.position.lerp(lampAt, 0.15);
       spot.position.set(spot.target.position.x - 3, groundY + 16, spot.target.position.z + 5);
       screenApi.tick(dt);
       scene.updateMatrixWorld();
@@ -532,10 +572,13 @@ export async function createDeskScene(o: {
     setNight(on: boolean, instant = false) {
       night = on;
       const duration = instant || still ? 0 : 0.3;
-      gsap.to(light, { intensity: on ? 0.1 : 2.4, duration, overwrite: true });
-      gsap.to(ambient, { intensity: on ? 0.04 : 0.35, duration, overwrite: true });
-      gsap.to(scene, { environmentIntensity: on ? 0.1 : 0.9, duration, overwrite: true });
-      gsap.to(spot, { intensity: on ? 520 : 0, duration, overwrite: true });
+      const to = (target: gsap.TweenTarget, vars: gsap.TweenVars) => gsap.to(target, { ...vars, duration, overwrite: true });
+      to(light, { intensity: on ? NIGHT.key : DAY.key });
+      to(ambient, { intensity: on ? NIGHT.ambient : DAY.ambient });
+      to(scene, { environmentIntensity: on ? NIGHT.environment : DAY.environment });
+      to(spot, { intensity: on ? NIGHT.lamp : 0 });
+      to(legends, { emissiveIntensity: on ? NIGHT.legend : 0 });
+      to(printed, { emissiveIntensity: on ? NIGHT.print : 0 });
     },
     setStill(on: boolean) {
       if (on === still) return;
@@ -550,6 +593,23 @@ export async function createDeskScene(o: {
       moves.forEach((a) => a.progress(1));
     },
     seatedId: () => all.find((t) => t.seated)?.id ?? null,
+    printSwatch(id: `key${number}` | TrackId, mode: Swatch | null) {
+      if (id.startsWith("key")) return keyLabels.swatch(Number(id.slice(3)), mode);
+      const t = recs.get(id as TrackId);
+      if (t) tapeSwatch(t.obj, mode);
+    },
+    printQuad(id: `key${number}` | TrackId) {
+      const key = id.startsWith("key");
+      const mesh = key ? keyLabels.meshes[Number(id.slice(3))] : recs.get(id as TrackId)?.obj.getObjectByName("PrintedLabel");
+      if (!mesh) return null;
+      const { left, right, top, bottom } = SUB_LINE;
+      const [w, h] = [PLANE_W / 2, PLANE_H / 2];
+      const corners: [number, number][] = key
+        ? [[-w, h], [w, h], [w, -h], [-w, -h]]
+        : [labelPoint(left, top), labelPoint(right, top), labelPoint(right, bottom), labelPoint(left, bottom)];
+      mesh.updateWorldMatrix(true, false);
+      return corners.map(([x, y]) => frame.point(mesh.localToWorld(new three.Vector3(x, y, 0))));
+    },
   };
   return {
     ...scopedAll(api),
@@ -563,6 +623,8 @@ export async function createDeskScene(o: {
       frame.dispose();
       screenApi.dispose();
       disposeTapes(tapes);
+      keyLabels.dispose();
+      nameInk?.dispose();
       ledMat.dispose();
       fadeMats.forEach((m) => m.dispose());
       spot.dispose();

@@ -24,7 +24,7 @@ export function SpriteDesk({ tracks, current, screen = null }: { tracks: Track[]
         <Sprite name="plate" className={styles.full} eager />
         <Screen lines={lines} className={styles.screen} style={place(DEVICE.screen)} />
         <span className={styles.led} style={{ left: pct(DEVICE.led.x), top: pct(DEVICE.led.y) }} data-on={t ? "" : undefined} />
-        <span className={styles.nameplate} style={place(DEVICE.nameplate)}>
+        <span className={styles.nameplate} style={place(DEVICE.nameplate)} data-print>
           miel
         </span>
       </div>

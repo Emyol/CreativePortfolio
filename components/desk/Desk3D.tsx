@@ -173,9 +173,19 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       window.clearTimeout(timer);
       undo.push(attachDeskPointer(s, { onTapeClick: (id) => latest.current.onTapeClick(id), onKnob: (n) => latest.current.onKnob(n) }));
       if (process.env.NODE_ENV !== "production") {
-        const w = window as unknown as { __deskProject?: (id: ProjectId) => DOMRect | null };
+        const w = window as unknown as {
+          __deskProject?: (id: ProjectId) => DOMRect | null;
+          __deskPrint?: DeskScene["printQuad"];
+          __deskSwatch?: DeskScene["printSwatch"];
+        };
         w.__deskProject = (id) => s.project(id);
-        undo.push(() => delete w.__deskProject);
+        w.__deskPrint = (id) => s.printQuad(id);
+        w.__deskSwatch = (id, mode) => s.printSwatch(id, mode);
+        undo.push(() => {
+          delete w.__deskProject;
+          delete w.__deskPrint;
+          delete w.__deskSwatch;
+        });
       }
       // Drawn once unseen (shaders compile, the screen paints), then it counts as ready.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));

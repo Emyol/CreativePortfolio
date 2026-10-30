@@ -26,6 +26,11 @@
   border-radius: 1px;
 }
 
+/* In the dark room the cord is lit by the lamp it hangs from. */
+:global(html[data-night]) .string {
+  background: linear-gradient(#9a9ea6, #6b6f78);
+}
+
 .bead {
   width: 12px;
   height: 16px;
