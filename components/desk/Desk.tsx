@@ -3,19 +3,25 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { SiteContent } from "@/lib/content/schema";
+import { runBack } from "@/lib/desk/back";
+import { deskKeyAction } from "@/lib/desk/keyboard";
 import { deskHref, hashRedirect, parseDeskPath } from "@/lib/desk/location";
+import { useNight } from "@/lib/desk/night";
 import { TRACK_INK } from "@/lib/desk/tapeLabel";
 import { TIMING } from "@/lib/desk/timing";
 import { markInserted } from "@/lib/desk/visit";
+import { trackKeysEnabled } from "@/lib/keys";
 import { visibleTracks, type TrackId } from "@/lib/tape";
 import { Desk3D, type Desk3DHandle } from "./Desk3D";
 import { DeskContext, knobStack, type DeskApi } from "./deskContext";
 import { DotField, type DotFieldHandle } from "./DotField";
 import { JCard } from "./JCard";
+import { LampCord } from "./LampCord";
 import type { OverlayHandle, Project } from "./overlayPlace";
 import { PlayerKeys } from "./PlayerKeys";
 import { SpriteDesk } from "./SpriteDesk";
 import { TapeLinks, type TapeLinksHandle } from "./TapeLinks";
+import { Transport } from "./Transport";
 
 const REST_INK: [number, number, number] = [255, 90, 31];
 
@@ -24,7 +30,10 @@ const REST_INK: [number, number, number] = [255, 90, 31];
  * player), the tape and key links over them, and the route's content. The route is the state
  * (a track path is the deck with that tape in), so the 3D follows Back and Forward. With a
  * tape in, the route's panels sit in its J-card, which takes focus when a tape loads; after
- * an eject, focus goes back to that tape. A later task adds the dock.
+ * an eject, focus goes back to that tape. The keys drive it too (lib/desk/keyboard: 1 to 6,
+ * Esc and Backspace one level back, ←/→ on the J-card), as do the transport under the flap
+ * and, on the desk, the lamp cord, which with the transport's night key switches the 3D's
+ * lighting (night is lighting, not a dark page).
  */
 export function Desk({ content, base, children }: { content: SiteContent; base: string; children: ReactNode }) {
   const router = useRouter();
@@ -38,6 +47,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   const [has3D, setHas3D] = useState(true);
   const tapeLinks = useRef<TapeLinksHandle>(null);
   const keyLinks = useRef<OverlayHandle>(null);
+  const night = useNight();
 
   useEffect(() => {
     const to = hashRedirect(location.pathname, location.hash, base);
@@ -53,13 +63,48 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
     if (current) html.dataset.loaded = current;
     else delete html.dataset.loaded;
   }, [state, current]);
+  useEffect(() => {
+    const html = document.documentElement;
+    if (night) html.dataset.night = "";
+    else delete html.dataset.night;
+  }, [night]);
   useEffect(
     () => () => {
       delete document.documentElement.dataset.desk;
       delete document.documentElement.dataset.loaded;
+      delete document.documentElement.dataset.night;
     },
     [],
   );
+
+  // The control grammar's keys. Esc and Backspace step out one level: the newest open
+  // device's back handler first (a tape held up is put back), else out of an event to its
+  // track, else the tape is ejected to the desk.
+  const where = useRef(loc);
+  useEffect(() => {
+    where.current = loc;
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat) return;
+      const at = where.current;
+      const action = deskKeyAction(e, { loc: at, tracks, keysOn: trackKeysEnabled(), base });
+      if (!action) return;
+      if (action.kind === "go") {
+        e.preventDefault();
+        router.push(action.href);
+        return;
+      }
+      if (runBack()) return e.preventDefault();
+      if (!at.track) return;
+      e.preventDefault();
+      // Until the Events device registers its own back handler (Task 11), an event steps
+      // back to the events track here.
+      router.push(deskHref(base, at.event ? { track: at.track, event: null } : { track: null, event: null }));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [router, base, tracks]);
 
   const onTapeClick = useCallback((id: TrackId) => router.push(deskHref(base, { track: id, event: null })), [router, base]);
   const onInsert = useCallback(() => {
@@ -97,6 +142,13 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   const onPointer = useCallback((e: PointerEvent) => {
     document.querySelector("[data-desk-view]")?.dispatchEvent(new PointerEvent(e.type, e));
   }, []);
+  // The wheel over a key is the knob's, as over the rest of the player: the 3D's view gets a
+  // copy, and when it turns the knob (it cancels the copy), the page does not scroll.
+  const onKeyWheel = useCallback((e: WheelEvent) => {
+    const copy = new WheelEvent(e.type, { ...wheelInit(e), bubbles: false, cancelable: true });
+    document.querySelector("[data-desk-view]")?.dispatchEvent(copy);
+    if (copy.defaultPrevented) e.preventDefault();
+  }, []);
 
   const knob = useMemo(() => knobStack(), []);
   const api = useMemo<DeskApi>(
@@ -111,7 +163,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   return (
     <DeskContext.Provider value={api}>
       <div data-desk-root>
-        <DotField ref={dots} tint={current ? TRACK_INK[current] : REST_INK} playing={!!current} night={false} />
+        <DotField ref={dots} tint={current ? TRACK_INK[current] : REST_INK} playing={!!current} night={night} />
         {has3D && (
           <Desk3D
             ref={desk3d}
@@ -119,7 +171,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
             content={content}
             state={state}
             current={current}
-            night={false}
+            night={night}
             onTapeClick={onTapeClick}
             onKnob={knob.step}
             onInsert={onInsert}
@@ -139,7 +191,9 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
           onInspect={onInspect}
           onPointer={onPointer}
         />
-        <PlayerKeys ref={keyLinks} tracks={tracks} base={base} current={current} project={has3D ? project : null} />
+        {state === "desk" && <LampCord />}
+        {current && !loc.event && <Transport tracks={tracks} base={base} current={current} />}
+        <PlayerKeys ref={keyLinks} tracks={tracks} base={base} current={current} project={has3D ? project : null} onWheel={has3D ? onKeyWheel : undefined} />
         {/* Until the live recording is a Section of its own (Task 11), an event's page brings its own main. */}
         {loc.event ? (
           children
@@ -151,4 +205,10 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
       </div>
     </DeskContext.Provider>
   );
+}
+
+/** A wheel event's own fields, for a copy (a spread of the event would copy none of them). */
+function wheelInit(e: WheelEvent): WheelEventInit {
+  const { deltaX, deltaY, deltaZ, deltaMode, clientX, clientY, screenX, screenY, ctrlKey, shiftKey, altKey, metaKey, buttons } = e;
+  return { deltaX, deltaY, deltaZ, deltaMode, clientX, clientY, screenX, screenY, ctrlKey, shiftKey, altKey, metaKey, buttons };
 }

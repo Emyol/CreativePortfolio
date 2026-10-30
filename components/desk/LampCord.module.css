@@ -1,0 +1,76 @@
+/* The lamp's pull cord: a thin cord from the top edge, a bead, and a printed paper tag.
+   The whole length is the button (56 × 128 px). The tag is the J-card's paper and ink, so
+   it reads at full contrast by day and under the lamp. */
+.cord {
+  position: fixed;
+  top: 0;
+  right: clamp(24px, 6vw, 96px);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 56px;
+  height: 128px;
+  padding: 0 0 6px;
+  border: 0;
+  border-radius: 0 0 10px 10px;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.string {
+  flex: 1;
+  width: 2px;
+  background: linear-gradient(#5b5f68, #2a2c31);
+  border-radius: 1px;
+}
+
+.bead {
+  width: 12px;
+  height: 16px;
+  margin-top: -1px;
+  border-radius: 6px;
+  background: radial-gradient(circle at 35% 30%, #4a4d55, #16181b 70%);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.3);
+}
+
+.tag {
+  margin-top: 6px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: inset 0 0 0 1px var(--paper-rule), 0 3px 8px rgb(22 24 27 / 0.2);
+  font: 700 11px/1.2 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.08em;
+}
+
+/* Lit: the bead glows with the lamp. */
+.cord[aria-pressed="true"] .bead {
+  background: radial-gradient(circle at 35% 30%, #ffd2a8, #e07a2c 70%);
+  box-shadow: 0 0 10px rgb(255 170 90 / 0.7);
+}
+
+/* A pull: the cord gives a little and springs back. Reduced motion (a media query, so live)
+   keeps it still. */
+@media (prefers-reduced-motion: no-preference) {
+  .string,
+  .bead,
+  .tag {
+    transition: translate 260ms cubic-bezier(0.34, 1.56, 0.64, 1), scale 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  /* The cord stretches from where it hangs; the bead and the tag come down with its end. */
+  .cord:active .string {
+    transform-origin: top;
+    scale: 1 1.1;
+    transition-duration: 90ms;
+    transition-timing-function: var(--ease-out);
+  }
+  .cord:active .bead,
+  .cord:active .tag {
+    translate: 0 8px;
+    transition-duration: 90ms;
+    transition-timing-function: var(--ease-out);
+  }
+}

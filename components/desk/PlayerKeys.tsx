@@ -15,6 +15,8 @@ type Props = {
   current: TrackId | null;
   /** The 3D's projection; null where there is no 3D, and the keys are drawn as sprites. */
   project: Project | null;
+  /** A wheel over a key, handed to the 3D's knob (the keys sit on the player). */
+  onWheel?(e: WheelEvent): void;
 };
 
 // Until the six-key model lands (phase 1), only the keys the model has are drawn; the rest
@@ -27,13 +29,24 @@ const DRAWN = DEVICE.keys.length;
  * blank cap that does nothing. The playing track's key is latched. Without the 3D, the
  * links carry the sprite caps and their printed labels.
  */
-export const PlayerKeys = forwardRef<OverlayHandle, Props>(function PlayerKeys({ tracks, base, current, project }, ref) {
+export const PlayerKeys = forwardRef<OverlayHandle, Props>(function PlayerKeys({ tracks, base, current, project, onWheel }, ref) {
   const layer = useRef<HTMLDivElement>(null);
   const latest = useRef(project);
   useEffect(() => {
     latest.current = project;
     if (!project && layer.current) unplaceAll(layer.current);
   }, [project]);
+
+  // Not React's onWheel: that listener is passive, and the knob's turn must stop the scroll.
+  useEffect(() => {
+    const el = layer.current;
+    if (!el || !onWheel) return;
+    const wheel = (e: WheelEvent) => {
+      if (e.target instanceof Element && e.target.closest("[data-key]")) onWheel(e);
+    };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, [onWheel]);
 
   useImperativeHandle(
     ref,
@@ -51,7 +64,9 @@ export const PlayerKeys = forwardRef<OverlayHandle, Props>(function PlayerKeys({
   // A tape with nothing on these keys offers no navigation, so no landmark either.
   const Box = slots.some((s) => s.track) ? "nav" : "div";
   return (
-    <div ref={layer} className={styles.layer} data-player-keys data-sprite={sprite ? "" : undefined}>
+    // Lenis scrolls from its own wheel listener, whatever the knob cancels: over the keys the
+    // wheel is left to the knob (and, where the knob doesn't take it, to the page itself).
+    <div ref={layer} className={styles.layer} data-player-keys data-sprite={sprite ? "" : undefined} data-lenis-prevent-wheel>
       <Box aria-label={Box === "nav" ? "Player keys" : undefined} className={styles.player} data-state={current ? "deck" : "desk"}>
         {slots.map(({ index, track }) => {
           if (!track) {

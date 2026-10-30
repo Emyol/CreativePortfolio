@@ -27,8 +27,9 @@ const NOTCH = 100; // wheel delta per knob step (one notch of a mouse wheel)
 /**
  * Hands on the desk (apple-design §2–6, ported from the prototype): a tape follows the
  * pointer 1:1 from where it was grabbed and is thrown with the release velocity; a click
- * loads it, a double-click picks it up to look at (drag turns it, Esc puts it back); a drag
- * across the player or the wheel over it turns the knob. Nothing waits for a motion to end.
+ * loads it, a double-click picks it up to look at (drag turns it; Esc, on the back ladder in
+ * Desk3D, puts it back); a drag across the player or the wheel over it turns the knob.
+ * Nothing waits for a motion to end.
  */
 export function attachDeskPointer(s: PointerScene, cb: { onTapeClick(id: TrackId): void; onKnob(steps: number): void }): () => void {
   const { el } = s;
@@ -126,11 +127,6 @@ export function attachDeskPointer(s: PointerScene, cb: { onTapeClick(id: TrackId
     s.turnKnob(steps);
     cb.onKnob(steps);
   };
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key !== "Escape" || !s.inspecting()) return;
-    e.preventDefault();
-    s.putBack();
-  };
 
   el.addEventListener("pointerdown", onDown);
   el.addEventListener("pointermove", onMove);
@@ -138,7 +134,6 @@ export function attachDeskPointer(s: PointerScene, cb: { onTapeClick(id: TrackId
   el.addEventListener("pointercancel", onUp);
   el.addEventListener("pointerleave", onLeave);
   el.addEventListener("wheel", onWheel, { passive: false });
-  window.addEventListener("keydown", onKey);
   return () => {
     if (clickWait) window.clearTimeout(clickWait.timer);
     el.removeEventListener("pointerdown", onDown);
@@ -147,7 +142,6 @@ export function attachDeskPointer(s: PointerScene, cb: { onTapeClick(id: TrackId
     el.removeEventListener("pointercancel", onUp);
     el.removeEventListener("pointerleave", onLeave);
     el.removeEventListener("wheel", onWheel);
-    window.removeEventListener("keydown", onKey);
     el.style.cursor = "";
   };
 }

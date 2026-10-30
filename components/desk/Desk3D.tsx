@@ -1,6 +1,7 @@
 "use client";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { SiteContent } from "@/lib/content/schema";
+import { pushBack } from "@/lib/desk/back";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
 import { formatTrackNumber, type Track, type TrackId } from "@/lib/tape";
@@ -156,12 +157,16 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   useEffect(() => scene.current?.sync(props.state, props.current), [props.state, props.current]);
   useEffect(() => scene.current?.setNight(props.night), [props.night]);
 
-  // Picked up: the bar takes focus; put back, focus returns where it was.
+  // Picked up: the bar takes focus, and the first step back (Esc) puts the tape back; put
+  // back by any route, the step is no longer the tape's and focus returns where it was.
   useEffect(() => {
     if (held) {
       before.current = document.activeElement;
       putBack.current?.focus({ preventScroll: true });
-      return;
+      return pushBack(() => {
+        scene.current?.putBack();
+        return true;
+      });
     }
     const b = before.current;
     before.current = null;
@@ -172,7 +177,8 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   const heldTrack = held ? props.tracks.find((t) => t.id === held) : null;
   return (
     <>
-      <div ref={view} className={styles.view} data-desk-view data-state={props.state} aria-hidden="true" />
+      {/* Lenis would scroll the page under the knob's wheel (it ignores a cancelled wheel). */}
+      <div ref={view} className={styles.view} data-desk-view data-state={props.state} aria-hidden="true" data-lenis-prevent-wheel />
       {heldTrack && (
         <div className={styles.inspect} role="group" aria-label={`Holding ${formatTrackNumber(heldTrack.number)} ${heldTrack.label}`}>
           <span className={styles.name}>
