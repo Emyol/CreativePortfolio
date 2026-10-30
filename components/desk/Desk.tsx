@@ -49,8 +49,13 @@ type Written = ScreenText & { track: TrackId | null };
  * A first visit is welcomed (spec "First visit and discoverability"): the screen asks for a
  * tape, a one-line hint under the player names the less obvious toys until the first tape
  * goes in, and the 3D nudges the first tape after two idle seconds (Desk3D).
+ *
+ * The admin's preview (`preview`, under its own `base`) is the same desk with the draft. It
+ * shares the browser with the public site, so a tape loaded there uses the hint up for that
+ * visit only, not for good. The first insert needs nothing: it is module memory, and the
+ * preview opens in a tab of its own.
  */
-export function Desk({ content, base, children }: { content: SiteContent; base: string; children: ReactNode }) {
+export function Desk({ content, base, preview = false, children }: { content: SiteContent; base: string; preview?: boolean; children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const loc = parseDeskPath(pathname, base);
@@ -149,12 +154,12 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   // parent's effects run after all of its children's: the 3D (its sync) and the J-card (its
   // layout effect) have each read the flag for this insert by now. The 3D marks it too, when
   // the tape seats; without the 3D, this is the only mark.
-  // The hint is used up with it, for good in this browser.
+  // The hint is used up with it, for good in this browser (in the preview, for this visit).
   useEffect(() => {
     if (!current) return;
     markInserted();
-    markHintSeen();
-  }, [current]);
+    markHintSeen({ remember: !preview });
+  }, [current, preview]);
 
   // The page the visit landed on is on screen: sections mounting from now on came by a move.
   // A task later, so effects run again on mount (React's StrictMode, in development) still

@@ -181,13 +181,15 @@
 
 /* The flap: the spine and tracklist. Sticky at the top of the view, and never taller than
    the room above the corner player and the transport strip over it (Transport.module.css),
-   a fold's gap from each (it scrolls inside past that). */
+   a fold's gap from each (it scrolls inside past that). --flap-clear keeps room free above
+   it for something pinned there: the admin preview's label (app/admin/preview). */
 .flap {
   grid-area: flap;
   align-self: start;
   position: sticky;
-  top: var(--edge);
-  max-height: calc(100dvh - var(--corner-h) - 2 * var(--edge) - 2 * var(--fold-gap) - var(--transport-h));
+  top: calc(var(--edge) + var(--flap-clear, 0px));
+  margin-top: var(--flap-clear, 0px);
+  max-height: calc(100dvh - var(--corner-h) - 2 * var(--edge) - 2 * var(--fold-gap) - var(--transport-h) - var(--flap-clear, 0px));
   overflow-y: auto;
   padding: 20px 24px 24px;
   overscroll-behavior: contain;

@@ -5,8 +5,10 @@ export function PreviewLabel({ hidden }: { hidden: number }) {
   return (
     <p className={styles.label}>
       <span>Preview: not published</span>
-      {hidden > 0 && <span>{hidden === 1 ? "1 unfinished entry isn't shown" : `${hidden} unfinished entries aren't shown`}</span>}
-      <a href="/admin">Back to the editor</a>
+      {hidden > 0 && <span className={styles.note}>{hidden === 1 ? "1 unfinished entry isn't shown" : `${hidden} unfinished entries aren't shown`}</span>}
+      <a className={styles.back} href="/admin">
+        Back to the editor
+      </a>
     </p>
   );
 }

@@ -14,14 +14,75 @@ test("no smooth scrolling in the admin", async ({ page }) => {
   await expect(page.locator("html")).not.toHaveClass(/lenis/);
 });
 
-test("the preview is the real tape, marked as unpublished, with its own event pages", async ({ page }) => {
-  await gotoReady(page, "/admin/preview");
-  await expect(page.getByText("Preview: not published")).toBeVisible();
-  await expect(page.locator("[data-hero] [data-device]")).toHaveCount(1);
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-  await page.locator("#events").getByRole("link").first().click();
-  await expect(page).toHaveURL(/\/admin\/preview\/events\/fixture-event-6$/, { timeout: 15_000 });
-  await expect(page.getByText("Preview: not published")).toBeVisible();
+test.describe("the preview", () => {
+  // The desk loads three.js and the model on a dev server that compiles on demand.
+  test.beforeEach(() => test.setTimeout(60_000));
+
+  const label = (page: Page) => page.getByText("Preview: not published");
+  // Every link in the preview stays in it, or leaves for the editor or another site. The
+  // root layout's skip link to the public track list is the one exception (Task 15).
+  const strays = (page: Page) =>
+    page.locator("a[href]:not(.skip-link)").evaluateAll((links) =>
+      links.map((a) => a.getAttribute("href") ?? "").filter((h) => h.startsWith("/") && h !== "/admin" && h !== "/admin/preview" && !h.startsWith("/admin/preview/")),
+    );
+
+  test("is the desk with the draft, marked as unpublished, and every move stays in it", async ({ page }) => {
+    await gotoReady(page, "/admin/preview");
+    await expect(label(page)).toBeVisible();
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+    await expect(page.locator("html")).toHaveAttribute("data-desk", "desk");
+    await expect(page.locator("main")).toHaveCount(1);
+    expect(await strays(page)).toEqual([]);
+
+    // Loading the events tape: the J-card, with the draft's newest event on its liner.
+    await page.getByRole("link", { name: "02 events, tape" }).click();
+    await expect(page).toHaveURL(/\/admin\/preview\/events$/, { timeout: 15_000 });
+    const card = page.locator("main[data-jcard=events]");
+    await expect(card.getByRole("heading", { level: 2, name: "events" })).toBeFocused();
+    await expect(card.getByRole("heading", { level: 3, name: "Fixture event 6" })).toBeVisible();
+    await expect(label(page)).toBeVisible();
+    // Pinned over the card's left column, the label leaves the tracklist on the flap clear
+    // (once the card has unfolded: on its hinge, the flap's box swings).
+    const clear = async () => {
+      const [over, flap] = await Promise.all([page.locator("p:has(> a[href='/admin'])").boundingBox(), card.locator("[data-panel=flap]").boundingBox()]);
+      return !!over && !!flap && over.y + over.height <= flap.y && over.x + over.width <= flap.x + flap.width + 0.5;
+    };
+    await expect.poll(clear, { timeout: 10_000 }).toBe(true);
+    await expect(page.locator("main")).toHaveCount(1);
+    expect(await strays(page)).toEqual([]);
+
+    // Its live recording, then one step back at a time with Esc: the list, then the desk.
+    await card.getByRole("link", { name: /open the live recording/ }).click();
+    await expect(page).toHaveURL(/\/admin\/preview\/events\/fixture-event-6$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { level: 1, name: "Fixture event 6" })).toBeVisible();
+    await expect(label(page)).toBeVisible();
+    await expect(page.locator("main")).toHaveCount(1);
+    expect(await strays(page)).toEqual([]);
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(/\/admin\/preview\/events$/, { timeout: 15_000 });
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(/\/admin\/preview$/, { timeout: 15_000 });
+    await expect(page.locator("html")).toHaveAttribute("data-desk", "desk");
+  });
+
+  test("opens a track directly, and 404s for one that isn't on the tape", async ({ page }) => {
+    const res = await gotoReady(page, "/admin/preview/people");
+    expect(res?.status()).toBe(200);
+    await expect(page.locator("main[data-jcard=people]").getByRole("heading", { level: 2, name: "people" })).toBeVisible();
+    await expect(label(page)).toBeVisible();
+    expect((await page.goto("/admin/preview/side-b"))?.status()).toBe(404);
+    expect((await page.goto("/admin/preview/events/no-such-event"))?.status()).toBe(404);
+  });
+
+  test("doesn't use up the public site's first-visit hint", async ({ page }) => {
+    await gotoReady(page, "/admin/preview");
+    await page.getByRole("link", { name: "01 about, tape" }).click();
+    await expect(page).toHaveURL(/\/admin\/preview\/about$/, { timeout: 15_000 });
+    await expect(page.locator("main[data-jcard=about]")).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("side-a:hint"))).toBeNull();
+    await gotoReady(page, "/");
+    await expect(page.getByText("drag to throw · double-click to read the back · pull the cord", { exact: true })).toBeVisible();
+  });
 });
 
 import AxeBuilder from "@axe-core/playwright";

@@ -34,4 +34,16 @@ describe("TrackRoute", () => {
     expect(el.type).toBe(EventsSection);
     expect(el.props).toMatchObject({ events: FIXTURES.events, base: "" });
   });
+
+  it("renders given content under a given base without loading the published tape (the admin's preview)", async () => {
+    getContent.mockClear();
+    const draft = { ...FIXTURES, events: FIXTURES.events.slice(0, 1) };
+    const el = await TrackRoute({ id: "events", content: draft, base: "/admin/preview" });
+    expect(el.props).toMatchObject({ events: draft.events, base: "/admin/preview" });
+    expect(getContent).not.toHaveBeenCalled();
+  });
+
+  it("calls notFound when the given content leaves the track empty", async () => {
+    await expect(TrackRoute({ id: "people", content: { ...FIXTURES, people: [] }, base: "/admin/preview" })).rejects.toThrow("NEXT_NOT_FOUND");
+  });
 });

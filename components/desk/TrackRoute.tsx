@@ -20,15 +20,23 @@ function body(id: Exclude<TrackId, "events">, c: SiteContent) {
   }
 }
 
+type Props = {
+  id: TrackId;
+  /** The tape to show: the published one unless given (the admin's preview gives the draft). */
+  content?: SiteContent;
+  /** Where the desk's paths start (lib/desk/location): "" or "/admin/preview". */
+  base?: string;
+};
+
 /**
  * A track's page: 404 while it is empty, otherwise its section's panels. The desk's J-card
  * holds them, and is the page's main region with the track's title. Events has its own
  * device; until the other sections have theirs, each v1 body sits on a stand-in screen,
  * dark as the body was designed for.
  */
-export async function TrackRoute({ id }: { id: TrackId }) {
-  const content = await getContent();
+export async function TrackRoute({ id, content: given, base = "" }: Props) {
+  const content = given ?? (await getContent());
   if (!hasContent(id, content)) notFound();
-  if (id === "events") return <EventsSection events={content.events} base="" />;
+  if (id === "events") return <EventsSection events={content.events} base={base} />;
   return <Section device={<div data-interim-screen>{body(id, content)}</div>} liner={null} />;
 }

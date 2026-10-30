@@ -1,19 +1,49 @@
+/* The preview's desk and its label. The label is pinned over the J-card's left column, as
+   wide as the flap (JCard.module.css), and the flap starts under it (--flap-clear), so it
+   never covers the tracklist. Its height is fixed per row so the clearance can follow it:
+   one row, or two with the note on unfinished entries. */
+.room {
+  display: contents;
+  --label-h: 44px;
+  --flap-clear: calc(var(--label-h) + 8px);
+}
+.room[data-notes] {
+  --label-h: 68px;
+}
+
 .label {
   position: fixed;
   z-index: 60;
-  top: max(0.75rem, env(safe-area-inset-top));
-  left: max(0.75rem, env(safe-area-inset-left));
-  display: flex;
-  flex-wrap: wrap;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(18px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: 44px;
+  grid-auto-rows: 24px;
   align-items: center;
-  gap: 0.25rem 0.9rem;
+  column-gap: 0.75rem;
+  width: calc(min(34vw, 420px) + 12px);
+  height: var(--label-h);
   margin: 0;
-  padding: 0.55rem 0.9rem;
-  border-radius: 10px;
+  padding: 0 0.75rem;
+  border-radius: 8px;
   background: var(--oled);
   color: var(--oled-text);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.8125rem;
+  font: 400 12px/1.6 var(--font-mono), monospace;
+  white-space: nowrap;
   box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.5);
 }
-.label a { color: #fff; min-height: 32px; display: inline-flex; align-items: center; }
+.note {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  align-self: start;
+}
+.back {
+  grid-row: 1;
+  grid-column: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #fff;
+}
