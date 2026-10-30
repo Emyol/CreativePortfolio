@@ -162,7 +162,7 @@ export function EventsScreen({ events, base, onSelect }: Props) {
               <span className={styles.cursor} aria-hidden="true">
                 ▸
               </span>
-              <span className={styles.number}>{formatTrackNumber(i + 1)}</span>
+              <span>{formatTrackNumber(i + 1)}</span>
               <Name text={e.name} running={i === index && !still} />
               <span className={styles.hidden}>, {where(e)}</span>
             </li>

@@ -1,8 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
+import { pct } from "@/lib/device/layout";
 import { deviceLayout, type DeviceId } from "@/lib/devices/layout";
 import styles from "./DeviceFrame.module.css";
-
-const pct = (n: number) => `${+(n * 100).toFixed(4)}%`;
 
 type Props = { id: DeviceId; label: string; children: ReactNode };
 
