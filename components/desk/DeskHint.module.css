@@ -1,0 +1,41 @@
+/* The hint under the player: one line printed on a slip of the J-card's paper, near-black
+   Space Mono (no Doto: it is print, not a screen), so it reads at full contrast by day and
+   under the lamp. It never takes the pointer from the desk under it. */
+.hint {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(34rem, calc(100vw - 32px));
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: inset 0 0 0 1px var(--paper-rule), 0 3px 8px rgb(22 24 27 / 0.12);
+  font: 400 12px/1.45 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-wrap: balance;
+  pointer-events: none;
+}
+
+/* Without the 3D: under the sprite player (overlays.module.css's desk layout, in units of
+   its plate's width, --u: centred under the plate, a gap below its bottom edge). */
+.hint:not([data-over3d]) {
+  --u: min(36vw, 62vh);
+  left: calc(50% + 0.56 * var(--u));
+  top: calc(50% + 0.22875 * var(--u) + 14px);
+  translate: -50% 0;
+}
+
+/* Over the 3D: unseen until the player's first frame places it (DeskHint.tsx), and while
+   a tape is held up to read (Desk3D's bar), which the 3D draws across the player. */
+.hint[data-over3d]:not([data-placed]),
+:global(body:has([data-holding])) .hint { opacity: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hint { transition: opacity 240ms var(--ease-out); }
+}

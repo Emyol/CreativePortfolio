@@ -2,6 +2,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { SiteContent } from "@/lib/content/schema";
 import { pushBack } from "@/lib/desk/back";
+import { isFirstInsert } from "@/lib/desk/visit";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { computeTier, NARROW_QUERY, REDUCE_QUERY } from "@/lib/motion/tier";
 import { formatTrackNumber, type Track, type TrackId } from "@/lib/tape";
@@ -44,6 +45,8 @@ type Props = {
 };
 
 const TIMEOUT = 10_000; // without the scene by then, the desk falls back
+const NUDGE_IDLE = 2000; // ms of no input on a first visit's desk before the first tape nudges
+const INPUT = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
 
 /**
  * The desk's 3D: the player and the six tapes on the shared stage (deskScene.ts), driven by
@@ -61,6 +64,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   const latest = useRef(props);
   const [held, setHeld] = useState<TrackId | null>(null);
   const [gone, setGone] = useState(false);
+  const [ready, setReady] = useState(false);
   const putBack = useRef<HTMLButtonElement>(null);
   const before = useRef<Element | null>(null);
   const wiggleWaiting = useRef(false);
@@ -137,9 +141,10 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       await stage.prepare(s.view);
       if (dead) return;
       scene.current = s;
-      s.sync(latest.current.state, latest.current.current, true);
+      // The lines first, so the first paint is already theirs (no flicker from the player's own).
       const written = latest.current.screen;
       if (written) s.screen(written.lines, written.progress);
+      s.sync(latest.current.state, latest.current.current, true);
       s.setNight(latest.current.night, true);
       undo.push(stage.add(s.view));
       undo.push(stage.onLost(fail));
@@ -154,11 +159,13 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (dead) return;
       el.dataset.ready = "";
+      setReady(true);
       if (wiggleWaiting.current) {
         wiggleWaiting.current = false;
         s.wiggle();
       }
       undo.push(() => {
+        setReady(false);
         delete el.dataset.ready;
         delete el.dataset.seated;
         delete el.dataset.screen;
@@ -179,6 +186,30 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
     if (props.screen) s.screen(props.screen.lines, props.screen.progress);
   }, [props.state, props.current, props.screen]);
   useEffect(() => scene.current?.setNight(props.night), [props.night]);
+
+  // A first visit's desk left alone for two seconds: the first tape (01 about) nudges, once.
+  // Any input starts the wait again, and settles a nudge under way; leaving the desk, or
+  // reduced motion (live: the tier), calls it off.
+  const nudged = useRef(false);
+  const first = props.tracks[0]?.id;
+  useEffect(() => {
+    if (!ready || props.state !== "desk" || tier === "none" || !first || nudged.current || !isFirstInsert()) return;
+    let timer = 0;
+    const wait = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        nudged.current = true;
+        scene.current?.nudge(first);
+      }, NUDGE_IDLE);
+    };
+    const onInput = () => (nudged.current ? scene.current?.calm() : wait());
+    INPUT.forEach((type) => window.addEventListener(type, onInput, { capture: true, passive: true }));
+    wait();
+    return () => {
+      window.clearTimeout(timer);
+      INPUT.forEach((type) => window.removeEventListener(type, onInput, { capture: true }));
+    };
+  }, [ready, props.state, tier, first]);
 
   // Picked up: the bar takes focus, and the first step back (Esc) puts the tape back; put
   // back by any route, the step is no longer the tape's and focus returns where it was.
@@ -203,7 +234,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       {/* Lenis would scroll the page under the knob's wheel (it ignores a cancelled wheel). */}
       <div ref={view} className={styles.view} data-desk-view data-state={props.state} aria-hidden="true" data-lenis-prevent-wheel />
       {heldTrack && (
-        <div className={styles.inspect} role="group" aria-label={`Holding ${formatTrackNumber(heldTrack.number)} ${heldTrack.label}`}>
+        <div className={styles.inspect} role="group" aria-label={`Holding ${formatTrackNumber(heldTrack.number)} ${heldTrack.label}`} data-holding>
           <span className={styles.name}>
             {formatTrackNumber(heldTrack.number)} {heldTrack.label}
           </span>

@@ -45,6 +45,10 @@ export type DeskScene = PointerScene & {
   led(on: boolean): void;
   slotOnScreen(): { x: number; y: number };
   wiggle(): void;
+  /** The first visit's nudge: the tape lifts a little and settles, once. Not under reduced motion. */
+  nudge(id: TrackId): void;
+  /** Input arrived: a nudge still going settles now. */
+  calm(): void;
   setNight(on: boolean, instant?: boolean): void;
   seatedId(): TrackId | null;
   dispose(): void;
@@ -207,6 +211,8 @@ export async function createDeskScene(o: {
     }
     const h = hovered ? recs.get(hovered) : null;
     if (h) return screenApi.show([`CUE ${nn(h)}`, h.track.label]);
+    // The desk's own lines (the desk writes them on `/`), else the player's.
+    if (override) return screenApi.show(override.lines, override.progress);
     screenApi.show(["NO TAPE", "PICK A TAPE"]);
   };
   const led = (on: boolean) => gsap.to(ledMat, { emissiveIntensity: on ? 2.5 : 0, duration: still ? 0 : 0.2, overwrite: true });
@@ -318,6 +324,7 @@ export async function createDeskScene(o: {
   const hoverH = tsize.y * 2.2;
   const holdH = tsize.y * 3;
   let grabbed: Tape | null = null;
+  let nudging: { t: Tape; tl: gsap.core.Timeline } | null = null;
   let samples: { x: number; z: number; t: number }[] = [];
   let grabOffset = { dx: 0, dz: 0 };
   const setHover = (id: TrackId | null) => {
@@ -454,6 +461,25 @@ export async function createDeskScene(o: {
         .to(mark.rotation, { y: knobTo - 0.35, duration: 0.14, ease: "power2.out" })
         .to(mark.rotation, { y: knobTo + 0.2, duration: 0.16, ease: "power2.inOut" })
         .to(mark.rotation, { y: knobTo, duration: 0.3, ease: "back.out(2)" });
+    },
+    nudge(id: TrackId) {
+      const t = recs.get(id);
+      if (still || !t || t.mode !== "free" || t === grabbed || hovered === id || applied?.state !== "desk") return;
+      // A small hop off the desk and back down onto it, a touch of bounce as it lands. A hover
+      // (motion.raise overwrites the tween) or a grab takes the tape over at once.
+      const tl = gsap
+        .timeline({ onComplete: () => void (nudging = null) })
+        .to(t.hover, { y: hoverH * 0.7, duration: 0.24, ease: "power2.out" })
+        .to(t.hover, { y: 0, duration: 0.6, ease: "bounce.out" });
+      nudging = { t, tl };
+    },
+    calm() {
+      if (!nudging) return;
+      const { t, tl } = nudging;
+      nudging = null;
+      if (!tl.isActive()) return;
+      tl.kill();
+      if (hovered !== t.id && grabbed !== t) gsap.to(t.hover, { y: 0, duration: 0.2, ease: "power2.out", overwrite: true });
     },
     setNight(on: boolean, instant = false) {
       night = on;

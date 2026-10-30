@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { SiteContent } from "@/lib/content/schema";
 import { runBack } from "@/lib/desk/back";
+import { deskScreenLines, markHintSeen } from "@/lib/desk/hint";
 import { deskKeyAction } from "@/lib/desk/keyboard";
 import { deskHref, hashRedirect, parseDeskPath } from "@/lib/desk/location";
 import { useNight } from "@/lib/desk/night";
@@ -14,6 +15,7 @@ import { trackKeysEnabled } from "@/lib/keys";
 import { visibleTracks, type TrackId } from "@/lib/tape";
 import { Desk3D, type Desk3DHandle, type ScreenText } from "./Desk3D";
 import { DeskContext, knobStack, type DeskApi } from "./deskContext";
+import { DeskHint } from "./DeskHint";
 import { DotField, type DotFieldHandle } from "./DotField";
 import { JCard } from "./JCard";
 import { LampCord } from "./LampCord";
@@ -42,6 +44,11 @@ type Written = ScreenText & { track: TrackId | null };
  * the latest lines with the track they were written for and hands them to the player as a
  * prop, so they show whichever runs first: the section's effect, the 3D following the
  * route, or the 3D's scene becoming ready; without 3D the sprite player shows them too.
+ * With no tape in, the desk writes its own: `PICK A TAPE` and how many there are.
+ *
+ * A first visit is welcomed (spec "First visit and discoverability"): the screen asks for a
+ * tape, a one-line hint under the player names the less obvious toys until the first tape
+ * goes in, and the 3D nudges the first tape after two idle seconds (Desk3D).
  */
 export function Desk({ content, base, children }: { content: SiteContent; base: string; children: ReactNode }) {
   const router = useRouter();
@@ -55,6 +62,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   const [has3D, setHas3D] = useState(true);
   const tapeLinks = useRef<TapeLinksHandle>(null);
   const keyLinks = useRef<OverlayHandle>(null);
+  const hint = useRef<OverlayHandle>(null);
   const night = useNight();
 
   useEffect(() => {
@@ -130,8 +138,11 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   // parent's effects run after all of its children's: the 3D (its sync) and the J-card (its
   // layout effect) have each read the flag for this insert by now. The 3D marks it too, when
   // the tape seats; without the 3D, this is the only mark.
+  // The hint is used up with it, for good in this browser.
   useEffect(() => {
-    if (current) markInserted();
+    if (!current) return;
+    markInserted();
+    markHintSeen();
   }, [current]);
 
   // The page the visit landed on is on screen: sections mounting from now on came by a move.
@@ -150,12 +161,26 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   useLayoutEffect(() => {
     writing.current = current;
   });
-  const screen = written && written.track === current ? written : null;
+  const deskLines = useMemo<ScreenText>(() => ({ lines: deskScreenLines(tracks.length) }), [tracks.length]);
+  const screen = written && written.track === current ? written : current ? null : deskLines;
+  // For tests: the lines the player was last handed (null: its own).
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const w = window as unknown as { __deskScreen?: [string, string] | null };
+    w.__deskScreen = screen?.lines ?? null;
+  }, [screen]);
+  useEffect(
+    () => () => {
+      if (process.env.NODE_ENV !== "production") delete (window as unknown as { __deskScreen?: unknown }).__deskScreen;
+    },
+    [],
+  );
 
   const project = useCallback<Project>((id) => desk3d.current?.project(id) ?? null, []);
   const onFrame = useCallback(() => {
     tapeLinks.current?.place();
     keyLinks.current?.place();
+    hint.current?.place();
   }, []);
   const onHover = useCallback((id: TrackId | null) => desk3d.current?.hover(id), []);
   const onHot = useCallback((id: TrackId | null) => tapeLinks.current?.hot(id), []);
@@ -223,6 +248,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
           onPointer={onPointer}
         />
         {state === "desk" && <LampCord />}
+        {state === "desk" && <DeskHint ref={hint} project={has3D ? project : null} />}
         {current && <Transport tracks={tracks} base={base} current={current} />}
         <PlayerKeys ref={keyLinks} tracks={tracks} base={base} current={current} project={has3D ? project : null} onWheel={has3D ? onKeyWheel : undefined} />
         <JCard tracks={tracks} base={base} current={current} seatDelay={has3D ? TIMING.fly + TIMING.drop + TIMING.load : 0}>
