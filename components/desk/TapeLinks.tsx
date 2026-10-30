@@ -49,6 +49,22 @@ export const TapeLinks = forwardRef<TapeLinksHandle, Props>(function TapeLinks({
   // The 3D has drawn a frame: its scene is ready, so inspect works and presses are its.
   const [ready, setReady] = useState(false);
   const readyRef = useRef(false);
+  // A tape asked to take focus (after an eject) that couldn't yet: off the view while it
+  // flies back, its link is hidden. Tried again as the links are placed, until it takes it,
+  // or until focus has gone somewhere else meanwhile.
+  const wantsFocus = useRef<TrackId | null>(null);
+  const tryFocus = () => {
+    const id = wantsFocus.current;
+    if (!id) return;
+    const link = layer.current?.querySelector<HTMLElement>(`[data-tape="${id}"] a`);
+    const now = document.activeElement;
+    if (now && now !== document.body && now !== link && !now.closest("[inert]")) {
+      wantsFocus.current = null;
+      return;
+    }
+    link?.focus({ preventScroll: true });
+    if (link && document.activeElement === link) wantsFocus.current = null;
+  };
   useEffect(() => {
     latest.current = project;
     if (project || !layer.current) return;
@@ -65,6 +81,7 @@ export const TapeLinks = forwardRef<TapeLinksHandle, Props>(function TapeLinks({
         const p = latest.current;
         if (!p || !layer.current) return;
         placeAll(layer.current, p, (el) => el.dataset.tape as TrackId);
+        tryFocus();
         if (!readyRef.current) {
           readyRef.current = true;
           setReady(true);
@@ -78,7 +95,8 @@ export const TapeLinks = forwardRef<TapeLinksHandle, Props>(function TapeLinks({
         });
       },
       focus(id) {
-        layer.current?.querySelector<HTMLElement>(`[data-tape="${id}"] a`)?.focus({ preventScroll: true });
+        wantsFocus.current = id;
+        tryFocus();
       },
     }),
     [],
