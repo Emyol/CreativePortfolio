@@ -269,8 +269,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   const heldTrack = held ? props.tracks.find((t) => t.id === held) : null;
   return (
     <>
-      {/* Lenis would scroll the page under the knob's wheel (it ignores a cancelled wheel). */}
-      <div ref={view} className={styles.view} data-desk-view data-state={props.state} aria-hidden="true" data-lenis-prevent-wheel />
+      <div ref={view} className={styles.view} data-desk-view data-state={props.state} aria-hidden="true" />
       <p ref={fullHead} className="sr-only" aria-live="polite" data-screen-full />
       {heldTrack && (
         <div className={styles.inspect} role="group" aria-label={`Holding ${formatTrackNumber(heldTrack.number)} ${heldTrack.label}`} data-holding>

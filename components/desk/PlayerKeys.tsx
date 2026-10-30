@@ -64,9 +64,7 @@ export const PlayerKeys = forwardRef<OverlayHandle, Props>(function PlayerKeys({
   // A tape with nothing on these keys offers no navigation, so no landmark either.
   const Box = slots.some((s) => s.track) ? "nav" : "div";
   return (
-    // Lenis scrolls from its own wheel listener, whatever the knob cancels: over the keys the
-    // wheel is left to the knob (and, where the knob doesn't take it, to the page itself).
-    <div ref={layer} className={styles.layer} data-player-keys data-sprite={sprite ? "" : undefined} data-lenis-prevent-wheel>
+    <div ref={layer} className={styles.layer} data-player-keys data-sprite={sprite ? "" : undefined}>
       <Box aria-label={Box === "nav" ? "Player keys" : undefined} className={styles.player} data-state={current ? "deck" : "desk"}>
         {slots.map(({ index, track }) => {
           if (!track) {
@@ -106,7 +104,7 @@ export const PlayerKeys = forwardRef<OverlayHandle, Props>(function PlayerKeys({
   );
 });
 
-// The key sprite carries its shadow beyond the cap (as in TapeKeys).
+// The key sprite carries its shadow beyond the cap.
 const pad = { x: DEVICE.keyPad.x / DEVICE.keys[0].w, y: DEVICE.keyPad.y / DEVICE.keys[0].h };
 const capSprite = { left: pct(-pad.x), top: pct(-pad.y), width: pct(1 + 2 * pad.x), height: pct(1 + 2 * pad.y) };
 

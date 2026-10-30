@@ -144,7 +144,6 @@ export function EventsScreen({ events, base, onSelect }: Props) {
           aria-activedescendant={optionId(index)}
           className={styles.options}
           onKeyDown={onKeyDown}
-          data-lenis-prevent-wheel
         >
           {list.map((e, i) => (
             <li
