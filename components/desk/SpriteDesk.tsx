@@ -10,12 +10,13 @@ const place = (r: { x: number; y: number; w: number; h: number }) => ({ left: pc
 /**
  * The player drawn flat (the rendered layers and layout.json), where the 3D can't run: on
  * the desk right of centre, in the deck the corner player. Never a placeholder before the
- * 3D. Its screen and LED say what the 3D's would; the tapes and keys are the links' own
- * sprites (TapeLinks, PlayerKeys), which share this layout.
+ * 3D. Its screen and LED say what the 3D's would (the loaded section's own lines, `screen`,
+ * when it wrote some); the tapes and keys are the links' own sprites (TapeLinks,
+ * PlayerKeys), which share this layout.
  */
-export function SpriteDesk({ tracks, current }: { tracks: Track[]; current: TrackId | null }) {
+export function SpriteDesk({ tracks, current, screen = null }: { tracks: Track[]; current: TrackId | null; screen?: [string, string] | null }) {
   const t = current ? tracks.find((x) => x.id === current) : null;
-  const lines = t ? [`${formatTrackNumber(t.number)} ${t.label.toUpperCase()}`, "▶ PLAYING"] : ["NO TAPE", "PICK A TAPE"];
+  const lines = t ? (screen ?? [`${formatTrackNumber(t.number)} ${t.label.toUpperCase()}`, "▶ PLAYING"]) : ["NO TAPE", "PICK A TAPE"];
   return (
     <div className={styles.stage} aria-hidden="true" data-sprite-desk>
       <div className={`${styles.player} ${styles.plate}`} data-state={current ? "deck" : "desk"}>

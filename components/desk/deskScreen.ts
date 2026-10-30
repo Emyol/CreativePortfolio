@@ -52,6 +52,8 @@ export function deskScreen(three: typeof THREE, root: THREE.Object3D, family: st
         .call(() => paint(0.15, old), undefined, 0.08)
         .call(() => (take(lines), paint()), undefined, 0.12);
     },
+    /** What it shows now (after any flicker), a line of text per line. */
+    text: () => shown.join("\n"),
     /** Moves a long headline on (call every frame). */
     tick(dt: number) {
       time += dt;

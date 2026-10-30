@@ -161,9 +161,10 @@ test("the system's dark preference starts a visit in night", async ({ browser })
 
 test("the wheel over a player key turns the knob instead of scrolling the page", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await deskReady(page, "/events");
+  // A track whose J-card runs past the view (the events screen fits in it), so the page could scroll.
+  await deskReady(page, "/mixtape");
   await page.waitForTimeout(500);
-  const key = (await page.locator("[data-player-keys] a").first().boundingBox())!;
+  const key =(await page.locator("[data-player-keys] a").first().boundingBox())!;
   await page.mouse.move(key.x + key.width / 2, key.y + key.height / 2);
   const before = await page.evaluate(() => window.scrollY);
   await page.mouse.wheel(0, 300);

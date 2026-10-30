@@ -7,6 +7,7 @@ vi.mock("next/navigation", () => ({ notFound: () => notFound() }));
 const getContent = vi.fn();
 vi.mock("@/lib/content/load", () => ({ getContent: () => getContent() }));
 
+import { EventsSection } from "@/components/devices/events/EventsSection";
 import { FIXTURES } from "@/lib/content/fixtures";
 import { TrackRoute } from "./TrackRoute";
 
@@ -25,5 +26,12 @@ describe("TrackRoute", () => {
     getContent.mockResolvedValue(FIXTURES);
     await expect(TrackRoute({ id: "about" })).resolves.toBeTruthy();
     expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it("gives events its own device instead of the stand-in screen", async () => {
+    getContent.mockResolvedValue(FIXTURES);
+    const el = await TrackRoute({ id: "events" });
+    expect(el.type).toBe(EventsSection);
+    expect(el.props).toMatchObject({ events: FIXTURES.events, base: "" });
   });
 });

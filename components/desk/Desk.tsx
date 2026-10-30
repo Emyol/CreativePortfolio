@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { SiteContent } from "@/lib/content/schema";
 import { runBack } from "@/lib/desk/back";
 import { deskKeyAction } from "@/lib/desk/keyboard";
@@ -9,10 +9,10 @@ import { deskHref, hashRedirect, parseDeskPath } from "@/lib/desk/location";
 import { useNight } from "@/lib/desk/night";
 import { TRACK_INK } from "@/lib/desk/tapeLabel";
 import { TIMING } from "@/lib/desk/timing";
-import { markInserted } from "@/lib/desk/visit";
+import { markInserted, markLanded } from "@/lib/desk/visit";
 import { trackKeysEnabled } from "@/lib/keys";
 import { visibleTracks, type TrackId } from "@/lib/tape";
-import { Desk3D, type Desk3DHandle } from "./Desk3D";
+import { Desk3D, type Desk3DHandle, type ScreenText } from "./Desk3D";
 import { DeskContext, knobStack, type DeskApi } from "./deskContext";
 import { DotField, type DotFieldHandle } from "./DotField";
 import { JCard } from "./JCard";
@@ -25,6 +25,9 @@ import { Transport } from "./Transport";
 
 const REST_INK: [number, number, number] = [255, 90, 31];
 
+/** What a section last wrote to the player's screen, and for which track. */
+type Written = ScreenText & { track: TrackId | null };
+
 /**
  * The persistent desk: the dot field, the 3D player and tapes (or, without 3D, the sprite
  * player), the tape and key links over them, and the route's content. The route is the state
@@ -34,6 +37,11 @@ const REST_INK: [number, number, number] = [255, 90, 31];
  * Esc and Backspace one level back, ←/→ on the J-card), as do the transport under the flap
  * and, on the desk, the lamp cord, which with the transport's night key switches the 3D's
  * lighting (night is lighting, not a dark page).
+ *
+ * A section writes to the player's screen through the desk (DeskContext). The desk keeps
+ * the latest lines with the track they were written for and hands them to the player as a
+ * prop, so they show whichever runs first: the section's effect, the 3D following the
+ * route, or the 3D's scene becoming ready; without 3D the sprite player shows them too.
  */
 export function Desk({ content, base, children }: { content: SiteContent; base: string; children: ReactNode }) {
   const router = useRouter();
@@ -78,8 +86,8 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   );
 
   // The control grammar's keys. Esc and Backspace step out one level: the newest open
-  // device's back handler first (a tape held up is put back), else out of an event to its
-  // track, else the tape is ejected to the desk.
+  // device's back handler first (a tape held up is put back, an event goes back to its
+  // list), else the tape is ejected to the desk.
   const where = useRef(loc);
   useEffect(() => {
     where.current = loc;
@@ -98,9 +106,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
       if (runBack()) return e.preventDefault();
       if (!at.track) return;
       e.preventDefault();
-      // Until the Events device registers its own back handler (Task 11), an event steps
-      // back to the events track here.
-      router.push(deskHref(base, at.event ? { track: at.track, event: null } : { track: null, event: null }));
+      router.push(deskHref(base, { track: null, event: null }));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -128,6 +134,24 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
     if (current) markInserted();
   }, [current]);
 
+  // The page the visit landed on is on screen: sections mounting from now on came by a move.
+  // A task later, so effects run again on mount (React's StrictMode, in development) still
+  // count as the landing.
+  useEffect(() => {
+    const t = window.setTimeout(markLanded, 0);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // The screen's lines are kept for the track they were written for. The track is read when
+  // they are written (a section's effects), so it is the committed one: a layout effect, run
+  // before any section's passive effects in the same commit.
+  const [written, setWritten] = useState<Written | null>(null);
+  const writing = useRef(current);
+  useLayoutEffect(() => {
+    writing.current = current;
+  });
+  const screen = written && written.track === current ? written : null;
+
   const project = useCallback<Project>((id) => desk3d.current?.project(id) ?? null, []);
   const onFrame = useCallback(() => {
     tapeLinks.current?.place();
@@ -153,7 +177,13 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
   const knob = useMemo(() => knobStack(), []);
   const api = useMemo<DeskApi>(
     () => ({
-      setScreen: (lines, progress) => desk3d.current?.screen(lines, progress),
+      // The same lines again are not a change (no re-render, no repaint).
+      setScreen: (lines, progress) =>
+        setWritten((was) => {
+          const track = writing.current;
+          const same = was && was.track === track && was.progress === progress && was.lines[0] === lines[0] && was.lines[1] === lines[1];
+          return same ? was : { lines, progress, track };
+        }),
       useKnob: knob.useKnob,
       wiggleKnob: () => desk3d.current?.wiggle(),
     }),
@@ -171,6 +201,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
             content={content}
             state={state}
             current={current}
+            screen={screen}
             night={night}
             onTapeClick={onTapeClick}
             onKnob={knob.step}
@@ -180,7 +211,7 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
             onUnavailable={() => setHas3D(false)}
           />
         )}
-        {!has3D && <SpriteDesk tracks={tracks} current={current} />}
+        {!has3D && <SpriteDesk tracks={tracks} current={current} screen={screen?.lines ?? null} />}
         <TapeLinks
           ref={tapeLinks}
           tracks={tracks}
@@ -192,16 +223,11 @@ export function Desk({ content, base, children }: { content: SiteContent; base: 
           onPointer={onPointer}
         />
         {state === "desk" && <LampCord />}
-        {current && !loc.event && <Transport tracks={tracks} base={base} current={current} />}
+        {current && <Transport tracks={tracks} base={base} current={current} />}
         <PlayerKeys ref={keyLinks} tracks={tracks} base={base} current={current} project={has3D ? project : null} onWheel={has3D ? onKeyWheel : undefined} />
-        {/* Until the live recording is a Section of its own (Task 11), an event's page brings its own main. */}
-        {loc.event ? (
-          children
-        ) : (
-          <JCard tracks={tracks} base={base} current={current} seatDelay={has3D ? TIMING.fly + TIMING.drop + TIMING.load : 0}>
-            {children}
-          </JCard>
-        )}
+        <JCard tracks={tracks} base={base} current={current} seatDelay={has3D ? TIMING.fly + TIMING.drop + TIMING.load : 0}>
+          {children}
+        </JCard>
       </div>
     </DeskContext.Provider>
   );

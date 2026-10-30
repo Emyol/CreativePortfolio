@@ -40,6 +40,8 @@ export type DeskScene = PointerScene & {
   sync(state: DeskState, current: TrackId | null, initial?: boolean): void;
   project(id: ProjectId): DOMRect | null;
   screen(lines: Lines, progress?: number): void;
+  /** The lines the screen shows now, one per line of text. */
+  screenText(): string;
   led(on: boolean): void;
   slotOnScreen(): { x: number; y: number };
   wiggle(): void;
@@ -442,6 +444,7 @@ export async function createDeskScene(o: {
       override = { lines, progress };
       refreshScreen();
     },
+    screenText: () => screenApi.text(),
     led,
     slotOnScreen: () => frame.point(slotP),
     wiggle() {

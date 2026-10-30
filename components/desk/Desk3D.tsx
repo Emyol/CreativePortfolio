@@ -14,7 +14,6 @@ import styles from "./Desk3D.module.css";
 export type Desk3DHandle = {
   project(id: ProjectId): DOMRect | null;
   hover(id: TrackId | null): void;
-  screen(lines: [string, string], progress?: number): void;
   led(on: boolean): void;
   slotOnScreen(): { x: number; y: number };
   inspect(id: TrackId | null): void;
@@ -22,11 +21,16 @@ export type Desk3DHandle = {
   wiggle(): void;
 };
 
+/** Lines a section wrote to the player's screen (DeskContext's `setScreen`). */
+export type ScreenText = { lines: [string, string]; progress?: number };
+
 type Props = {
   tracks: Track[];
   content: SiteContent;
   state: DeskState;
   current: TrackId | null;
+  /** The loaded track's section's lines, or null for the player's own. */
+  screen: ScreenText | null;
   night: boolean;
   onTapeClick(id: TrackId): void;
   onKnob(steps: number): void;
@@ -45,7 +49,10 @@ const TIMEOUT = 10_000; // without the scene by then, the desk falls back
  * The desk's 3D: the player and the six tapes on the shared stage (deskScene.ts), driven by
  * the route (`state`, `current`) so Back and Forward animate too, with the pointer's play on
  * top (deskPointer.ts). Its box is the viewport on the desk and the lower-left corner on the
- * deck. Picking a tape up shows a small bar to play it or put it back.
+ * deck. Picking a tape up shows a small bar to play it or put it back. A section's screen
+ * lines (`screen`) are applied after the route is (a change of tape clears the last tape's)
+ * and again when the scene is ready, so they show whatever order those come in. What the
+ * screen shows is on the view as `data-screen`, for tests.
  */
 export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref) {
   const tier = useMotionTier();
@@ -56,6 +63,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   const [gone, setGone] = useState(false);
   const putBack = useRef<HTMLButtonElement>(null);
   const before = useRef<Element | null>(null);
+  const wiggleWaiting = useRef(false);
   useEffect(() => {
     latest.current = props;
   });
@@ -65,11 +73,11 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
     () => ({
       project: (id) => scene.current?.project(id) ?? null,
       hover: (id) => scene.current?.hover(id),
-      screen: (lines, progress) => scene.current?.screen(lines, progress),
       led: (on) => void scene.current?.led(on),
       slotOnScreen: () => scene.current?.slotOnScreen() ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 },
       inspect: (id) => scene.current?.inspect(id),
-      wiggle: () => scene.current?.wiggle(),
+      // Asked before the scene is ready (a direct load): the knob wiggles once it is.
+      wiggle: () => (scene.current ? scene.current.wiggle() : void (wiggleWaiting.current = true)),
     }),
     [],
   );
@@ -112,6 +120,8 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
           onFrame: () => {
             const seated = s?.seatedId() ?? "";
             if (el.dataset.seated !== seated) el.dataset.seated = seated;
+            const shown = s?.screenText() ?? "";
+            if (el.dataset.screen !== shown) el.dataset.screen = shown;
             latest.current.onFrame?.();
           },
           fail,
@@ -128,6 +138,8 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       if (dead) return;
       scene.current = s;
       s.sync(latest.current.state, latest.current.current, true);
+      const written = latest.current.screen;
+      if (written) s.screen(written.lines, written.progress);
       s.setNight(latest.current.night, true);
       undo.push(stage.add(s.view));
       undo.push(stage.onLost(fail));
@@ -142,9 +154,14 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (dead) return;
       el.dataset.ready = "";
+      if (wiggleWaiting.current) {
+        wiggleWaiting.current = false;
+        s.wiggle();
+      }
       undo.push(() => {
         delete el.dataset.ready;
         delete el.dataset.seated;
+        delete el.dataset.screen;
       });
     })().catch((e) => {
       console.warn("[3D] the desk fell back:", e);
@@ -153,8 +170,14 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
     return stop;
   }, [tier, gone]);
 
-  // The route drives the 3D, so Back and Forward animate as a click does.
-  useEffect(() => scene.current?.sync(props.state, props.current), [props.state, props.current]);
+  // The route drives the 3D, so Back and Forward animate as a click does. The section's lines
+  // go on after it: a new tape clears the last one's, never the new section's own.
+  useEffect(() => {
+    const s = scene.current;
+    if (!s) return;
+    s.sync(props.state, props.current);
+    if (props.screen) s.screen(props.screen.lines, props.screen.progress);
+  }, [props.state, props.current, props.screen]);
   useEffect(() => scene.current?.setNight(props.night), [props.night]);
 
   // Picked up: the bar takes focus, and the first step back (Esc) puts the tape back; put
