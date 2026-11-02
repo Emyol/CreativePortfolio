@@ -52,3 +52,41 @@ describe("coverRect", () => {
     expect(r.sy).toBe(300);
   });
 });
+
+describe("sampleSrc", () => {
+  it("samples a published upload from a small optimised copy, not the full file", () => {
+    expect(sampleSrc("/api/media/ab12.jpg")).toBe("/_next/image?url=%2Fapi%2Fmedia%2Fab12.jpg&w=128&q=75");
+  });
+
+  it("takes fixture data: URIs and admin drafts as they are (the optimiser can't read them)", () => {
+    expect(sampleSrc("data:image/svg+xml,abc")).toBe("data:image/svg+xml,abc");
+    expect(sampleSrc("/api/media/ab12.jpg?draft")).toBe("/api/media/ab12.jpg?draft");
+  });
+});
+
+describe("gridFor", () => {
+  it("keeps the screen's 4:5 shape for any number of dots across", () => {
+    expect(gridFor(40)).toEqual({ cols: 40, rows: 50 });
+    expect(gridFor(24)).toEqual({ cols: 24, rows: 30 });
+    expect(gridFor(64)).toEqual({ cols: 64, rows: 80 });
+  });
+});
+
+describe("the dot settings in the content", () => {
+  const about = { letter: ["Hi."], toolbox: [] };
+  const parse = (dots: unknown) => contentSchema.shape.about.safeParse({ ...about, dots }).success;
+
+  it("are optional, and take the admin's ranges", () => {
+    expect(contentSchema.shape.about.safeParse(about).success).toBe(true);
+    expect(parse({ across: 40, brightness: 0, contrast: 1 })).toBe(true);
+    expect(parse({ across: 24, brightness: -0.5, contrast: 0.5 })).toBe(true);
+    expect(parse({ across: 64, brightness: 0.5, contrast: 2 })).toBe(true);
+  });
+
+  it("refuse values the screen can't draw", () => {
+    expect(parse({ across: 8, brightness: 0, contrast: 1 })).toBe(false);
+    expect(parse({ across: 40.5, brightness: 0, contrast: 1 })).toBe(false);
+    expect(parse({ across: 40, brightness: 2, contrast: 1 })).toBe(false);
+    expect(parse({ across: 40, brightness: 0, contrast: 0 })).toBe(false);
+  });
+});
