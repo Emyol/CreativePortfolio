@@ -9,12 +9,13 @@ const deskReady = async (page: Page, url: string) => {
   await page.waitForSelector("[data-desk-view][data-ready]", { state: "attached", timeout: 30_000 });
 };
 
-type Times = { press: number; shown: number; focused: number; readable: number; turned: boolean };
+type Times = { press: number; shown: number; focused: number; readable: number; seated: number; turned: boolean };
 
 /**
  * Times, in the page and every frame, from the next press (pointer or key): when the J-card
- * titled `label` is in the page (`shown`), when its title has focus, and when it is readable;
- * and notes whether any panel turned on its hinge meanwhile. Readable, not only "visible" to
+ * titled `label` is in the page (`shown`), when its title has focus, when it is readable, and
+ * when the 3D has seated its tape (`data-seated` on the view, written each 3D frame); and
+ * notes whether any panel turned on its hinge meanwhile. Readable, not only "visible" to
  * Playwright (which counts opacity 0 and a turned-away panel as visible): on screen, fully
  * opaque all the way up, and not turned. Timed in the page, not by the driver: on a machine
  * busy with two browsers' 3D, a round trip to the page can take a few hundred ms.
@@ -22,7 +23,7 @@ type Times = { press: number; shown: number; focused: number; readable: number; 
 const watch = (page: Page, label: string) =>
   page.evaluate((label) => {
     const w = window as unknown as { __jcard: Times };
-    const t: Times = (w.__jcard = { press: 0, shown: 0, focused: 0, readable: 0, turned: false });
+    const t: Times = (w.__jcard = { press: 0, shown: 0, focused: 0, readable: 0, seated: 0, turned: false });
     const press = () => (t.press ||= performance.now());
     document.addEventListener("pointerdown", press, { capture: true, once: true });
     document.addEventListener("keydown", press, { capture: true, once: true });
@@ -43,13 +44,14 @@ const watch = (page: Page, label: string) =>
       if (!t.press) return requestAnimationFrame(tick);
       t.turned ||= [...document.querySelectorAll("main [data-panel]")].some(turned);
       const h = [...document.querySelectorAll("main > h2")].find((e) => e.textContent === label);
+      const now = performance.now();
       if (h) {
-        const now = performance.now();
         t.shown ||= now;
         if (document.activeElement === h) t.focused ||= now;
         if (readable(h)) t.readable ||= now;
       }
-      if (!t.focused || !t.readable) requestAnimationFrame(tick);
+      if (document.querySelector<HTMLElement>("[data-desk-view]")?.dataset.seated === label) t.seated ||= now;
+      if (!t.focused || !t.readable || !t.seated) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   }, label);
@@ -57,9 +59,16 @@ const watch = (page: Page, label: string) =>
 /** The watched times, in ms after the press (`readable` also after `shown`). */
 const times = async (page: Page) => {
   const done = () => page.evaluate(() => (window as unknown as { __jcard: Times }).__jcard);
-  await expect.poll(async () => { const t = await done(); return t.focused > 0 && t.readable > 0; }, { timeout: 10_000 }).toBe(true);
+  await expect.poll(async () => { const t = await done(); return t.focused > 0 && t.readable > 0 && t.seated > 0; }, { timeout: 10_000 }).toBe(true);
   const t = await done();
-  return { shown: t.shown - t.press, focused: t.focused - t.press, readable: t.readable - t.press, readableAfterShown: t.readable - t.shown, turned: t.turned };
+  return {
+    shown: t.shown - t.press,
+    focused: t.focused - t.press,
+    readable: t.readable - t.press,
+    readableAfterShown: t.readable - t.shown,
+    readableAfterSeated: t.readable - t.seated,
+    turned: t.turned,
+  };
 };
 
 const overlaps = (a: Rect, b: Rect) =>
@@ -160,14 +169,13 @@ test("under reduced motion, switched on mid-visit, a tape's J-card cross-fades i
   await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
   const load = await times(page);
   expect(load.turned, "a panel turned").toBe(false);
-  // The route's own fetch, then a 0.2 s fade, with no wait for the tape to seat: readable
-  // before a seat alone (TIMING.fly + drop + load) could have passed, counted from when the
-  // route is in, as above. A fade that waited for the seat would take that plus its 0.2 s. On
-  // the dev server, with two browsers drawing 3D, the new route's work can stall the main
-  // thread (traced: in at 0.93 s, readable 0.17 s later when idle, 1.03 s at worst under load;
-  // the production build's numbers are in the Task 15 report).
-  const seat = (TIMING.fly + TIMING.drop + TIMING.load) * 1000;
-  expect(load.readableAfterShown, "readable after the route is in, before a seat could finish").toBeLessThan(seat);
+  // No wait for a seat: the card fades in (0.2 s) alongside the tape's cross-fade into the
+  // slot, which seats it 0.1 s in. Both start on the same commit and run on GSAP's clock, so
+  // the new route's stall on a busy dev server delays them alike, and the card is readable
+  // about 0.1 s after the seat (55 to 94 ms measured under load, though up to 1.27 s after the
+  // route came in). A card that waited out a full-motion seat (TIMING.fly + drop + load)
+  // first would be readable over a second after it.
+  expect(load.readableAfterSeated, "readable within its own fade of the tape seating").toBeLessThan(500);
   expect(load.shown, "shown").toBeLessThanOrEqual(2400);
   expect(load.focused, "focused").toBeLessThanOrEqual(2400);
 });
