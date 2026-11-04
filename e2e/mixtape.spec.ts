@@ -60,7 +60,7 @@ test("switching to another track stops the tape; coming back, nothing plays", as
 });
 
 test("when Spotify is blocked, the deck says so and the plain links still work", async ({ page, allowConsole }) => {
-  allowConsole(/Failed to load resource: net::ERR_FAILED/);
+  allowConsole(/Failed to load resource: net::ERR_FAILED/, /^https:\/\/open\.spotify\.com\/embed\/iframe-api\//);
   await page.route(API, (route) => route.abort());
   await gotoReady(page, "/mixtape");
   await page.getByRole("button", { name: "Play Fixture song 1 on Spotify" }).click();

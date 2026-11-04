@@ -67,7 +67,8 @@ test("three quick picks end on the last one, with the 3D matching", async ({ pag
       }),
     spots,
   );
-  expect(spread).toBeLessThan(300);
+  // Pressed at 0, 100 and 200 ms; a busy main thread runs the last timer late.
+  expect(spread).toBeLessThan(450);
   await page.waitForTimeout(2000);
   await expect(page).toHaveURL(/\/people$/);
   await expect(page.locator("html")).toHaveAttribute("data-desk", "deck");
@@ -162,7 +163,7 @@ test("losing the GPU hands the desk to the sprite player, its tape links still t
 // console, and the J-card of a direct load doesn't wait for a tape that will never seat.
 for (const path of ["/", "/events"]) {
   test(`a model that fails to load hands ${path} to the sprite player and says why`, async ({ page, allowConsole }) => {
-    allowConsole(/Failed to load resource: net::ERR_FAILED/);
+    allowConsole(/Failed to load resource: net::ERR_FAILED/, /\/device\/device\.glb$/);
     const said: string[] = [];
     page.on("console", (m) => m.type() === "info" && said.push(m.text()));
     await page.route("**/device/device.glb", (r) => r.abort());

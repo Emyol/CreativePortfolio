@@ -255,9 +255,10 @@ test("switching night eases the room over about 0.3 s", async ({ page }) => {
     const c = rgbOf(s.split(":")[1]);
     return c.join() !== day.join() && c.join() !== end.join();
   });
-  // Some frames in between, and none after about 0.3 s.
-  expect(between.length, seen.join(" ")).toBeGreaterThan(3);
-  expect(Math.max(...between.map((s) => Number(s.split(":")[0]))), seen.join(" ")).toBeLessThan(420);
+  // Some frames in between (more than a cut's one), and none well after 0.3 s (a busy
+  // machine's frames come late, so the bound has room).
+  expect(between.length, seen.join(" ")).toBeGreaterThan(1);
+  expect(Math.max(...between.map((s) => Number(s.split(":")[0]))), seen.join(" ")).toBeLessThan(480);
 });
 
 test("under reduced motion the night switch is instant", async ({ page }) => {

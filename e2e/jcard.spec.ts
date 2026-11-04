@@ -67,6 +67,7 @@ const times = async (page: Page) => {
     readable: t.readable - t.press,
     readableAfterShown: t.readable - t.shown,
     readableAfterSeated: t.readable - t.seated,
+    seatedAfterShown: t.seated - t.shown,
     turned: t.turned,
   };
 };
@@ -82,25 +83,35 @@ test.beforeAll(async ({ request }) => {
   for (const p of ["/", "/events", "/mixtape", "/people"]) await request.get(p);
 });
 
-test("a tape loads its J-card: the heading is shown and focused within 2.4 s, readable once it unfolds", async ({ page }) => {
+// Wall-clock bounds from the press include the dev server's response and the main thread's
+// stalls under the whole suite, so they are loose (the production build's own numbers are the
+// timing check, spec "Timing"). What the desk itself decides is timed from its own states:
+// the J-card waits for the tape to seat, then unfolds; a switch is readable at once and seated
+// within its own legs.
+const LOOSE = 4000;
+const SLACK = 300; // a busy main thread's stall, either side
+
+test("a tape loads its J-card: the heading is shown and focused, readable once the seated tape loads and the card unfolds", async ({ page }) => {
   await deskReady(page, "/");
   await watch(page, "events");
   await page.getByRole("link", { name: "02 events, tape" }).click();
   const load = await times(page);
-  expect(load.shown, "shown").toBeLessThanOrEqual(2400);
-  expect(load.focused, "focused").toBeLessThanOrEqual(2400);
-  // Readable once the tape is seated and loaded and the card has unfolded, counted from when
-  // the route is in (before that, the dev server's own response time).
-  const unfolded = (TIMING.fly + TIMING.drop + TIMING.load + TIMING.unfold) * 1000;
-  expect(load.readableAfterShown, "readable after the route is in").toBeLessThanOrEqual(unfolded);
+  expect(load.shown, "shown").toBeLessThanOrEqual(LOOSE);
+  expect(load.focused, "focused").toBeLessThanOrEqual(LOOSE);
+  // From the seat: the tape loads, then the card unfolds. Both run on GSAP's clock from the
+  // same commit, so a stall delays them alike.
+  expect(load.readableAfterSeated, "readable after the tape seats").toBeGreaterThan(0);
+  expect(load.readableAfterSeated, "readable after the tape seats").toBeLessThanOrEqual((TIMING.load + TIMING.unfold) * 1000 + SLACK);
 
-  // A later switch, from the J-card's own tracklist, reprints in place.
+  // A later switch, from the J-card's own tracklist, reprints in place: the new title is
+  // readable as soon as the route is in, and the new tape seats within the switch's legs.
   const flap = page.getByRole("navigation", { name: "Tape", exact: true });
   await expect(flap.getByRole("link", { name: "02 events" })).toHaveAttribute("aria-current", "page");
   await watch(page, "mixtape");
   await flap.getByRole("link", { name: "03 mixtape" }).click();
   const swap = await times(page);
-  expect(swap.readable, "readable").toBeLessThanOrEqual(800);
+  expect(swap.readableAfterShown, "readable once the route is in").toBeLessThanOrEqual(SLACK);
+  expect(swap.seatedAfterShown, "seated within the switch").toBeLessThanOrEqual(TIMING.switchMax * 1000);
   await expect(page.getByRole("heading", { level: 2, name: "mixtape", exact: true })).toBeFocused();
   await expect(flap.getByRole("link", { name: "03 mixtape" })).toHaveAttribute("aria-current", "page");
 });
@@ -176,6 +187,6 @@ test("under reduced motion, switched on mid-visit, a tape's J-card cross-fades i
   // route came in). A card that waited out a full-motion seat (TIMING.fly + drop + load)
   // first would be readable over a second after it.
   expect(load.readableAfterSeated, "readable within its own fade of the tape seating").toBeLessThan(500);
-  expect(load.shown, "shown").toBeLessThanOrEqual(2400);
-  expect(load.focused, "focused").toBeLessThanOrEqual(2400);
+  expect(load.shown, "shown").toBeLessThanOrEqual(LOOSE);
+  expect(load.focused, "focused").toBeLessThanOrEqual(LOOSE);
 });

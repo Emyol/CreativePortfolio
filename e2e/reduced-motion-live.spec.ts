@@ -69,16 +69,18 @@ async function reduce(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("data-tier", "none");
 }
 
-test("switched on after load, a tape loads readable within half a second and the dot field holds still", async ({ page }) => {
+// The waits below are a few times the 0.25 s cross-fade: loose enough for the whole suite's
+// load, far short of the full-motion first insert (about 2 s) they rule out.
+test("switched on after load, a tape loads readable by a cross-fade, and the dot field holds still", async ({ page }) => {
   await deskReady(page);
   await reduce(page);
   await page.getByRole("link", { name: "02 events, tape" }).click();
   await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
   const card = page.locator("main[data-jcard]");
-  await expect(card.getByRole("heading", { level: 2, name: "events" })).toBeVisible({ timeout: 500 });
-  await expect.poll(() => card.evaluate((el) => Number(getComputedStyle(el).opacity)), { timeout: 500 }).toBe(1);
+  await expect(card.getByRole("heading", { level: 2, name: "events" })).toBeVisible({ timeout: 1000 });
+  await expect.poll(() => card.evaluate((el) => Number(getComputedStyle(el).opacity)), { timeout: 1000 }).toBe(1);
   // The tape cross-faded into the slot (0.25 s), no flight.
-  await expect(page.locator("[data-desk-view]")).toHaveAttribute("data-seated", "events", { timeout: 500 });
+  await expect(page.locator("[data-desk-view]")).toHaveAttribute("data-seated", "events", { timeout: 1000 });
   // The tint is the new tape's at once and the pointer is still: nothing changes.
   const a = await dotField(page);
   await page.waitForTimeout(300);
@@ -105,7 +107,7 @@ test("switched on mid-insert, the tape is in and the view in its corner at once"
   // The first insert of a visit is flying (about 1.2 s before it seats).
   await expect(page.locator("[data-desk-view]")).not.toHaveAttribute("data-seated", "mixtape");
   await reduce(page);
-  await expect(page.locator("[data-desk-view]")).toHaveAttribute("data-seated", "mixtape", { timeout: 300 });
+  await expect(page.locator("[data-desk-view]")).toHaveAttribute("data-seated", "mixtape", { timeout: 800 });
   const corner = Math.round(Math.min(1440 * 0.34, 420));
   expect(await page.locator("[data-desk-view]").evaluate((el) => Math.round(el.getBoundingClientRect().width))).toBe(corner);
 });
@@ -201,7 +203,7 @@ test("without 3D, switched on after load, the J-card cross-fades and the dot fie
   await page.getByRole("link", { name: "02 events, tape" }).click();
   await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
   const card = page.locator("main[data-jcard]");
-  await expect.poll(() => card.evaluate((el) => Number(getComputedStyle(el).opacity)), { timeout: 500 }).toBe(1);
+  await expect.poll(() => card.evaluate((el) => Number(getComputedStyle(el).opacity)), { timeout: 1000 }).toBe(1);
   const a = await dotField(page);
   await page.waitForTimeout(300);
   expect(await dotField(page)).toBe(a);

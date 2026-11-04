@@ -82,7 +82,7 @@ test.describe("the preview", () => {
   });
 
   test("opens a track directly, and 404s for one that isn't on the tape", async ({ page, allowConsole }) => {
-    allowConsole(/status of 404/);
+    allowConsole(/status of 404/, /\/admin\/preview\/(side-b|events\/no-such-event)$/);
     const res = await gotoReady(page, "/admin/preview/people");
     expect(res?.status()).toBe(200);
     await expect(page.locator("main[data-jcard=people]").getByRole("heading", { level: 2, name: "people" })).toBeVisible();
@@ -152,7 +152,7 @@ for (const [name, use] of [["desktop", {}], ["phone", iphone]] as const) {
     });
 
     test("a save from a stale device says so and offers a reload", async ({ page, allowConsole }) => {
-      allowConsole(/status of 409/);
+      allowConsole(/status of 409/, /\/api\/admin\/content$/);
       await stubBackend(page, { conflict: true });
       await gotoReady(page, "/admin");
       const links = page.getByRole("region", { name: "links" });

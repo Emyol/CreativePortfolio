@@ -32,7 +32,7 @@ test("an event's page is its live recording, with its story printed beside it", 
 });
 
 test("unknown events are a 404 with the device and a way home", async ({ page, allowConsole }) => {
-  allowConsole(/status of 404/);
+  allowConsole(/status of 404/, /\/events\/not-a-real-event$/);
   const res = await page.goto("/events/not-a-real-event");
   expect(res?.status()).toBe(404);
   await expect(page.locator("img[src*='/device/beauty']")).toHaveAttribute("alt", "");

@@ -161,6 +161,19 @@ test("the system's dark preference starts a visit in night", async ({ browser })
 
 test("the wheel over a player key turns the knob instead of scrolling the page", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  // On events the knob moves the screen's cursor: two notches over a key, two rows on.
+  await deskReady(page, "/events");
+  const screen = () => page.locator("[data-desk-view]").getAttribute("data-screen");
+  await expect.poll(screen, { timeout: 10_000 }).toBe("02 EVENTS\n> 01 OF 07");
+  await page.waitForTimeout(500);
+  const firstKey = (await page.locator("[data-player-keys] a").first().boundingBox())!;
+  await page.mouse.move(firstKey.x + firstKey.width / 2, firstKey.y + firstKey.height / 2);
+  await page.mouse.wheel(0, 100);
+  await page.waitForTimeout(100);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(screen).toBe("02 EVENTS\n> 03 OF 07");
+  await expect(page.locator('[role="listbox"] [aria-selected="true"]')).toHaveCount(1);
+
   // A track whose J-card runs past the view (the events screen fits in it), so the page could scroll.
   await deskReady(page, "/mixtape");
   await page.waitForTimeout(500);
