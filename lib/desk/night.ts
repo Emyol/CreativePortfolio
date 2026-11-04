@@ -1,11 +1,10 @@
 import { useSyncExternalStore } from "react";
 import { readStorage, writeStorage } from "@/lib/motion/storage";
+import { DARK, NIGHT_KEY as KEY } from "./nightPrepaint";
 
 // Night is the lamp's lighting, the site's only dark mode. A visit starts from the stored
 // choice, else from the system's dark preference; the cord and the transport's night key
 // share this one store, so they never disagree.
-const KEY = "side-a:night";
-const DARK = "(prefers-color-scheme: dark)";
 const listeners = new Set<() => void>();
 let on: boolean | null = null;
 

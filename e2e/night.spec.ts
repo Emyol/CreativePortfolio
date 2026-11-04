@@ -180,6 +180,45 @@ test("night darkens the room behind the desk; day's room is light", async ({ pag
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
 });
 
+/** Holds the page's own scripts back until `release`, so what shows is the server's HTML and the pre-paint script alone. */
+async function holdScripts(page: Page) {
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await held;
+    await route.continue();
+  });
+  return release;
+}
+
+for (const how of ["the system's dark preference", "a stored choice"] as const) {
+  test(`a night visit (${how}) is dark from its first paint, before the page's script runs`, async ({ page }) => {
+    if (how === "a stored choice") await atNight(page);
+    else await page.emulateMedia({ colorScheme: "dark" });
+    const release = await holdScripts(page);
+    await page.goto("/events", { waitUntil: "domcontentloaded" });
+    // Not hydrated yet (MotionProvider sets data-tier), and already the night room.
+    expect(await page.evaluate(() => document.documentElement.hasAttribute("data-tier"))).toBe(false);
+    await expect(page.locator("html")).toHaveAttribute("data-night", "");
+    expect(lum(...rgbOf(await roomColour(page))), "the room before the script").toBeLessThan(0.02);
+    release();
+    await page.waitForSelector("html[data-tier]", { state: "attached" });
+    await expect(page.locator("html")).toHaveAttribute("data-night", "");
+    expect(lum(...rgbOf(await roomColour(page))), "the room once the desk runs").toBeLessThan(0.02);
+  });
+}
+
+test("the pre-paint leaves the day room on a day visit, and off the desk's routes", async ({ page }) => {
+  const release = await holdScripts(page);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  expect(await page.evaluate(() => document.documentElement.hasAttribute("data-night"))).toBe(false);
+  expect(lum(...rgbOf(await roomColour(page)))).toBeGreaterThan(0.6);
+  release();
+  await page.emulateMedia({ colorScheme: "dark" });
+  await gotoReady(page, "/tracklist");
+  expect(await page.evaluate(() => document.documentElement.hasAttribute("data-night"))).toBe(false);
+});
+
 test("the night dot field shows on the dark room, away from the lamp too", async ({ page }) => {
   await atNight(page);
   await deskReady(page);

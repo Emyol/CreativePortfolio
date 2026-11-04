@@ -83,19 +83,23 @@ export function Desk({ content, base, preview = false, children }: { content: Si
     if (current) html.dataset.loaded = current;
     else delete html.dataset.loaded;
   }, [state, current]);
-  // Night darkens the room (globals.css). A switch eases the light; a visit that starts at
-  // night is simply dark, without easing in from the day the server drew. So the first time,
-  // the store's own value (while hydrating, the render still has the server's day) goes on
-  // with the transition off, its style taken before the transition is back.
-  const nightSet = useRef(false);
+  // Night darkens the room (globals.css). A visit that starts at night is dark from its first
+  // paint (NIGHT_PREPAINT, app/layout.tsx); a switch eases the light. The store's own value
+  // is read every time (while hydrating, the render still has the server's day), and only a
+  // change of it that this desk saw eases: anything else (the first application, or StrictMode
+  // running the mount effects again after the cleanup took the attribute off) goes on with
+  // the transition off, its style taken before the transition is back.
+  const nightSeen = useRef<boolean | null>(null);
   useEffect(() => {
     const html = document.documentElement;
-    const first = !nightSet.current;
-    nightSet.current = true;
-    if (first) html.dataset.nightInstant = "";
-    if (first ? nightOn() : night) html.dataset.night = "";
+    const on = nightOn();
+    const eased = nightSeen.current !== null && nightSeen.current !== on;
+    nightSeen.current = on;
+    if (on === "night" in html.dataset) return;
+    if (!eased) html.dataset.nightInstant = "";
+    if (on) html.dataset.night = "";
     else delete html.dataset.night;
-    if (!first) return;
+    if (eased) return;
     void getComputedStyle(html).backgroundColor;
     delete html.dataset.nightInstant;
   }, [night]);

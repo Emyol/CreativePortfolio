@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Archivo, Doto, Space_Mono } from "next/font/google";
 import { InlineScript } from "@/components/InlineScript";
+import { NIGHT_PREPAINT } from "@/lib/desk/nightPrepaint";
 import { MotionProvider } from "@/lib/motion/MotionProvider";
 import { GL_PREPAINT } from "@/lib/powerOn";
 import "./globals.css";
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={[sans.variable, mono.variable, dot.variable].join(" ")} suppressHydrationWarning>
       <head>
         <InlineScript html={GL_PREPAINT} />
+        <InlineScript html={NIGHT_PREPAINT} />
       </head>
       <body>
         <MotionProvider>{children}</MotionProvider>
