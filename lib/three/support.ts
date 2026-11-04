@@ -6,8 +6,8 @@ export function dprFor(tier: MotionTier, dpr: number): number {
 }
 
 /**
- * Whether the flip and the footer turn in 3D: not under reduced motion (they show the turned
- * drawing), never without WebGL. The hero is 3D under reduced motion too, held still (Hero3D).
+ * Whether the footer turns in 3D: not under reduced motion (it shows the turned drawing),
+ * never without WebGL.
  */
 export function canUse3D(tier: MotionTier, gl: boolean): boolean {
   return tier !== "none" && gl;
@@ -44,7 +44,7 @@ export function hasGpuWebGL(): boolean {
 }
 
 /** When the CSS failsafes show the flat drawing if the page's script hasn't run yet (the
- * gl-failsafe animations in HomeTape, Flip and Underside's CSS). */
+ * gl-failsafe animations in Underside's CSS). */
 export const GL_FAILSAFE = 10_000;
 
 /**

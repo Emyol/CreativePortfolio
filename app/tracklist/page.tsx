@@ -15,49 +15,52 @@ export default async function TrackList() {
   const tracks = visibleTracks(content);
 
   return (
-    <main id="main" tabIndex={-1} className={styles.page}>
-      <h1>Track list</h1>
-      <p>
-        Everything on the tape, as a plain list with no motion. <Link href="/">Back to the tape</Link>
-      </p>
+    <>
+      <a className="skip-link" href="#main">Skip to content</a>
+      <main id="main" tabIndex={-1} className={styles.page}>
+        <h1>Track list</h1>
+        <p>
+          Everything on the tape, as a plain list with no motion. <Link href="/">Back to the tape</Link>
+        </p>
 
-      {tracks.length === 0 ? (
-        <p>Nothing on the tape yet.</p>
-      ) : (
-        <nav aria-label="Tracks">
-          <ol className={styles.toc}>
-            {tracks.map((t) => (
-              <li key={t.id}>
-                <span aria-hidden="true">{formatTrackNumber(t.number)} </span>
-                <a href={`#list-${t.id}`}>{t.label}</a>
-              </li>
-            ))}
-          </ol>
-        </nav>
-      )}
+        {tracks.length === 0 ? (
+          <p>Nothing on the tape yet.</p>
+        ) : (
+          <nav aria-label="Tracks">
+            <ol className={styles.toc}>
+              {tracks.map((t) => (
+                <li key={t.id}>
+                  <span aria-hidden="true">{formatTrackNumber(t.number)} </span>
+                  <a href={`#list-${t.id}`}>{t.label}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
 
-      {tracks.map((t) => (
-        <section key={t.id} id={`list-${t.id}`} aria-labelledby={`list-${t.id}-title`}>
-          <h2 id={`list-${t.id}-title`}>{t.label}</h2>
-          <IndexBody id={t.id} content={content} />
+        {tracks.map((t) => (
+          <section key={t.id} id={`list-${t.id}`} aria-labelledby={`list-${t.id}-title`}>
+            <h2 id={`list-${t.id}-title`}>{t.label}</h2>
+            <IndexBody id={t.id} content={content} />
+          </section>
+        ))}
+
+        {content.links.length > 0 && (
+          <section aria-labelledby="links-title">
+            <h2 id="links-title">Links</h2>
+            <ul>
+              {content.links.map((l) => (
+                <li key={l.url}><a href={l.url}>{l.label}</a></li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section aria-labelledby="credits-title">
+          <h2 id="credits-title">Credits</h2>
+          <p>Fonts: Archivo, Space Mono and Doto, from Google Fonts under the OFL.</p>
         </section>
-      ))}
-
-      {content.links.length > 0 && (
-        <section aria-labelledby="links-title">
-          <h2 id="links-title">Links</h2>
-          <ul>
-            {content.links.map((l) => (
-              <li key={l.url}><a href={l.url}>{l.label}</a></li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section aria-labelledby="credits-title">
-        <h2 id="credits-title">Credits</h2>
-        <p>Fonts: Archivo, Space Mono and Doto, from Google Fonts under the OFL.</p>
-      </section>
-    </main>
+      </main>
+    </>
   );
 }

@@ -1,0 +1,179 @@
+/* The Events device's screen: the player's own lettering grown large, orange dots on black.
+   Every text here reads at 4.5:1 or more on the glass (#050506): --oled-text #FF5A1F 6.5:1,
+   --screen-light #F1E7E2 16.8:1, and the dim hint ink --screen-dim #D24C1C 4.6:1, never
+   under 13 px. The hint's prototype colour (#8a3414, 2.5:1) and the brief's #C2461A (4.06:1)
+   both read too dim. Doto is for lit lettering of 15 px and up; smaller lines are the mono. */
+.screen {
+  --screen-dim: #d24c1c;
+  --screen-light: #f1e7e2;
+  --pad: clamp(12px, 3.4cqi, 18px);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  font-family: var(--font-dot), ui-monospace, monospace;
+  color: var(--oled-text);
+}
+
+/* ---------- the list ---------- */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-block: var(--pad);
+  border-right: 1px dashed rgb(255 90 31 / 0.32);
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0 var(--pad) 10px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--screen-dim);
+}
+
+.options {
+  position: relative; /* the options' offsetParent, for keeping the cursor's row in view */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: calc(8 * 46px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 90 31 / 0.45) transparent;
+}
+/* On a screen, the focus ring is white (on paper it is the track's ink). */
+.options:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.option {
+  display: grid;
+  grid-template-columns: 1.1em 2.1em minmax(0, 1fr);
+  align-items: center;
+  min-height: 46px;
+  padding: 0 var(--pad);
+  font-size: clamp(15px, 3.6cqi, 19px);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+.cursor {
+  visibility: hidden;
+}
+/* The cursor's row: lit solid, its text cut out of the light (#050506 on #FF5A1F, 6.5:1). */
+.option[aria-selected="true"] {
+  background: var(--oled-text);
+  color: var(--oled);
+}
+.option[aria-selected="true"] .cursor {
+  visibility: visible;
+}
+
+/* A row never takes its width from its name: a long one is cut short, and steps across
+   while the cursor is on it (Name, EventsScreen.tsx). */
+.name {
+  contain: inline-size;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stepping {
+  text-overflow: clip;
+}
+.stepping > span {
+  display: inline-block;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Without JS: the events as plain links under the list. */
+.plain {
+  margin: 12px 0 0;
+  padding: 0 var(--pad);
+  list-style: none;
+  font: 400 14px/1.4 var(--font-mono), ui-monospace, monospace;
+}
+.plain a {
+  display: block;
+  padding-block: 12px;
+  color: var(--screen-light);
+}
+
+/* ---------- the preview ---------- */
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: var(--pad);
+}
+/* The dithered photo sits straight on this screen: no bezel of its own. */
+.preview .photo {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.preview .photo canvas {
+  aspect-ratio: 4 / 3;
+}
+
+/* At most three lines, so the screen keeps its height as the cursor moves; the name is
+   printed whole on the liner beside it. */
+.previewName {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: clamp(15px, 3.8cqi, 19px);
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.meta {
+  margin: 0;
+  font: 700 14px/1.4 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  color: var(--screen-light);
+}
+.hint {
+  margin: auto 0 0;
+  padding-top: 6px;
+  font: 700 13px/1.4 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  color: var(--screen-dim);
+}
+
+/* A narrow screen: the preview goes under the list. */
+@container device-screen (max-width: 420px) {
+  .screen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .side {
+    border-right: 0;
+    border-bottom: 1px dashed rgb(255 90 31 / 0.32);
+  }
+}

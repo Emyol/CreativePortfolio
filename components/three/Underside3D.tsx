@@ -1,10 +1,7 @@
 "use client";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { packScales } from "@/components/device/useReelMotion";
-import { gsap, ScrollTrigger } from "@/lib/motion/gsap";
-import { DOCK_RESERVE } from "@/lib/motion/hold";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
-import { useHold, type Arrival } from "@/lib/motion/useHold";
 import { loadDevice } from "@/lib/three/loadDevice";
 import { getStage, type View } from "@/lib/three/stage";
 import { rectFromCorners } from "./project";
@@ -19,6 +16,10 @@ const BOX_W = 9.36; // model units across the footer's device box (the sprite's 
 const LIFT = 0.9; // kept low, so the shadow stays soft
 const LANDED = 0.98; // from here the live text sits on the sticker and the door
 const deg = (d: number) => (d * Math.PI) / 180;
+// The hold (v1's scroll holds; this view is parked, mounted nowhere, kept for the footer): room kept clear above the
+// bottom of the screen, and how much scroll the turn lasts.
+const RESERVE = 110;
+const HOLD = 1000;
 
 /**
  * The tape's end: the player turns over in real time (docs/superpowers/specs/2026-10-18-
@@ -88,9 +89,7 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
       drawScreen(screen.ctx, ["SIDE B"], { family });
       screen.update();
       const cassette = root.getObjectByName("Cassette");
-      const packL = cassette?.getObjectByName("PackL");
-      const packR = cassette?.getObjectByName("PackR");
-      if (!cassette || !packL || !packR) throw new Error("device.glb has no Cassette with packs");
+      if (!cassette) throw new Error("device.glb has no Cassette");
       const before = new three.Box3().setFromObject(cassette).min.y;
       cassette.rotation.z = -Math.PI;
       cassette.updateMatrixWorld(true);
@@ -163,10 +162,6 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
           const e = t * t * (3 - 2 * t);
           pivot.rotation.set(Math.PI * e, deg(-3) * Math.sin(2 * Math.PI * t), deg(-5) * Math.sin(Math.PI * t));
           pivot.position.y = H / 2 + LIFT * Math.sin(Math.PI * t);
-          // Turned to its B half, the cassette shows its right pack on the left.
-          const s = packScales();
-          packL.scale.set(s.right, 1, s.right);
-          packR.scale.set(s.left, 1, s.left);
           const label = t.toFixed(2);
           if (label !== shown) box.dataset.turn = shown = label;
           const now = t >= LANDED;
@@ -219,7 +214,9 @@ export function Underside3D({ device, onFail }: { device: RefObject<HTMLDivEleme
 /**
  * Holds the footer's device box while the scroll turns it. The footer ends soon after the
  * box, so on a tall screen the page would run out before the hold's end: it gets just enough
- * room below first (measured from the box and the footer's own content, not the pin).
+ * room below first (measured from the box and the footer's own content, not the pin). The
+ * box holds centred above the bottom reserve when it fits there, else with its top 10 px
+ * down; `data-arrival` records how far the hold is.
  */
 function UndersideHold({ device, turn }: { device: RefObject<HTMLDivElement | null>; turn: { t: number } }) {
   useLayoutEffect(() => {
@@ -232,8 +229,8 @@ function UndersideHold({ device, turn }: { device: RefObject<HTMLDivElement | nu
       footer.style.paddingBottom = own;
       const vh = window.innerHeight;
       const h = box.offsetHeight;
-      const above = vh - DOCK_RESERVE;
-      const bottom = h <= above ? (above + h) / 2 : 10 + h; // the box's bottom while held (holdStart)
+      const above = vh - RESERVE;
+      const bottom = h <= above ? (above + h) / 2 : 10 + h; // the box's bottom while held
       const style = getComputedStyle(footer);
       const after = meta.offsetHeight + parseFloat(style.rowGap || "0") + parseFloat(style.paddingBottom);
       const short = Math.ceil(vh - bottom - after);
@@ -246,7 +243,34 @@ function UndersideHold({ device, turn }: { device: RefObject<HTMLDivElement | nu
       footer.style.paddingBottom = own;
     };
   }, [device]);
-  const arrival = useMemo<Arrival>(() => ({ distance: 1000, hold: (tl) => void tl.fromTo(turn, { t: 0 }, { t: 1, duration: 1 }) }), [turn]);
-  useHold(device, arrival, "underside");
+  useGSAP(
+    () => {
+      const box = device.current;
+      if (!box) return;
+      const write = (st: ScrollTrigger) => box.setAttribute("data-arrival", st.progress.toFixed(2));
+      gsap
+        .timeline({
+          defaults: { ease: "none" },
+          scrollTrigger: {
+            trigger: box,
+            pin: true,
+            scrub: true,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+            start: () => {
+              const room = innerHeight - RESERVE;
+              return box.offsetHeight <= room ? `center ${Math.round(room / 2)}px` : "top top+=10";
+            },
+            end: `+=${HOLD}`,
+            onUpdate: write,
+            onRefresh: write,
+          },
+        })
+        .fromTo(turn, { t: 0 }, { t: 1, duration: 1 })
+        .to({}, { duration: 0.15 }); // a still rest before it lets go
+      return () => box.removeAttribute("data-arrival");
+    },
+    { scope: device, dependencies: [turn] },
+  );
   return null;
 }

@@ -1,6 +1,6 @@
 // The 3D player's screen: live text drawn on a canvas that textures a plane over the OLED
 // glass. Sized for a 1024×452 canvas (the glass's proportions).
-import { MARQUEE } from "@/lib/motion/marquee";
+import { MARQUEE, fitScale } from "@/lib/motion/marquee";
 
 export const SCREEN_W = 1024;
 export const SCREEN_H = 452;
@@ -9,7 +9,7 @@ const ORANGE = "#FF5A1F";
 const WHITE = "#F1E7E2";
 const PAD = 70;
 const CHAR = 0.62; // Doto's advance as a share of its size (a monospace dot-matrix face)
-/** The headline's type size; it comes round (lib/motion/marquee.ts) when too long. */
+/** The headline's type size; it comes round (lib/motion/marquee.ts) when too long, or at rest is set smaller to fit. */
 export const HEAD_SIZE = 150;
 const ROOM = SCREEN_W - 2 * PAD;
 
@@ -18,7 +18,7 @@ export type ScreenLine = { text: string; size: number; x: number; y: number; col
 
 /** How wide the headline draws, in canvas px. */
 export type Measure = (text: string) => number;
-const HEAD_FONT = (family: string) => `900 ${HEAD_SIZE}px ${family}, monospace`;
+const HEAD_FONT = (family: string, size = HEAD_SIZE) => `900 ${size}px ${family}, monospace`;
 /** Doto's advance for every character: what the layout assumes with no canvas to measure on. */
 const estimate: Measure = (text) => Array.from(text).length * HEAD_SIZE * CHAR;
 /** The headline's real width on `ctx` (a title in a script Doto lacks falls back wider). */
@@ -35,7 +35,8 @@ export function headlineShift(lines: string[], measure: Measure = estimate): num
 
 /**
  * Where each line goes: an orange headline, and a white second line shrunk (then cut) to fit.
- * A headline too long comes round instead (`scroll` says how far it has), or rests cut short.
+ * A headline too long comes round instead (`scroll` says how far it has); at rest (reduced
+ * motion) it is set smaller to fit, down to FIT_FLOOR of its size, and only past that cut short.
  * (The HTML screen lets a long second line come round too; this one has room to shrink it.)
  */
 export function screenLayout(lines: string[], scroll?: number, measure: Measure = estimate): ScreenLine[] {
@@ -44,14 +45,17 @@ export function screenLayout(lines: string[], scroll?: number, measure: Measure 
   if (head !== undefined) {
     const shift = headlineShift(lines, measure);
     let text = head;
-    if (shift && scroll === undefined) {
+    let size = HEAD_SIZE;
+    const fit = shift && scroll === undefined ? fitScale(measure(head), ROOM) : 1;
+    if (fit) size = Math.floor(HEAD_SIZE * fit);
+    else {
       // Whole characters (an emoji is one) off the end until it fits with its ellipsis.
       const chars = Array.from(head);
       do chars.pop();
       while (chars.length && measure(`${chars.join("")}…`) > ROOM);
       text = `${chars.join("")}…`;
     }
-    out.push({ text, size: HEAD_SIZE, x: PAD, y: 190, color: ORANGE, ...(shift && scroll !== undefined ? { scroll, shift } : {}) });
+    out.push({ text, size, x: PAD, y: 190, color: ORANGE, ...(shift && scroll !== undefined ? { scroll, shift } : {}) });
   }
   if (second) {
     const room = SCREEN_W - 2 * PAD - 8;
@@ -66,9 +70,9 @@ export function screenLayout(lines: string[], scroll?: number, measure: Measure 
 /**
  * Draws the screen: lines at `dim` brightness (the flicker), and the playhead when playing.
  * `family` is the page's Doto (next/font gives it its own name); `scroll`, how far a long
- * headline has come round (screenLayout).
+ * headline has come round (screenLayout). Returns the layout it drew.
  */
-export function drawScreen(ctx: CanvasRenderingContext2D, lines: string[], { dim = 1, progress, family = "Doto", scroll }: { dim?: number; progress?: number; family?: string; scroll?: number } = {}): void {
+export function drawScreen(ctx: CanvasRenderingContext2D, lines: string[], { dim = 1, progress, family = "Doto", scroll }: { dim?: number; progress?: number; family?: string; scroll?: number } = {}): ScreenLine[] {
   const layout = screenLayout(lines, scroll, measureHead(ctx, family));
   ctx.globalAlpha = 1;
   ctx.fillStyle = "#040405";
@@ -79,7 +83,7 @@ export function drawScreen(ctx: CanvasRenderingContext2D, lines: string[], { dim
     ctx.shadowColor = line.color === ORANGE ? "rgb(255 90 31 / 0.6)" : "rgb(255 255 255 / 0.25)";
     ctx.shadowBlur = 18;
     ctx.fillStyle = line.color;
-    ctx.font = line.color === ORANGE ? HEAD_FONT(family) : `800 ${line.size}px ${family}, monospace`;
+    ctx.font = line.color === ORANGE ? HEAD_FONT(family, line.size) : `800 ${line.size}px ${family}, monospace`;
     if (line.scroll === undefined || line.shift === undefined) {
       ctx.fillText(line.text, line.x, line.y);
       continue;
@@ -102,4 +106,5 @@ export function drawScreen(ctx: CanvasRenderingContext2D, lines: string[], { dim
     ctx.fillRect(PAD, 384, (SCREEN_W - 2 * PAD) * Math.min(1, Math.max(0, progress)), 8);
   }
   ctx.globalAlpha = 1;
+  return layout;
 }

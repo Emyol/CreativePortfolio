@@ -14,7 +14,20 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
   );
 }
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+/**
+ * The editor, or what stands in its way. On its own shell (an opaque table colour), not the
+ * admin layout's: the preview's desk draws under the page, where a shell would cover it.
+ */
+export default async function AdminPage(props: { searchParams: Promise<{ error?: string }> }) {
+  return (
+    <div className={styles.shell}>
+      <a className="skip-link" href="#main">Skip to content</a>
+      {await body(props)}
+    </div>
+  );
+}
+
+async function body({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const state = await getAdminStatus();
   const { error } = await searchParams;
 

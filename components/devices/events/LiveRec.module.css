@@ -1,0 +1,118 @@
+/* The live recording on the Events screen. The same inks as the list (EventsScreen.module.css):
+   --oled-text #FF5A1F 6.5:1, --screen-light #F1E7E2 16.8:1, --screen-dim #D24C1C 4.6:1
+   (13 px and up) on the glass. */
+.rec {
+  --screen-dim: #d24c1c;
+  --screen-light: #f1e7e2;
+  --pad: clamp(12px, 3.4cqi, 18px);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-areas:
+    "head head"
+    "photo words"
+    "back back";
+  grid-template-rows: auto auto 1fr;
+  gap: 12px var(--pad);
+  padding: var(--pad);
+  box-sizing: border-box;
+  font-family: var(--font-dot), ui-monospace, monospace;
+  color: var(--oled-text);
+}
+
+/* Opened from within the site: the screen wipes down to the recording in a few hard steps,
+   as a dot screen redraws. Never under reduced motion, the system's or the site's (live). */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-tier="none"]) .rec[data-wipe] {
+    animation: wipe 420ms steps(14) both;
+  }
+}
+@keyframes wipe {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+.words {
+  grid-area: words;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.head {
+  grid-area: head;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  font-size: clamp(15px, 4.6cqi, 18px);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.rec .photo {
+  grid-area: photo;
+  align-self: start;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.rec .photo canvas {
+  aspect-ratio: 4 / 3;
+}
+
+.meta {
+  margin: 0;
+  font: 700 14px/1.4 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  color: var(--screen-light);
+}
+.summary {
+  margin: 0;
+  font: 400 14px/1.6 var(--font-mono), ui-monospace, monospace;
+  color: var(--screen-light);
+  overflow-wrap: anywhere;
+}
+
+/* One step back, as a key on the screen: a full touch target, white focus as on every screen. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  grid-area: back;
+  align-self: end;
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 10px;
+  margin-left: -10px;
+  border-radius: 4px;
+  font: 700 13px/1.2 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  color: var(--screen-dim);
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .back:hover {
+    color: var(--oled-text);
+  }
+}
+.back:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+@container device-screen (max-width: 420px) {
+  .rec {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "photo" "words" "back";
+    grid-template-rows: auto;
+  }
+}

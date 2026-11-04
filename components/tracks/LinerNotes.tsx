@@ -5,9 +5,8 @@ import styles from "./LinerNotes.module.css";
 
 /**
  * About, set like the liner notes folded into a cassette case, with the candid shown on a
- * small dot-matrix screen (DotPhoto). As the track arrives the letter's lines rise into place
- * one by one while the screen powers on (arrivals.ts), and the screen can be picked up and
- * thrown, springing back to its place.
+ * small dot-matrix screen (DotPhoto). The screen can be picked up and thrown, springing
+ * back to its place.
  */
 export function LinerNotes({ about }: { about: About }) {
   return (

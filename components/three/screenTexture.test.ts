@@ -35,7 +35,7 @@ test("a headline too long is cut short at rest, and whole while it comes round",
 
 test("widths are measured, so a headline in a wider face comes round and is cut to fit", () => {
   const wide = (text: string) => Array.from(text).length * 150; // a fallback face about 1 em wide
-  const lines = ["夜に駆けるまで", "Artist  0:01"];
+  const lines = ["あいうえおかきくけ", "Artist  0:01"]; // nine wide characters: too wide to shrink to fit
   expect(headlineShift(lines)).toBe(0); // Doto's advance would say it fits
   expect(headlineShift(lines, wide)).toBeGreaterThan(0);
   const [rest] = screenLayout(lines, undefined, wide);
@@ -46,4 +46,16 @@ test("widths are measured, so a headline in a wider face comes round and is cut 
 test("an emoji is cut whole, never split in half", () => {
   const [rest] = screenLayout(["🎵".repeat(12)]);
   expect(rest.text).toMatch(/^(🎵)+…$/u);
+});
+
+test("at rest, a headline a little too long is set smaller to fit, whole", () => {
+  const lines = ["PICK A TAPE", "six on the desk"];
+  expect(headlineShift(lines)).toBeGreaterThan(0); // it would come round with motion
+  const [rest] = screenLayout(lines);
+  expect(rest.text).toBe("PICK A TAPE");
+  expect(rest.size).toBeLessThan(150);
+  expect(rest.size).toBeGreaterThanOrEqual(120);
+  expect(Array.from(rest.text).length * rest.size * 0.62).toBeLessThanOrEqual(1024 - 140);
+  // Coming round, it keeps its full size.
+  expect(screenLayout(lines, 0)[0].size).toBe(150);
 });

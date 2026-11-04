@@ -1,0 +1,45 @@
+/* A track that failed to show: printed on the J-card's paper (or, on the desk, a slip of it). */
+.page {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  padding: 3rem var(--gutter);
+}
+.box {
+  max-width: 36rem;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  font: 400 1rem/1.6 var(--font-sans), system-ui, sans-serif;
+}
+.line {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.9375rem;
+}
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+}
+.button {
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--paper-ink);
+  border-radius: 8px;
+  background: var(--paper-ink);
+  color: var(--paper);
+  font: inherit;
+  cursor: pointer;
+}

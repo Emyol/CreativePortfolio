@@ -18,7 +18,6 @@ type Props = { side: SideId; className?: string; style?: CSSProperties; eager?: 
 
 /**
  * The tape in the window: two packs, two hubs, then the shell with its label window on top.
- * Reels and packs carry data-reel / data-pack for useReelMotion.
  */
 export function Cassette({ side, className, style, eager = true }: Props) {
   const start = packDiameters(0, pack);

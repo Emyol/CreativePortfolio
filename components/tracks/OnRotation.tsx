@@ -3,14 +3,14 @@ import { useId, useRef, useState } from "react";
 import type { ShelfItem } from "@/lib/content/schema";
 import { gsap, useGSAP } from "@/lib/motion/gsap";
 import { useMotionTier } from "@/lib/motion/MotionProvider";
-import { getLenis } from "@/lib/motion/navigate";
+import { trackScroll } from "@/lib/motion/scrollSpeed";
 import { Spine } from "./Spine";
 import styles from "./OnRotation.module.css";
 
 /**
- * Games, anime and manga Miel is into right now, as cassette spines in a rack. They drop
- * into the rack as the track arrives (arrivals.ts); hovering, focusing or tapping a spine
- * pulls it up and shows its note below; scrolling fast makes the spines lean.
+ * Games, anime and manga Miel is into right now, as cassette spines in a rack. Hovering,
+ * focusing or tapping a spine pulls it up and shows its note below; scrolling fast makes
+ * the spines lean.
  */
 export function OnRotation({ items }: { items: ShelfItem[] }) {
   const [open, setOpen] = useState(0);
@@ -24,12 +24,15 @@ export function OnRotation({ items }: { items: ShelfItem[] }) {
       const spines = rack.current?.querySelectorAll<HTMLElement>("[data-spine]");
       if (!spines?.length || tier === "none") return;
       const lean = gsap.quickTo(spines, "skewX", { duration: 0.6, ease: "power3" });
+      const scroll = trackScroll();
       const tick = () => {
-        const v = getLenis()?.velocity ?? 0;
-        lean(gsap.utils.clamp(-14, 14, -v * 0.5));
+        lean(gsap.utils.clamp(-14, 14, -scroll.read() * 0.5));
       };
       gsap.ticker.add(tick);
-      return () => gsap.ticker.remove(tick);
+      return () => {
+        gsap.ticker.remove(tick);
+        scroll.stop();
+      };
     },
     { scope: rack, dependencies: [tier, items.length], revertOnUpdate: true },
   );

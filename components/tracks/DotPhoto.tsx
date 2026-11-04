@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useRef } from "react";
 import type { Photo } from "@/lib/content/schema";
-import { coverRect, DOTS, dotLevels, gridFor, rowLight, sampleSrc, STEPS, type DotSettings } from "@/lib/dotPhoto";
+import { coverRect, DOTS, dotLevels, gridFor, sampleSrc, STEPS, type DotSettings } from "@/lib/dotPhoto";
 import { useInViewOnce } from "@/lib/motion/useInViewOnce";
 import styles from "./DotPhoto.module.css";
 
 const OFF = 0.06; // an unlit dot still shows faintly, like an off pixel
 
-const redraws = new WeakMap<Element, () => void>();
 // Decoded once per photo, so adjusting the dots in the admin redraws at once.
 const images = new Map<string, Promise<HTMLImageElement>>();
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -20,22 +19,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     images.set(src, image);
   }
   return image;
-}
-
-/**
- * How far the screen has powered on, 0 (dark) to 1 (fully lit): the About arrival's
- * scanline (components/tracks/arrivals.ts). Kept on the element, so it holds even if the
- * arrival is made before the screen has drawn.
- */
-export function revealDots(screen: Element | null, reveal: number): void {
-  if (!(screen instanceof HTMLElement)) return;
-  screen.dataset.reveal = reveal.toFixed(2);
-  redraws.get(screen)?.();
-}
-
-/** One short flicker, as the player's screen gives when its text changes (Screen.module.css). */
-export function flickerDots(screen: Element | null): void {
-  screen?.animate([{ opacity: 0.15 }, { opacity: 0.7 }, { opacity: 1 }], { duration: 120, easing: "steps(3, jump-none)" });
 }
 
 /**
@@ -65,8 +48,7 @@ export function DotPhoto({ photo, dots = DOTS, className }: { photo: Photo; dots
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const pw = Math.round(w * dpr);
       const ph = Math.round(h * dpr);
-      const reveal = Number(canvas.dataset.reveal ?? 1);
-      const key = `${pw}x${ph} ${reveal} ${levels ? 1 : 0}`;
+      const key = `${pw}x${ph} ${levels ? 1 : 0}`;
       if (key === drawn) return;
       drawn = key;
       if (canvas.width !== pw || canvas.height !== ph) {
@@ -81,23 +63,21 @@ export function DotPhoto({ photo, dots = DOTS, className }: { photo: Photo; dots
       const r = pitch * 0.36;
       // A row's dots at the same step share one fill.
       for (let y = 0; y < rows; y++) {
-        const light = levels ? rowLight(y, rows, reveal) : 0;
         const paths = Array.from({ length: STEPS + 1 }, () => new Path2D());
         for (let x = 0; x < cols; x++) {
           const cx = ox + x * pitch;
           const cy = oy + y * pitch;
-          const path = paths[levels && light > 0 ? levels[y * cols + x] : 0];
+          const path = paths[levels ? levels[y * cols + x] : 0];
           path.moveTo(cx + r, cy);
           path.arc(cx, cy, r, 0, Math.PI * 2);
         }
         paths.forEach((path, step) => {
-          g.fillStyle = `rgb(255 90 31 / ${Math.max(OFF, step ? (0.18 + (step / STEPS) * 0.82) * light : 0).toFixed(3)})`;
+          g.fillStyle = `rgb(255 90 31 / ${Math.max(OFF, step ? 0.18 + (step / STEPS) * 0.82 : 0).toFixed(3)})`;
           g.fill(path);
         });
       }
     };
 
-    redraws.set(canvas, draw);
     const resized = new ResizeObserver(draw);
     resized.observe(canvas);
     draw();
@@ -122,7 +102,6 @@ export function DotPhoto({ photo, dots = DOTS, className }: { photo: Photo; dots
     }
     return () => {
       gone = true;
-      redraws.delete(canvas);
       resized.disconnect();
     };
   }, [photo.src, near, across, brightness, contrast]);
@@ -130,7 +109,7 @@ export function DotPhoto({ photo, dots = DOTS, className }: { photo: Photo; dots
   return (
     <div className={[styles.panel, className].filter(Boolean).join(" ")}>
       <div className={styles.glass}>
-        <canvas ref={ref} role="img" aria-label={photo.alt} className={styles.dots} data-dot-photo="" data-reveal="1.00" data-across={across} />
+        <canvas ref={ref} role="img" aria-label={photo.alt} className={styles.dots} data-dot-photo="" data-across={across} />
       </div>
     </div>
   );

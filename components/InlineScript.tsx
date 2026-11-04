@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * A blocking inline script that runs before first paint on hard loads.
  * Next 16 docs (preventing-flash-before-hydration): render it as text/javascript on the

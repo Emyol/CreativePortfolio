@@ -1,0 +1,39 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { Section } from "@/components/desk/Section";
+import { EventStory } from "@/components/devices/events/EventStory";
+import { LiveRec } from "@/components/devices/events/LiveRec";
+import { getContent } from "@/lib/content/load";
+import { newestFirst } from "@/lib/devices/events";
+
+type Props = { params: Promise<{ slug: string }> };
+
+// Events published from the admin get their page on first visit, without a deploy;
+// unknown slugs still 404 (notFound below). Pages refresh hourly and on publish.
+export const dynamicParams = true;
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const { events } = await getContent();
+  return events.map((e) => ({ slug: e.slug }));
+}
+
+async function findEvent(slug: string) {
+  const { events } = await getContent();
+  return events.find((e) => e.slug === slug);
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const event = await findEvent((await params).slug);
+  return event ? { title: `${event.name} · Miel`, description: event.summary } : {};
+}
+
+/** An event: the Events device opened on its live recording, its story on the J-card's liner. */
+export default async function EventPage({ params }: Props) {
+  const { slug } = await params;
+  const list = newestFirst((await getContent()).events);
+  const at = list.findIndex((e) => e.slug === slug);
+  if (at < 0) notFound();
+  const event = list[at];
+  return <Section device={<LiveRec event={event} number={at + 1} />} liner={<EventStory event={event} />} />;
+}

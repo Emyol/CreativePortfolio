@@ -1,22 +1,19 @@
-import { notFound, redirect } from "next/navigation";
-import { EventPageBody } from "@/components/tape/EventPageBody";
-import { previewable } from "@/components/tape/preview";
-import { getDraft } from "@/lib/content/repository";
-import { getAdminStatus } from "@/lib/supabase/server";
-import { PreviewLabel } from "../../PreviewLabel";
+import { notFound } from "next/navigation";
+import { Section } from "@/components/desk/Section";
+import { EventStory } from "@/components/devices/events/EventStory";
+import { LiveRec } from "@/components/devices/events/LiveRec";
+import { newestFirst } from "@/lib/devices/events";
+import { PREVIEW_BASE, previewDraft } from "../../draft";
 
 export const dynamic = "force-dynamic";
 
+/** An event of the draft, as the public event page: the Events device on its live recording, the story on the liner. */
 export default async function PreviewEvent({ params }: { params: Promise<{ slug: string }> }) {
-  if ((await getAdminStatus()).status !== "ready") redirect("/admin");
+  const { content } = await previewDraft();
   const { slug } = await params;
-  const { content, hidden } = previewable((await getDraft()).content);
-  const event = content.events.find((e) => e.slug === slug);
-  if (!event) notFound();
-  return (
-    <>
-      <PreviewLabel hidden={hidden} />
-      <EventPageBody content={content} event={event} home="/admin/preview" />
-    </>
-  );
+  const list = newestFirst(content.events);
+  const at = list.findIndex((e) => e.slug === slug);
+  if (at < 0) notFound();
+  const event = list[at];
+  return <Section device={<LiveRec event={event} number={at + 1} base={PREVIEW_BASE} />} liner={<EventStory event={event} />} />;
 }

@@ -18,7 +18,8 @@ export function makeTable(three: typeof THREE, environment: THREE.Texture, tier:
   light.shadow.radius = 6;
   light.shadow.bias = -0.0004;
   light.shadow.normalBias = 0.03;
-  scene.add(light, new three.AmbientLight("#ffffff", 0.35));
+  const ambient = new three.AmbientLight("#ffffff", 0.35);
+  scene.add(light, ambient);
   const groundGeo = new three.PlaneGeometry(60, 60);
   const groundMat = new three.ShadowMaterial({ opacity: 0.22 });
   const ground = new three.Mesh(groundGeo, groundMat);
@@ -29,7 +30,9 @@ export function makeTable(three: typeof THREE, environment: THREE.Texture, tier:
   return {
     scene,
     light,
+    ambient,
     dispose() {
+      light.dispose(); // its shadow map
       groundGeo.dispose();
       groundMat.dispose();
     },

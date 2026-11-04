@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coverRect, DOTS, dotLevels, gridFor, rowLight, sampleSrc, STEPS } from "./dotPhoto";
+import { coverRect, DOTS, dotLevels, gridFor, sampleSrc, STEPS } from "./dotPhoto";
 import { contentSchema } from "./content/schema";
 
 /** An RGBA buffer of grey pixels. */
@@ -50,32 +50,6 @@ describe("coverRect", () => {
     expect(r.sw).toBe(800);
     expect(r.sh).toBe(1000);
     expect(r.sy).toBe(300);
-  });
-});
-
-describe("rowLight", () => {
-  it("is dark before the sweep and fully lit once it has passed", () => {
-    expect(rowLight(0, 50, 0)).toBe(0);
-    expect(rowLight(49, 50, 0)).toBe(0);
-    expect(rowLight(0, 50, 1)).toBe(1);
-    expect(rowLight(49, 50, 1)).toBe(1);
-  });
-
-  it("lights from the top down", () => {
-    const top = rowLight(5, 50, 0.4);
-    const middle = rowLight(25, 50, 0.4);
-    const bottom = rowLight(45, 50, 0.4);
-    expect(top).toBe(1);
-    expect(middle).toBeLessThan(top);
-    expect(bottom).toBe(0);
-  });
-
-  it("eases a row up as the scanline crosses it, never jumping", () => {
-    const steps = Array.from({ length: 101 }, (_, i) => rowLight(25, 50, i / 100));
-    for (let i = 1; i < steps.length; i++) {
-      expect(steps[i]).toBeGreaterThanOrEqual(steps[i - 1]);
-      expect(steps[i] - steps[i - 1]).toBeLessThan(0.35);
-    }
   });
 });
 

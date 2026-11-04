@@ -2,9 +2,8 @@ import type { Person } from "@/lib/content/schema";
 import styles from "./Featuring.module.css";
 
 /**
- * The people around Miel, set like the thank-you credits on an album sleeve. As the track
- * arrives the credits roll up into their window and settle (arrivals.ts); a name lights up
- * on hover or focus, and its note opens.
+ * The people around Miel, set like the thank-you credits on an album sleeve. A name lights
+ * up on hover or focus, and its note opens.
  */
 export function Featuring({ people }: { people: Person[] }) {
   return (

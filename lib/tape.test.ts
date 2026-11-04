@@ -6,13 +6,16 @@ import seed from "./content/seed.json";
 import {
   formatTrackNumber,
   hasSide,
+  KEY_COUNT,
   keySlots,
-  knobAngle,
+  neighbours,
   packDiameters,
   shouldHandleTrackKey,
+  sideTrackForKey,
   sideOf,
   sideTracks,
   trackForKey,
+  trackNumber,
   visibleTracks,
 } from "./tape";
 
@@ -35,18 +38,23 @@ describe("tracks", () => {
   test("labels are the printed key labels", () => {
     expect(visibleTracks(FIXTURES).map((t) => t.label)).toEqual(["about", "events", "mixtape", "people", "made", "on rotation"]);
   });
-  test("empty tracks close up the numbering", () => {
+  test("numbers stay fixed when a track is empty", () => {
+    const t = visibleTracks({ ...FIXTURES, music: [] });
+    expect(t.find((x) => x.id === "people")?.number).toBe(4);
+    expect(t.some((x) => x.id === "mixtape")).toBe(false);
     const c = { ...FIXTURES, events: [], hobbies: [] };
-    expect(visibleTracks(c).map((t) => `${t.id}:${t.number}`)).toEqual(["about:1", "mixtape:2", "people:3", "on-rotation:4"]);
+    expect(visibleTracks(c).map((x) => `${x.id}:${x.number}`)).toEqual(["about:1", "mixtape:3", "people:4", "on-rotation:6"]);
+    expect(trackNumber("on-rotation")).toBe(6);
+    expect(KEY_COUNT).toBe(6);
   });
   test("about needs a letter, not just a toolbox", () => {
     expect(visibleTracks({ ...empty, about: { letter: [], toolbox: ["Git"] } })).toEqual([]);
   });
-  test("an empty tape has no tracks, no side b, four blank keys", () => {
+  test("an empty tape has no tracks, no side b, six blank keys", () => {
     const t = visibleTracks(empty);
     expect(t).toEqual([]);
     expect(hasSide(t, "b")).toBe(false);
-    expect(keySlots(t, "a").map((k) => k.track)).toEqual([null, null, null, null]);
+    expect(keySlots(t).map((k) => k.track)).toEqual([null, null, null, null, null, null]);
   });
   test("today's seed has no tracks", () => {
     expect(visibleTracks(parseContent(seed, "seed.json"))).toEqual([]);
@@ -58,10 +66,20 @@ describe("tracks", () => {
     expect(sideOf(t, "events")).toBe("a");
     expect(sideOf(t, null)).toBe("a");
   });
-  test("side b keys use two slots and blank the rest", () => {
-    const t = visibleTracks(FIXTURES);
-    expect(keySlots(t, "b").map((k) => k.track?.id ?? null)).toEqual(["made", "on-rotation", null, null]);
-    expect(keySlots(t, "b").map((k) => k.index)).toEqual([0, 1, 2, 3]);
+  test("keySlots has six slots in tape order", () => {
+    const t = visibleTracks({ ...FIXTURES, music: [] });
+    const slots = keySlots(t);
+    expect(slots.map((k) => k.id)).toEqual(["about", "events", "mixtape", "people", "made", "on-rotation"]);
+    expect(slots.map((k) => k.index)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(slots[2].track).toBeNull();
+    expect(slots[3].track?.id).toBe("people");
+  });
+  test("neighbours skips empty tracks and wraps", () => {
+    const t = visibleTracks({ ...FIXTURES, music: [] });
+    expect(neighbours(t, "events").next?.id).toBe("people");
+    expect(neighbours(t, "people").prev?.id).toBe("events");
+    expect(neighbours(t, "about").prev?.id).toBe("on-rotation");
+    expect(neighbours(t, "on-rotation").next?.id).toBe("about");
   });
   test("track numbers print with two digits", () => {
     expect(formatTrackNumber(1)).toBe("01");
@@ -69,30 +87,21 @@ describe("tracks", () => {
   });
 });
 
-describe("knob", () => {
-  test("detents spread over 270 degrees", () => {
-    const t = visibleTracks(FIXTURES);
-    expect(knobAngle(t, "a", null)).toBe(-135);
-    expect(knobAngle(t, "a", "about")).toBe(-135);
-    expect(knobAngle(t, "a", "people")).toBe(135);
-    expect(knobAngle(t, "a", "events")).toBe(-45);
-    expect(knobAngle(t, "b", "made")).toBe(-135);
-    expect(knobAngle(visibleTracks({ ...FIXTURES, shelf: [] }), "b", "made")).toBe(0); // one detent points up
-  });
-  test("a track on the other side leaves the knob at rest", () => {
-    expect(knobAngle(visibleTracks(FIXTURES), "a", "made")).toBe(-135);
-  });
-});
-
 describe("number keys", () => {
-  test("follow the current side; out of range is undefined", () => {
+  test("fixed positions; an empty track's key and out of range are undefined", () => {
+    const t = visibleTracks({ ...FIXTURES, music: [] });
+    expect(trackForKey("1", t)?.id).toBe("about");
+    expect(trackForKey("3", t)).toBeUndefined();
+    expect(trackForKey("4", t)?.id).toBe("people");
+    expect(trackForKey("6", t)?.id).toBe("on-rotation");
+    expect(trackForKey("7", visibleTracks(FIXTURES))).toBeUndefined();
+    expect(trackForKey("0", t)).toBeUndefined();
+    expect(trackForKey("b", t)).toBeUndefined();
+  });
+  test("legacy side keys follow the current side", () => {
     const t = visibleTracks(FIXTURES);
-    expect(trackForKey("1", t, "b")?.id).toBe("made");
-    expect(trackForKey("3", t, "b")).toBeUndefined();
-    expect(trackForKey("4", t, "a")?.id).toBe("people");
-    expect(trackForKey("5", t, "a")).toBeUndefined();
-    expect(trackForKey("0", t, "a")).toBeUndefined();
-    expect(trackForKey("b", t, "a")).toBeUndefined();
+    expect(sideTrackForKey("1", t, "b")?.id).toBe("made");
+    expect(sideTrackForKey("3", t, "b")).toBeUndefined();
   });
 });
 

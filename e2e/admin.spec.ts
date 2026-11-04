@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 test("the admin opens (fixtures make it ready) and stays out of search engines", async ({ page }) => {
@@ -6,26 +6,104 @@ test("the admin opens (fixtures make it ready) and stays out of search engines",
   expect(res?.status()).toBe(200);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.getByRole("heading", { level: 1, name: "Edit the tape" })).toBeVisible();
-  await expect(page.locator("[data-device], [data-dock]")).toHaveCount(0);
+  await expect(page.locator("[data-desk-root]")).toHaveCount(0);
 });
 
-test("no smooth scrolling in the admin", async ({ page }) => {
-  await gotoReady(page, "/admin");
-  await expect(page.locator("html")).not.toHaveClass(/lenis/);
-});
+test.describe("the preview", () => {
+  // The desk loads three.js and the model on a dev server that compiles on demand.
+  test.beforeEach(() => test.setTimeout(60_000));
 
-test("the preview is the real tape, marked as unpublished, with its own event pages", async ({ page }) => {
-  await gotoReady(page, "/admin/preview");
-  await expect(page.getByText("Preview: not published")).toBeVisible();
-  await expect(page.locator("[data-hero] [data-device]")).toHaveCount(1);
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-  await page.locator("#events").getByRole("link").first().click();
-  await expect(page).toHaveURL(/\/admin\/preview\/events\/fixture-event-6$/, { timeout: 15_000 });
-  await expect(page.getByText("Preview: not published")).toBeVisible();
+  const label = (page: Page) => page.getByText("Preview: not published");
+  // Every link in the preview stays in it, or leaves for the editor or another site: its
+  // skip links too.
+  const strays = (page: Page) =>
+    page.locator("a[href]").evaluateAll((links) =>
+      links.map((a) => a.getAttribute("href") ?? "").filter((h) => h.startsWith("/") && h !== "/admin" && h !== "/admin/preview" && !h.startsWith("/admin/preview/")),
+    );
+  const skipLinks = (page: Page) => page.locator("a.skip-link").evaluateAll((links) => links.map((a) => [a.textContent, a.getAttribute("href")]));
+
+  test("is the desk with the draft, marked as unpublished, and every move stays in it", async ({ page }) => {
+    await gotoReady(page, "/admin/preview");
+    await expect(label(page)).toBeVisible();
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+    await expect(page.locator("html")).toHaveAttribute("data-desk", "desk");
+    await expect(page.locator("main")).toHaveCount(1);
+    expect(await strays(page)).toEqual([]);
+
+    // Loading the events tape: the J-card, with the draft's newest event on its liner. By the
+    // keyboard: a click leaves the pointer where the list lands, and hover moves its cursor.
+    await page.getByRole("link", { name: "02 events, tape" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/admin\/preview\/events$/, { timeout: 15_000 });
+    const card = page.locator("main[data-jcard=events]");
+    await expect(card.getByRole("heading", { level: 2, name: "events" })).toBeFocused();
+    await expect(card.getByRole("heading", { level: 3, name: "Fixture event 6" })).toBeVisible();
+    await expect(label(page)).toBeVisible();
+    // Pinned over the card's left column, the label leaves the tracklist on the flap clear
+    // (once the card has unfolded: on its hinge, the flap's box swings).
+    const clear = async () => {
+      const [over, flap] = await Promise.all([page.locator("p:has(> a[href='/admin'])").boundingBox(), card.locator("[data-panel=flap]").boundingBox()]);
+      return !!over && !!flap && over.y + over.height <= flap.y && over.x + over.width <= flap.x + flap.width + 0.5;
+    };
+    await expect.poll(clear, { timeout: 10_000 }).toBe(true);
+    await expect(page.locator("main")).toHaveCount(1);
+    expect(await strays(page)).toEqual([]);
+
+    // Its live recording, then one step back at a time with Esc: the list, then the desk.
+    await card.getByRole("link", { name: /open the live recording/ }).click();
+    await expect(page).toHaveURL(/\/admin\/preview\/events\/fixture-event-6$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { level: 3, name: "Fixture event 6" })).toBeVisible();
+    await expect(label(page)).toBeVisible();
+    await expect(page.locator("main")).toHaveCount(1);
+    expect(await strays(page)).toEqual([]);
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(/\/admin\/preview\/events$/, { timeout: 15_000 });
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(/\/admin\/preview$/, { timeout: 15_000 });
+    await expect(page.locator("html")).toHaveAttribute("data-desk", "desk");
+  });
+
+  test("its skip links come first and stay in it: the J-card, then the flap once a tape is in", async ({ page }) => {
+    await gotoReady(page, "/admin/preview");
+    // With no tape in, no flap to skip to.
+    expect(await skipLinks(page)).toEqual([["Skip to content", "#jcard"]]);
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+    await gotoReady(page, "/admin/preview/people");
+    expect(await skipLinks(page)).toEqual([
+      ["Skip to content", "#jcard"],
+      ["Skip to the track list", "#flap"],
+    ]);
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Skip to the track list" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("main[data-jcard=people] nav#flap")).toBeFocused();
+  });
+
+  test("opens a track directly, and 404s for one that isn't on the tape", async ({ page, allowConsole }) => {
+    allowConsole(/status of 404/, /\/admin\/preview\/(side-b|events\/no-such-event)$/);
+    const res = await gotoReady(page, "/admin/preview/people");
+    expect(res?.status()).toBe(200);
+    await expect(page.locator("main[data-jcard=people]").getByRole("heading", { level: 2, name: "people" })).toBeVisible();
+    await expect(label(page)).toBeVisible();
+    expect((await page.goto("/admin/preview/side-b"))?.status()).toBe(404);
+    expect((await page.goto("/admin/preview/events/no-such-event"))?.status()).toBe(404);
+  });
+
+  test("doesn't use up the public site's first-visit hint", async ({ page }) => {
+    await gotoReady(page, "/admin/preview");
+    await page.getByRole("link", { name: "01 about, tape" }).click();
+    await expect(page).toHaveURL(/\/admin\/preview\/about$/, { timeout: 15_000 });
+    await expect(page.locator("main[data-jcard=about]")).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("side-a:hint"))).toBeNull();
+    await gotoReady(page, "/");
+    await expect(page.getByText("drag to throw · double-click to read the back · pull the cord", { exact: true })).toBeVisible();
+  });
 });
 
 import AxeBuilder from "@axe-core/playwright";
-import { devices, type Page } from "@playwright/test";
+import { devices, type Page } from "./fixtures";
 
 // A 4 x 3 px PNG, small enough to inline; the browser decodes, shrinks and re-encodes it.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEElEQVQImWM40+ECRww4OQB7hhMhQLrF8gAAAABJRU5ErkJggg==", "base64");
@@ -73,7 +151,8 @@ for (const [name, use] of [["desktop", {}], ["phone", iphone]] as const) {
       await expect(page.getByText("Published")).toBeVisible();
     });
 
-    test("a save from a stale device says so and offers a reload", async ({ page }) => {
+    test("a save from a stale device says so and offers a reload", async ({ page, allowConsole }) => {
+      allowConsole(/status of 409/, /\/api\/admin\/content$/);
       await stubBackend(page, { conflict: true });
       await gotoReady(page, "/admin");
       const links = page.getByRole("region", { name: "links" });

@@ -39,10 +39,15 @@ test("the elapsed time ticking does not flicker the screen", () => {
 
 // jsdom lays nothing out: every row's text is 500 px wide in a 200 px screen, and animate() is
 // a stand-in.
-function longRows() {
+function longRows(width = 500) {
   const animate = vi.fn(() => ({ cancel: vi.fn() }));
+  // The text's width scales with the row's fit (its font size), as it would when laid out.
+  const fit = (el: HTMLElement) => Number(el.closest("p")?.style.getPropertyValue("--fit") || 1);
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
-      return this.tagName === "SPAN" ? 500 : 0;
+      return this.tagName === "SPAN" ? width * fit(this) : 0;
+    });
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return new DOMRect(0, 0, this.tagName === "SPAN" ? width * fit(this) : 0, 0);
     });
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
       return this.tagName === "P" ? 200 : 0;
@@ -61,10 +66,13 @@ test("a title too long for the screen comes round for as long as it shows", () =
   expect(rows.animate).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ iterations: Infinity }));
 });
 
-test("under reduced motion a long title only rests, cut short", () => {
+test("under reduced motion a title far too long only rests, cut short, its full text in the title", () => {
   const rows = longRows();
   render(at("none", <Screen lines={["A song title far too long for the screen"]} />));
-  expect(document.querySelector("[data-screen] p")).not.toHaveAttribute("data-marquee");
+  const row = document.querySelector<HTMLElement>("[data-screen] p")!;
+  expect(row).not.toHaveAttribute("data-marquee");
+  expect(row.style.getPropertyValue("--fit")).toBe(""); // 500 in 200 would go below the floor
+  expect(row).toHaveAttribute("title", "A song title far too long for the screen");
   expect(rows.animate).not.toHaveBeenCalled();
 });
 
@@ -74,4 +82,22 @@ test("the clock ticking does not start a long title over", () => {
   const started = rows.animate.mock.calls.length;
   rerender(at("full", <Screen lines={["Song", "An artist with a very long name  0:02"]} />));
   expect(rows.animate).toHaveBeenCalledTimes(started);
+});
+
+test("under reduced motion a title a little too long is set smaller to fit, whole", () => {
+  longRows(220); // 10% over the 200 px screen
+  render(at("none", <Screen lines={["PICK A TAPE", "six on the desk"]} />));
+  const row = document.querySelector<HTMLElement>("[data-screen] p")!;
+  const fit = Number(row.style.getPropertyValue("--fit"));
+  expect(fit).toBeLessThan(1);
+  expect(220 * fit).toBeLessThanOrEqual(200);
+  expect(row).toHaveAttribute("data-fit");
+});
+
+test("with motion the same title comes round at its full size", () => {
+  longRows(220);
+  render(at("full", <Screen lines={["PICK A TAPE", "six on the desk"]} />));
+  const row = document.querySelector<HTMLElement>("[data-screen] p")!;
+  expect(row.style.getPropertyValue("--fit")).toBe("");
+  expect(row).toHaveAttribute("data-marquee");
 });

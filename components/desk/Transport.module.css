@@ -1,0 +1,110 @@
+/* The transport: a strip of the J-card's paper in the deck's left column, just above the
+   corner player (Desk3D.module.css: fixed 18 px in from the lower left, min(34vw, 420px)
+   wide at 1.35:1), a fold's gap from it. Its height is --transport-h (globals.css), which
+   the J-card's flap leaves free above it, so nothing on the card ever sits under it. On
+   paper whatever the lighting, so its ink reads at full contrast in night too. */
+.transport {
+  --corner-w: min(34vw, 420px);
+  --corner-h: calc(var(--corner-w) / 1.35);
+
+  position: fixed;
+  left: 18px;
+  bottom: calc(18px + var(--corner-h) + 12px);
+  z-index: 3;
+  display: grid;
+  grid-template-rows: 44px 44px;
+  gap: 6px;
+  box-sizing: border-box;
+  width: var(--corner-w);
+  height: var(--transport-h);
+  padding: 6px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: inset 0 0 0 1px var(--paper-rule), 0 22px 40px -26px rgb(22 24 27 / 0.35);
+  font: 400 12px/1.2 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.06em;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+  gap: 6px;
+}
+
+.skip,
+.eject {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--paper-rule);
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.next {
+  justify-content: flex-end;
+}
+.eject {
+  justify-content: center;
+  padding: 0;
+  font-size: 16px;
+}
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (hover: hover) and (pointer: fine) {
+  .skip:hover,
+  .eject:hover {
+    border-color: var(--paper-ink);
+    background-color: rgb(22 24 27 / 0.05);
+  }
+}
+
+/* The sound, night and track-key switches, grown to full touch size here. */
+.tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  justify-content: space-between;
+  gap: 6px;
+}
+.tools > button {
+  min-height: 44px;
+  min-width: 44px;
+  overflow: hidden;
+  white-space: nowrap;
+  border-color: var(--paper-rule);
+  font-size: 12px;
+}
+
+/* On a phone the player sits on top (deskFraming's PHONE): the strip goes under it, across
+   the screen, with the J-card below. */
+@media (width <= 640px) and (height > 600px) {
+  .transport {
+    --corner-w: min(calc(100vw - 24px), 300px);
+    top: calc(12px + var(--corner-w) / 1.35 + 12px);
+    bottom: auto;
+    left: 12px;
+    width: calc(100vw - 24px);
+  }
+}
+
+/* A short view (deskFraming's SHORT: a laptop at 200% zoom, a phone on its side) has no room
+   above the corner player: the strip scrolls with the page instead, at the head of the
+   column right of the player, where the J-card follows it (JCard.module.css). */
+@media (height <= 600px) {
+  .transport {
+    position: static;
+    width: auto;
+    max-width: 420px;
+    margin: 18px 18px 0 calc(18px + var(--corner-w) + 12px);
+  }
+}

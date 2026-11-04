@@ -1,0 +1,68 @@
+/* The events' liner, printed on the J-card in its two inks (JCard.module.css): the black
+   (--paper-ink) and the track's (--print-ink, its ink darkened to 4.5:1 on the card). */
+.liner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 62ch;
+}
+
+.title,
+.name {
+  margin: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 800;
+  font-stretch: 112%;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--paper-ink);
+  overflow-wrap: anywhere;
+}
+.title {
+  font-size: clamp(1.6rem, 2.6vw, 2.3rem);
+}
+.name {
+  font-size: clamp(1.25rem, 1.9vw, 1.6rem);
+}
+/* Focused when the event opens: the heading shows where focus is, printed in the track's ink. */
+.title:focus-visible {
+  outline: 2px solid var(--print-ink);
+  outline-offset: 4px;
+  box-shadow: none;
+}
+.title:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.2em;
+  margin: 0;
+  font: 400 13px/1.6 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--print-ink);
+}
+
+.text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  align-self: flex-start;
+  min-height: 44px;
+  font: 700 13px/1.2 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  color: var(--print-ink);
+  text-underline-offset: 4px;
+}
+.open:focus-visible {
+  outline: 2px solid var(--print-ink);
+  outline-offset: 2px;
+  box-shadow: none;
+}

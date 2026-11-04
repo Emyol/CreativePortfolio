@@ -27,6 +27,7 @@ export async function POST(request: Request) {
       throw new AdminError("Couldn't publish. Try again.", 500, { cause: error });
     }
     revalidateTag(TAPE_TAG, { expire: 0 });
+    revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/tracklist");
     revalidatePath("/events/[slug]", "page");

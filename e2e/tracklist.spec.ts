@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoReady } from "./helpers";
 
 test("the track list shows every track as a heading and links every event", async ({ page }) => {
@@ -13,11 +13,6 @@ test("the track list shows every track as a heading and links every event", asyn
 test("songs link to Spotify in the plain list", async ({ page }) => {
   await gotoReady(page, "/tracklist");
   await expect(page.getByRole("link", { name: /Fixture song 1/ })).toHaveAttribute("href", /^https:\/\/open\.spotify\.com\/track\//);
-});
-
-test("no smooth scrolling and no motion on the track list", async ({ page }) => {
-  await gotoReady(page, "/tracklist");
-  await expect(page.locator("html")).not.toHaveClass(/lenis/);
 });
 
 test("the old index address redirects to the track list", async ({ page }) => {

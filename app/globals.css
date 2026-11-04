@@ -21,26 +21,51 @@ html, body { margin: 0; }
   --device-ink: #17181B;
   --device-ink-light: #F2F3F5;
 
+  /* The J-card's card stock, cool white (never a warm cream), and its black ink and rules.
+     The second ink is the track's own, set on the card. Night is lighting, not a dark page:
+     the room darkens, the paper only warms (html[data-night], below). */
+  --paper: #EEF0F2;
+  --paper-ink: #16181B;
+  --paper-rule: #C9CDD3;
+
   --gutter: clamp(16px, 4vw, 48px);
   --measure-wide: 1180px;
+  /* The deck's transport strip (components/desk/Transport.module.css): two 44 px rows, a
+     6 px gap and 6 px of paper round them. The J-card's flap stops short of it. */
+  --transport-h: 106px;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
+  /* The lamp's light on a rendered device (an image, never its screen): none by day. */
+  --lamp: 0;
+  --lamp-filter: sepia(calc(0.3 * var(--lamp))) saturate(calc(1 + 0.25 * var(--lamp))) brightness(calc(1 - 0.12 * var(--lamp)));
+  --lamp-tint: rgb(255 205 150 / calc(0.32 * var(--lamp)));
+
   color-scheme: light;
 }
 
-/* The device art is rendered on transparency, so only the table changes in the dark. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --table: #17181B;
-    --ink: #ECEDEF;
-    --ink-muted: #A3A7AF;
-    --alu: #2A2C31;
-    --bezel: #303238;
-    color-scheme: dark;
-  }
+/* Night (the desk's html[data-night], the lamp's: components/desk/Desk.tsx) is lighting, not
+   a theme. The room's light goes out, so the room is dark; paper stays paper, warmed by the
+   lamp and never dimmer than by day, so every ink printed on it keeps its contrast; screens
+   are lit already and stay as they are. The colours are registered, so the switch eases as
+   the 3D's light does (0.3 s), and is instant under reduced motion (live: the tier) or on a
+   visit that starts at night (Desk.tsx's data-night-instant). */
+@property --table { syntax: "<color>"; inherits: true; initial-value: #E4E6E9; }
+@property --paper { syntax: "<color>"; inherits: true; initial-value: #EEF0F2; }
+@property --paper-rule { syntax: "<color>"; inherits: true; initial-value: #C9CDD3; }
+@property --lamp { syntax: "<number>"; inherits: true; initial-value: 0; }
+html[data-night] {
+  --table: #0F1012;
+  --paper: #F6F1E8;
+  --paper-rule: #D8CDBC;
+  --lamp: 1;
 }
+@media (prefers-reduced-motion: no-preference) {
+  html { transition: --table 0.3s ease-out, --paper 0.3s ease-out, --paper-rule 0.3s ease-out, --lamp 0.3s ease-out; }
+}
+html[data-tier="none"],
+html[data-night-instant] { transition: none !important; }
 
 html {
   background: var(--table);
@@ -56,6 +81,8 @@ body { background: var(--table); overflow-x: clip; }
 /* The 3D stage's canvas sits behind the page (z-index -1): body lets it show through, and
    html, the same colour, stays the background. */
 body:has(> canvas[data-stage]) { background: transparent; }
+/* The desk's dot field (z-index -2) sits under the stage too, so body never covers it. */
+body:has([data-desk-root]) { background: transparent; }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
 }
@@ -99,34 +126,9 @@ html[data-tier="none"] *::after {
 .skip-link:focus { top: 1rem; }
 /* main only receives focus from the skip link; it isn't interactive, so no ring. */
 main:focus, main:focus-visible { outline: none; }
+/* Nor does the heading a loaded tape moves focus to. */
+main h2[tabindex="-1"]:focus { outline: none; box-shadow: none; }
 
-/* Room at the end of the page so the dock never covers the last lines, and room at the
-   bottom of the viewport so focus and jumps never land under it (WCAG 2.4.11). */
-body:has([data-dock]) { padding-bottom: 6.5rem; }
-html:has([data-dock]) { scroll-padding-bottom: 7rem; }
-
-/* The entrance (set before paint): the page opens as the player's dark screen, until the
-   entrance takes over. If JS never does, the dark lifts and the screen lights after 5 s. */
-html[data-boot="pending"]::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 95;
-  background: var(--oled);
-  animation: boot-failsafe-lift 0s linear 5s forwards;
-}
-html:is([data-boot="pending"], [data-boot="running"]) [data-hero] [data-screen] > * {
-  visibility: hidden;
-  animation: boot-failsafe 0s linear 5s forwards;
-}
-@keyframes boot-failsafe { to { visibility: visible; } }
-@keyframes boot-failsafe-lift { to { visibility: hidden; } }
-
-/* CSS smooth scrolling fights Lenis. */
-html.lenis { scroll-behavior: auto !important; }
-
-/* Event card -> event page morph (React ViewTransition). Reduced motion swaps instantly. */
-::view-transition-group(.morph) { animation-duration: 420ms; animation-timing-function: var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 0s !important; animation-delay: 0s !important; }
 }

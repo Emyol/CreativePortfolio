@@ -1,0 +1,97 @@
+/* The box the shared stage draws the desk into (the canvas is behind the page). The script
+   sets its box while it moves; these are where it rests before the script runs. */
+.view {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.view[data-state="deck"] {
+  top: auto;
+  left: 18px;
+  bottom: 18px;
+  width: min(34vw, 420px);
+  height: auto;
+  aspect-ratio: 1.35;
+}
+/* On a phone the player sits on top, centred (deskFraming's PHONE); on a short view it keeps
+   the corner (SHORT). */
+@media (width <= 640px) and (height > 600px) {
+  .view[data-state="deck"] {
+    top: 12px;
+    bottom: auto;
+    left: calc(50% - min(calc(100vw - 24px), 300px) / 2);
+    width: min(calc(100vw - 24px), 300px);
+  }
+}
+
+/* Picked up: what you can do with the tape in your hand. Paper and ink, like the J-card. */
+.inspect {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 5;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid var(--paper-rule);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  font: 700 13px/1.2 var(--font-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgb(22 24 27 / 0.18);
+}
+
+.name {
+  padding: 0 6px;
+}
+
+.hint {
+  color: #4e525a;
+  font-weight: 400;
+}
+
+.button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--paper-ink);
+  border-radius: 8px;
+  background: var(--paper-ink);
+  color: var(--paper);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: #2a2c31;
+}
+
+@media (max-width: 560px) {
+  .hint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .inspect {
+    animation: rise 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: -50% 12px;
+  }
+}

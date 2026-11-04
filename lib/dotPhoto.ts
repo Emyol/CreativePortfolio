@@ -6,9 +6,6 @@
 
 /** Brightness steps above off: a dot is off (0) or lit at 1 to STEPS. */
 export const STEPS = 4;
-/** Rows the scanline's soft edge spans as it lights the screen. */
-const BAND = 8;
-
 /** How the photo is turned into dots, set in the admin (about.dots): dots across the screen, and a brightness and contrast applied after the stretch. */
 export type DotSettings = { across: number; brightness: number; contrast: number };
 /** What the screen uses until the owner adjusts it. */
@@ -62,16 +59,6 @@ export function coverRect(iw: number, ih: number, aspect: number, focus = 0.3): 
   }
   const sh = iw / aspect;
   return { sx: 0, sy: (ih - sh) * focus, sw: iw, sh };
-}
-
-/**
- * How lit a row is (0 to 1) while the screen powers on, `reveal` going 0 to 1: a scanline
- * sweeps down and each row eases up to full as it passes.
- */
-export function rowLight(row: number, rows: number, reveal: number): number {
-  const front = reveal * (rows + BAND);
-  const t = Math.min(1, Math.max(0, (front - row) / BAND));
-  return t * t * (3 - 2 * t);
 }
 
 /**
