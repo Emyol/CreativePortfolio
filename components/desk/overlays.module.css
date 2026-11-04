@@ -16,8 +16,9 @@
   --deck-left: 18px;
   --deck-top: calc(100% - 18px - 0.6975 * var(--cw));
 }
-/* On a phone the deck's player sits on top, centred (deskFraming's PHONE). */
-@media (max-width: 640px) {
+/* On a phone the deck's player sits on top, centred (deskFraming's PHONE); on a short view it
+   keeps the corner (SHORT). */
+@media (width <= 640px) and (height > 600px) {
   .layer,
   .stage {
     --cw: min(calc(100vw - 24px), 300px);

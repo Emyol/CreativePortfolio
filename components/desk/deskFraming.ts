@@ -3,16 +3,23 @@ import type * as THREE from "three";
 /** The corner box in the deck state: the player's aspect, `min(34vw, 420px)` wide, 18 px in. */
 export const CORNER = { share: 0.34, max: 420, gap: 18, aspect: 1.35 } as const;
 /**
- * On a phone (up to `max` wide) the deck's player sits on top instead, centred, at most
- * `width` wide and `gap` in, with the transport and the J-card stacked below it (their CSS
- * has the same numbers: Transport.module.css, JCard.module.css, overlays.module.css). The
- * sheet with detents is phase 4's.
+ * On a phone (up to `max` wide, and taller than SHORT) the deck's player sits on top
+ * instead, centred, at most `width` wide and `gap` in, with the transport and the J-card
+ * stacked below it (their CSS has the same numbers: Transport.module.css, JCard.module.css,
+ * overlays.module.css, Desk3D.module.css).
  */
 export const PHONE = { max: 640, width: 300, gap: 12 } as const;
+/**
+ * A view this tall or less (a laptop at 200% zoom, a phone on its side) has no room for the
+ * flap and the transport over the corner player, nor for the phone's stack: the player
+ * keeps the corner whatever the width, and the J-card scrolls with the page beside it (the
+ * CSS's `height <= 600px`).
+ */
+export const SHORT = 600;
 
 /** Where the deck's player is drawn in a `vw` × `vh` viewport. */
 export function deckBox(vw: number, vh: number) {
-  if (vw <= PHONE.max) {
+  if (vw <= PHONE.max && vh > SHORT) {
     const width = Math.min(vw - 2 * PHONE.gap, PHONE.width);
     return { left: (vw - width) / 2, top: PHONE.gap, width, height: width / CORNER.aspect };
   }

@@ -87,12 +87,24 @@
 
 /* On a phone the player sits on top (deskFraming's PHONE): the strip goes under it, across
    the screen, with the J-card below. */
-@media (max-width: 640px) {
+@media (width <= 640px) and (height > 600px) {
   .transport {
     --corner-w: min(calc(100vw - 24px), 300px);
     top: calc(12px + var(--corner-w) / 1.35 + 12px);
     bottom: auto;
     left: 12px;
     width: calc(100vw - 24px);
+  }
+}
+
+/* A short view (deskFraming's SHORT: a laptop at 200% zoom, a phone on its side) has no room
+   above the corner player: the strip scrolls with the page instead, at the head of the
+   column right of the player, where the J-card follows it (JCard.module.css). */
+@media (height <= 600px) {
+  .transport {
+    position: static;
+    width: auto;
+    max-width: 420px;
+    margin: 18px 18px 0 calc(18px + var(--corner-w) + 12px);
   }
 }

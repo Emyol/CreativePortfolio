@@ -277,7 +277,7 @@
    Transport.module.css), the card below them in one column, scrolling on its own so that
    nothing fixed ever passes over its print. The flap lays its two sides side by side. The
    sheet with detents comes with phones' own phase. */
-@media (max-width: 640px) {
+@media (width <= 640px) and (height > 600px) {
   .card {
     --corner-w: min(calc(100vw - 24px), 300px);
     --edge: 12px;
@@ -310,6 +310,38 @@
     margin-top: 0;
     overflow: visible;
     padding: 12px var(--pad) 16px;
+  }
+  .list + .side {
+    margin-top: 0;
+  }
+}
+
+/* A short view (deskFraming's SHORT: a laptop at 200% zoom, a phone on its side): no room for
+   the flap above the corner player, nor for the phone's stack. The left column is the
+   player's alone; the card scrolls with the page in the column beside it, under the
+   transport (Transport.module.css), the flap printed in it with its two sides side by side,
+   so nothing fixed ever passes over the print. */
+@media (height <= 600px) {
+  .card {
+    grid-template-columns: calc(var(--corner-w) + var(--fold-gap)) minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      ". title"
+      ". flap"
+      ". device"
+      ". liner";
+    min-height: 0;
+  }
+  .flap {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    grid-auto-flow: column;
+    column-gap: 16px;
+    max-height: none;
+    margin-top: 0;
+    overflow: visible;
   }
   .list + .side {
     margin-top: 0;

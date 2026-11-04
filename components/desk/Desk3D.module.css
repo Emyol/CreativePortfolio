@@ -20,8 +20,9 @@
   height: auto;
   aspect-ratio: 1.35;
 }
-/* On a phone the player sits on top, centred (deskFraming's PHONE). */
-@media (max-width: 640px) {
+/* On a phone the player sits on top, centred (deskFraming's PHONE); on a short view it keeps
+   the corner (SHORT). */
+@media (width <= 640px) and (height > 600px) {
   .view[data-state="deck"] {
     top: 12px;
     bottom: auto;

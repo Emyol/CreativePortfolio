@@ -22,3 +22,14 @@ test("on a narrow phone it takes the width less its margins", () => {
   expect(b.width).toBe(296);
   expect(b.left).toBe(12);
 });
+
+test("on a short view (a laptop at 200% zoom, a phone on its side) the player keeps the corner, phone-wide or not", () => {
+  for (const [vw, vh] of [[640, 360], [683, 384], [900, 400], [1440, 600]]) {
+    const b = deckBox(vw, vh);
+    expect(b.left, `${vw}×${vh}`).toBe(18);
+    expect(b.width).toBeCloseTo(Math.min(vw * 0.34, 420));
+    expect(b.top + b.height).toBeCloseTo(vh - 18);
+  }
+  // Just taller than short, a phone-wide view stacks again.
+  expect(deckBox(640, 601).top).toBe(12);
+});
