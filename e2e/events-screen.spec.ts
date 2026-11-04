@@ -36,7 +36,7 @@ test("Enter on the third row opens its live recording; Esc comes back to the lis
 
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(new RegExp(`/events/${THIRD.slug}$`), { timeout: 10_000 });
-  const heading = page.getByRole("heading", { level: 1, name: THIRD.name });
+  const heading = page.getByRole("heading", { level: 3, name: THIRD.name });
   await expect(heading).toBeVisible();
   await expect(heading).toBeFocused();
   await expect(page.locator("main")).toHaveCount(1);
@@ -53,7 +53,7 @@ test("Enter on the third row opens its live recording; Esc comes back to the lis
 
 test("an event opened directly steps back to its own row", async ({ page }) => {
   await deskReady(page, `/events/${THIRD.slug}`);
-  await expect(page.getByRole("heading", { level: 1, name: THIRD.name })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: THIRD.name })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
   await expect(option(page, 2)).toHaveAttribute("aria-selected", "true");
@@ -72,7 +72,7 @@ test("a click opens an event, and the wheel over the list moves the cursor witho
   await expect(option(page, 2)).toHaveAttribute("aria-selected", "true");
   await option(page, 1).click();
   await expect(page).toHaveURL(/\/events\/fixture-event-4$/, { timeout: 10_000 });
-  await expect(page.getByRole("heading", { level: 1, name: "Fixture event 4" })).toBeFocused();
+  await expect(page.getByRole("heading", { level: 3, name: "Fixture event 4" })).toBeFocused();
   // Browser Back: the list again, the row still under the cursor and focus on the list.
   await page.goBack();
   await expect(page).toHaveURL(/\/events$/, { timeout: 10_000 });
@@ -168,7 +168,7 @@ test("from the desk straight to an event, its heading takes focus; the browser o
   await expect(page.locator("html")).toHaveAttribute("data-desk", "desk");
   await page.evaluate(() => history.go(-2));
   await expect(page).toHaveURL(new RegExp(`/events/${THIRD.slug}$`), { timeout: 10_000 });
-  await expect(page.getByRole("heading", { level: 1, name: THIRD.name })).toBeFocused({ timeout: 10_000 });
+  await expect(page.getByRole("heading", { level: 3, name: THIRD.name })).toBeFocused({ timeout: 10_000 });
   // The event is the first entry now; the list is the next one (browser Back from an event
   // to its list is in the click test above).
   await page.goForward();
@@ -201,7 +201,7 @@ test("Back to an event from another track gives its heading focus", async ({ pag
   await expect(page).toHaveURL(/\/mixtape$/, { timeout: 10_000 });
   await page.goBack();
   await expect(page).toHaveURL(new RegExp(`/events/${THIRD.slug}$`), { timeout: 10_000 });
-  await expect(page.getByRole("heading", { level: 1, name: THIRD.name })).toBeFocused({ timeout: 10_000 });
+  await expect(page.getByRole("heading", { level: 3, name: THIRD.name })).toBeFocused({ timeout: 10_000 });
 });
 
 test("on an event, the transport shows and sits clear of every control and text", async ({ page }) => {

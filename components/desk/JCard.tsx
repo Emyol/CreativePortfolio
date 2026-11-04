@@ -91,6 +91,8 @@ type Props = {
   children: ReactNode;
   /** How long the first insert of a visit takes to seat the tape before the card unfolds. */
   seatDelay?: number;
+  /** The page's one h1, visually hidden (the player prints Miel's name): an event's name on its page. */
+  heading?: string;
 };
 
 /**
@@ -105,8 +107,11 @@ type Props = {
  * content back. A new tape mid-fold opens the same card again from where it is. Reduced
  * motion (live) cross-fades instead. A direct load only settles (CSS, so it plays before
  * hydration). When a tape loads, focus moves to the title.
+ *
+ * Its headings: the page's one h1 first (`heading`, read rather than shown), the track's
+ * title as the section's h2, then the flap's sides and whatever the panels print as h3s.
  */
-export function JCard({ tracks, base, current, children, seatDelay = 0 }: Props) {
+export function JCard({ tracks, base, current, children, seatDelay = 0, heading = "Miel" }: Props) {
   const still = useMotionTier() === "none";
   // The card's track: the tape that's in, or while it folds away after an eject, the one that was.
   const [shown, setShown] = useState<TrackId | null>(current);
@@ -276,6 +281,7 @@ export function JCard({ tracks, base, current, children, seatDelay = 0 }: Props)
       data-jcard={shown}
       data-settle={settle ? "" : undefined}
     >
+      <h1 className="sr-only">{heading}</h1>
       <h2 tabIndex={-1} className={styles.title}>
         {label}
       </h2>

@@ -62,6 +62,8 @@ export function Desk({ content, base, preview = false, children }: { content: Si
   const current = loc.track;
   const state = current ? "deck" : "desk";
   const tracks = useMemo(() => visibleTracks(content), [content]);
+  // The page's one h1 (JCard): an event's page is headed by the event's name.
+  const heading = (loc.event && content.events.find((e) => e.slug === loc.event)?.name) || "Miel";
   const desk3d = useRef<Desk3DHandle>(null);
   const dots = useRef<DotFieldHandle>(null);
   const [has3D, setHas3D] = useState(true);
@@ -264,7 +266,7 @@ export function Desk({ content, base, preview = false, children }: { content: Si
         {state === "desk" && <DeskHint ref={hint} project={has3D ? project : null} />}
         {current && <Transport tracks={tracks} base={base} current={current} />}
         <PlayerKeys ref={keyLinks} tracks={tracks} base={base} current={current} project={has3D ? project : null} onWheel={has3D ? onKeyWheel : undefined} />
-        <JCard tracks={tracks} base={base} current={current} seatDelay={has3D ? TIMING.fly + TIMING.drop + TIMING.load : 0}>
+        <JCard tracks={tracks} base={base} current={current} heading={heading} seatDelay={has3D ? TIMING.fly + TIMING.drop + TIMING.load : 0}>
           {children}
         </JCard>
       </div>

@@ -52,7 +52,7 @@ test.describe("the preview", () => {
     // Its live recording, then one step back at a time with Esc: the list, then the desk.
     await card.getByRole("link", { name: /open the live recording/ }).click();
     await expect(page).toHaveURL(/\/admin\/preview\/events\/fixture-event-6$/, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { level: 1, name: "Fixture event 6" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 3, name: "Fixture event 6" })).toBeVisible();
     await expect(label(page)).toBeVisible();
     await expect(page.locator("main")).toHaveCount(1);
     expect(await strays(page)).toEqual([]);

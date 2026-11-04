@@ -82,6 +82,22 @@ describe("JCard", () => {
     expect([...main.querySelectorAll("[data-panel]")].map((p) => p.getAttribute("data-panel"))).toEqual(["flap", "device", "liner"]);
   });
 
+  it("opens with the page's one h1, visually hidden: Miel, or the heading it is given (an event's name)", () => {
+    const { rerender } = render(card("people"));
+    const main = screen.getByRole("main");
+    const h1 = main.querySelector(":scope > h1");
+    expect(main.firstElementChild).toBe(h1);
+    expect(h1).toHaveClass("sr-only");
+    expect(h1).toHaveTextContent("Miel");
+    expect(main.querySelectorAll("h1")).toHaveLength(1);
+    rerender(
+      <JCard tracks={tracks} base="" current="events" heading="Fixture event 3">
+        <Section key="events" device={<p>Fixture device</p>} liner={<p>Fixture liner</p>} />
+      </JCard>,
+    );
+    expect(screen.getByRole("main").querySelector(":scope > h1")).toHaveTextContent("Fixture event 3");
+  });
+
   it("leaves the desk's own content alone with no tape in", () => {
     render(card(null));
     expect(screen.getByRole("main")).toHaveTextContent("the desk");

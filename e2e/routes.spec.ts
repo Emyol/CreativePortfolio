@@ -17,10 +17,11 @@ for (const [path, label] of ROUTES) {
   });
 }
 
-test("an event page shows the event name", async ({ page }) => {
+test("an event page is headed by the event's name, its h1, and prints it on the liner", async ({ page }) => {
   const res = await page.goto("/events/fixture-event-1");
   expect(res?.status()).toBe(200);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Fixture event 1");
+  await expect(page.locator('main [data-panel="liner"]').getByRole("heading", { level: 3, name: "Fixture event 1" })).toBeVisible();
 });
 
 test("/ has no h2", async ({ page }) => {

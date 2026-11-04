@@ -16,7 +16,10 @@ test("an event's page is its live recording, with its story printed beside it", 
   expect(res?.status()).toBe(200);
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator("main")).toHaveCount(1);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Fixture event with an extraordinarily long name that should wrap gracefully");
+  // The page's h1 (read, not shown) and the liner's printed title both carry the name.
+  const name = "Fixture event with an extraordinarily long name that should wrap gracefully";
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
+  await expect(page.locator('main [data-panel="liner"]').getByRole("heading", { level: 3, name })).toBeVisible();
   const rec = page.getByRole("group", { name: "Live recording 06" });
   await expect(rec).toContainText("● LIVE REC 06");
   await expect(rec).toContainText("Fixture summary for event 3.");
