@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deviceLayout, deviceLayoutSchema } from "./layout";
+import { deviceLayout, sectionDeviceSchema, type DeviceId } from "./layout";
 
 describe("deviceLayout", () => {
   it("parses the events device's layout", () => {
@@ -15,11 +15,15 @@ describe("deviceLayout", () => {
 
   it("defaults art and keys, and refuses a screen that leaves the body", () => {
     const base = { size: { width: 100, height: 50 }, screen: { x: 0.1, y: 0.1, w: 0.8, h: 0.8 } };
-    expect(deviceLayoutSchema.parse(base)).toMatchObject({ art: false, keys: {} });
-    expect(() => deviceLayoutSchema.parse({ ...base, screen: { x: 0.5, y: 0.1, w: 0.8, h: 0.8 } })).toThrow();
+    expect(sectionDeviceSchema.parse(base)).toMatchObject({ art: false, keys: {} });
+    expect(() => sectionDeviceSchema.parse({ ...base, screen: { x: 0.5, y: 0.1, w: 0.8, h: 0.8 } })).toThrow();
   });
 
-  it("names the device that has no layout yet", () => {
-    expect(() => deviceLayout("about")).toThrow(/about/);
+  it("knows only the devices that have a layout: one without is not a DeviceId", () => {
+    const ids: DeviceId[] = ["events"];
+    expect(ids.map((id) => deviceLayout(id).size.width > 0)).toEqual([true]);
+    // @ts-expect-error -- About has no device layout yet, so a frame for it does not compile.
+    const about: DeviceId = "about";
+    expect(about).toBe("about");
   });
 });
