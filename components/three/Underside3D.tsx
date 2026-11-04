@@ -16,7 +16,7 @@ const BOX_W = 9.36; // model units across the footer's device box (the sprite's 
 const LIFT = 0.9; // kept low, so the shadow stays soft
 const LANDED = 0.98; // from here the live text sits on the sticker and the door
 const deg = (d: number) => (d * Math.PI) / 180;
-// The hold (v1's scroll holds, kept here for phase 5's footer): room kept clear above the
+// The hold (v1's scroll holds; this view is parked, mounted nowhere, kept for the footer): room kept clear above the
 // bottom of the screen, and how much scroll the turn lasts.
 const RESERVE = 110;
 const HOLD = 1000;

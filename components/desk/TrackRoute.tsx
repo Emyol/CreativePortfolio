@@ -30,9 +30,9 @@ type Props = {
 
 /**
  * A track's page: 404 while it is empty, otherwise its section's panels. The desk's J-card
- * holds them, and is the page's main region with the track's title. Events has its own
- * device; until the other sections have theirs, each v1 body sits on a stand-in screen,
- * dark as the body was designed for.
+ * holds them, and is the page's main region with the track's title. Only Events has its own
+ * device (EventsSection); every other track's body sits on a stand-in screen
+ * (`[data-interim-screen]`), dark as the body was designed for.
  */
 export async function TrackRoute({ id, content: given, base = "" }: Props) {
   const content = given ?? (await getContent());

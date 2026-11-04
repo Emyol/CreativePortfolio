@@ -19,7 +19,10 @@ export function hasLanded(): boolean {
   return landed;
 }
 
-/** Called by the desk once its first render has committed (a parent's effects run last). */
+/**
+ * Called by the desk a task after its first commit (Desk.tsx), so the mount effects that
+ * StrictMode runs again in development still count as the landing.
+ */
 export function markLanded(): void {
   landed = true;
 }

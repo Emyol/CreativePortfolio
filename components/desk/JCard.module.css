@@ -159,9 +159,9 @@
   padding: 8px var(--pad) var(--pad);
 }
 
-/* Until a section has its own device (from Task 11), its v1 body sits on a stand-in screen:
-   black glass in a graphite bezel, as the v1 panel it was designed for (the only dark
-   surface on the card). It is a size container, so those bodies can fit its width. */
+/* Only Events has its own device (EventsSection); every other track's body sits on a
+   stand-in screen: black glass in a graphite bezel, as the panel it was designed for (the
+   only dark surface on the card). It is a size container, so those bodies can fit its width. */
 .card [data-interim-screen] {
   container: track-screen / inline-size;
   padding: clamp(16px, 2.2vw, 32px);
@@ -275,8 +275,7 @@
 
 /* A phone: the player on top and the transport under it (deskFraming's PHONE,
    Transport.module.css), the card below them in one column, scrolling on its own so that
-   nothing fixed ever passes over its print. The flap lays its two sides side by side. The
-   sheet with detents comes with phones' own phase. */
+   nothing fixed ever passes over its print. The flap lays its two sides side by side. */
 @media (width <= 640px) and (height > 600px) {
   .card {
     --corner-w: min(calc(100vw - 24px), 300px);

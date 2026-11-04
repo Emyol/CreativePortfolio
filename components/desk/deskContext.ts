@@ -14,10 +14,8 @@ export type DeskApi = {
 
 const NONE: DeskApi = {
   setScreen() {},
-  useKnob() {
-    // The same hook order with or without a desk around.
-    useEffect(() => {}, []);
-  },
+  // Outside the desk the knob is not there: nothing receives its steps.
+  useKnob() {},
   wiggleKnob() {},
 };
 

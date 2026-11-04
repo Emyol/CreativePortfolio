@@ -115,7 +115,7 @@ export async function createDeskScene(o: {
   if (o.dead()) return null;
   let still = tier === "none";
 
-  // The player, its feet on the desk. Its underside is for turning over (later): hidden.
+  // The player, its feet on the desk. Its underside is not drawn: nothing turns it over.
   const device = model.clone();
   const node = (name: string) => {
     const n = device.getObjectByName(name);

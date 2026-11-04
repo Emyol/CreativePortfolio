@@ -31,7 +31,7 @@ window.onSpotifyIframeApiReady({
 
 // The mixtape on its route, in the J-card. v1 also showed the song on the hero's and the
 // dock's screens, turned the reels and lit the LED; the desk's player gets the song with the
-// mixtape's own device (a later phase), so those checks went with the scroll page.
+// mixtape's own device (not built yet), so those checks went with the scroll page.
 const deck = (page: Page) => page.locator("main[data-jcard=mixtape] [data-deck]");
 const clock = async (page: Page) => (await deck(page).innerText()).match(/\d+:\d\d(?= \/)/)?.[0];
 

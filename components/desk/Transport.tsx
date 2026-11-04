@@ -17,7 +17,8 @@ const name = (t: Track) => `${formatTrackNumber(t.number)} ${t.label}`;
  * the next track (the neighbours named, empty tracks skipped), then sound, night and the
  * track keys' switch. It sits in the deck's left column, between the J-card's flap and the
  * corner player, in a box of its own fixed height (`--transport-h`) that the flap leaves
- * free, so it never covers a control or text.
+ * free, so it never covers a control or text (on a phone, under the player; on a short
+ * view, at the head of the J-card's column, scrolling with the page: Transport.module.css).
  */
 export function Transport({ tracks, base, current }: Props) {
   if (!current) return null;

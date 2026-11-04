@@ -19,15 +19,15 @@ type Props = {
   onWheel?(e: WheelEvent): void;
 };
 
-// Until the six-key model lands (phase 1), only the keys the model has are drawn; the rest
-// exist only in the transport.
+// The model has four keys, so only keys 1 to 4 are drawn; tracks 5 and 6 are reached by
+// the flap, the transport's previous and next, the tape links and the 5 and 6 keys.
 const DRAWN = DEVICE.keys.length;
 
 /**
- * The player's keys as real links, one per track in tape order (key N loads track N), laid
- * over the 3D keys and moved onto them every frame (`place`). An empty track's key is a
- * blank cap that does nothing. The playing track's key is latched. Without the 3D, the
- * links carry the sprite caps and their printed labels.
+ * The player's keys as real links, one per drawn key in tape order (key N loads track N,
+ * for the first `DRAWN` tracks), laid over the 3D keys and moved onto them every frame
+ * (`place`). An empty track's key is a blank cap that does nothing. The playing track's key
+ * is latched. Without the 3D, the links carry the sprite caps and their printed labels.
  */
 export const PlayerKeys = forwardRef<OverlayHandle, Props>(function PlayerKeys({ tracks, base, current, project, onWheel }, ref) {
   const layer = useRef<HTMLDivElement>(null);

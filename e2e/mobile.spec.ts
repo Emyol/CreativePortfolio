@@ -1,7 +1,7 @@
 import { devices, expect, test, type Page } from "./fixtures";
 import { gotoReady } from "./helpers";
 
-// A phone, 390 × 844. Until phones get their own phase (the J-card as a sheet with detents),
+// A phone, 390 × 844. Until phones get their own layout (the J-card as a sheet with detents),
 // the deck stacks: the player on top, the transport under it, the J-card below, scrolling on
 // its own. Nothing fixed may cover a link or a button, and every one of them can be reached.
 const { defaultBrowserType: _ignored, ...iphone } = devices["iPhone 13"];

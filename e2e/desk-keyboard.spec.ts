@@ -33,7 +33,7 @@ test("Tab from the skip links reaches the about tape first, and Enter loads it",
   await expect(page.locator(":focus")).toHaveAttribute("aria-label", "01 about, tape");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/about$/, { timeout: 10_000 });
-  // The J-card's title (Task 9); until then the route's own h2.
+  // The J-card's title.
   await expect(page.getByRole("heading", { level: 2, name: "about", exact: true })).toBeFocused();
 });
 
