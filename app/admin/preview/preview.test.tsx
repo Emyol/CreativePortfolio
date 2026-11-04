@@ -43,12 +43,24 @@ describe("the preview", () => {
     expect(eventModule.dynamic).toBe("force-dynamic");
   });
 
-  it("sends anyone but the signed-in owner to the admin, from every route", async () => {
-    getAdminStatus.mockResolvedValue({ status: "signed-out" });
-    await expect(PreviewLayout({ children: null })).rejects.toThrow("NEXT_REDIRECT /admin");
-    await expect(HomePage()).rejects.toThrow("NEXT_REDIRECT /admin");
-    await expect(TrackPage(params({ track: "about" }))).rejects.toThrow("NEXT_REDIRECT /admin");
-    await expect(EventPage(params({ slug: "fixture-event-1" }))).rejects.toThrow("NEXT_REDIRECT /admin");
+  // Signed out, signed in as someone who isn't the owner, the store not set up, or the check
+  // failing: every preview route fails closed, to the admin (which offers the sign-in), before
+  // it reads the draft. A route that doesn't exist redirects too, rather than 404 and say so.
+  it.each(["signed-out", "forbidden", "setup", "error"] as const)("sends a %s visitor to the admin from every route, the draft unread", async (status) => {
+    getAdminStatus.mockResolvedValue({ status });
+    const routes = [
+      () => PreviewLayout({ children: "route" }),
+      () => HomePage(),
+      () => TrackPage(params({ track: "about" })),
+      () => TrackPage(params({ track: "events" })),
+      () => TrackPage(params({ track: "side-b" })),
+      () => EventPage(params({ slug: "fixture-event-1" })),
+      () => EventPage(params({ slug: "unfinished" })),
+    ];
+    for (const route of routes) await expect(route()).rejects.toThrow("NEXT_REDIRECT /admin");
+    expect(redirect).toHaveBeenCalledTimes(routes.length);
+    expect(redirect.mock.calls.every(([to]) => to === "/admin")).toBe(true);
+    expect(notFound).not.toHaveBeenCalled();
     expect(getDraft).not.toHaveBeenCalled();
   });
 
