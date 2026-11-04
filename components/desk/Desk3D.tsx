@@ -7,7 +7,7 @@ import { useMotionTier } from "@/lib/motion/MotionProvider";
 import { computeTier, NARROW_QUERY, REDUCE_QUERY, type MotionTier } from "@/lib/motion/tier";
 import { formatTrackNumber, type Track, type TrackId } from "@/lib/tape";
 import { getStage } from "@/lib/three/stage";
-import { canDraw3D } from "@/lib/three/support";
+import { hasGpuWebGL } from "@/lib/three/support";
 import { attachDeskPointer } from "./deskPointer";
 import { createDeskScene, type DeskScene, type DeskState, type ProjectId } from "./deskScene";
 import styles from "./Desk3D.module.css";
@@ -45,6 +45,8 @@ type Props = {
 };
 
 const TIMEOUT = 10_000; // without the scene by then, the desk falls back
+/** Why the desk shows the flat drawing instead of the 3D (logged once, as information: a fallback, not an error). */
+type FallBack = "no GPU WebGL" | "timed out" | "load error" | "runtime error" | "a frame failed to draw" | "the stage ended";
 const NUDGE_IDLE = 2000; // ms of no input on a first visit's desk before the first tape nudges
 const NUDGE_LENGTH = 1000; // ms the nudge takes, with room to spare
 const INPUT = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
@@ -59,8 +61,16 @@ const INPUT = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] a
  * screen shows is on the view as `data-screen`, for tests.
  *
  * The scene is built once, for the first tier that is really this browser's (hydration
- * renders "full" first). Reduced motion switched mid-visit then changes its motion in place,
- * on the next frame: the tapes, the view and the screen stay as they are.
+ * renders "full" first). Reduced motion switched mid-visit then changes its motion in place:
+ * the tapes, the view and the screen stay as they are.
+ *
+ * Whatever fails, the desk falls back to the flat drawing (`onUnavailable`) and says why in
+ * the console (`[3D] the desk fell back (...)`): no GPU, a load that failed or took past
+ * TIMEOUT, a lost context, a frame that threw, or a throw from any later call into the
+ * running scene (the route, the tier, the lighting, the nudge, the pointer, the handle),
+ * which disposes the scene rather than taking the route down. A page whose script arrived
+ * late still gets the 3D: the late-script rule (`canDraw3D`) is for the footer's CSS
+ * failsafe, which the desk does not have.
  */
 export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref) {
   const tier = useMotionTier();
@@ -77,6 +87,19 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   const fullHead = useRef<HTMLParagraphElement>(null);
   const before = useRef<Element | null>(null);
   const wiggleWaiting = useRef(false);
+  // The running build's fallback (a no-op between builds): a throw from the scene lands here.
+  const failRef = useRef<(why: FallBack, e?: unknown) => void>(() => {});
+  /** A call into the running scene; a throw there falls back to the flat desk, `or` is the answer then. */
+  const safely = <T,>(f: (s: DeskScene) => T, or: T): T => {
+    const s = scene.current;
+    if (!s) return or;
+    try {
+      return f(s);
+    } catch (e) {
+      failRef.current("runtime error", e);
+      return or;
+    }
+  };
   useEffect(() => {
     latest.current = props;
     tierNow.current = tier;
@@ -85,13 +108,13 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   useImperativeHandle(
     ref,
     () => ({
-      project: (id) => scene.current?.project(id) ?? null,
-      hover: (id) => scene.current?.hover(id),
-      led: (on) => void scene.current?.led(on),
-      slotOnScreen: () => scene.current?.slotOnScreen() ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-      inspect: (id) => scene.current?.inspect(id),
+      project: (id) => safely((s) => s.project(id), null),
+      hover: (id) => safely((s) => s.hover(id), undefined),
+      led: (on) => safely((s) => void s.led(on), undefined),
+      slotOnScreen: () => safely((s) => s.slotOnScreen(), { x: window.innerWidth / 2, y: window.innerHeight / 2 }),
+      inspect: (id) => safely((s) => s.inspect(id), undefined),
       // Asked before the scene is ready (a direct load): the knob wiggles once it is.
-      wiggle: () => (scene.current ? scene.current.wiggle() : void (wiggleWaiting.current = true)),
+      wiggle: () => (scene.current ? safely((s) => s.wiggle(), undefined) : void (wiggleWaiting.current = true)),
     }),
     [],
   );
@@ -99,11 +122,12 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
   useEffect(() => {
     const el = view.current;
     if (!el || gone) return;
-    const giveUp = () => {
+    const giveUp = (why: FallBack, e?: unknown) => {
+      console.info(`[3D] the desk fell back (${why}); showing the flat desk`, ...(e === undefined ? [] : [e]));
       setGone(true);
       latest.current.onUnavailable?.();
     };
-    if (!canDraw3D()) return giveUp();
+    if (!hasGpuWebGL()) return giveUp("no GPU WebGL");
     if (!built) return;
     const tier = built;
     let dead = false;
@@ -113,12 +137,13 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       window.clearTimeout(timer);
       undo.splice(0).reverse().forEach((f) => f());
     };
-    const fail = () => {
+    const fail = (why: FallBack, e?: unknown) => {
       if (dead) return;
       stop();
-      giveUp();
+      giveUp(why, e);
     };
-    const timer = window.setTimeout(fail, TIMEOUT);
+    failRef.current = fail;
+    const timer = window.setTimeout(() => fail("timed out"), TIMEOUT);
 
     (async () => {
       const s = await createDeskScene({
@@ -148,7 +173,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
             }
             latest.current.onFrame?.();
           },
-          fail,
+          fail: () => fail("a frame failed to draw"),
         },
       });
       if (!s || dead) return s?.dispose();
@@ -161,7 +186,8 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       await stage.prepare(s.view);
       if (dead) return;
       scene.current = s;
-      // Reduced motion may have changed while it loaded.
+      // Reduced motion may have changed while it loaded. A throw from here to the end is the
+      // build's (a load error); once built, every later call into the scene is guarded.
       s.setStill(tierNow.current === "none");
       // The lines first, so the first paint is already theirs (no flicker from the player's own).
       const written = latest.current.screen;
@@ -169,9 +195,9 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       s.sync(latest.current.state, latest.current.current, true);
       s.setNight(latest.current.night, true);
       undo.push(stage.add(s.view));
-      undo.push(stage.onLost(fail));
+      undo.push(stage.onLost(() => fail("the stage ended")));
       window.clearTimeout(timer);
-      undo.push(attachDeskPointer(s, { onTapeClick: (id) => latest.current.onTapeClick(id), onKnob: (n) => latest.current.onKnob(n) }));
+      undo.push(attachDeskPointer(guarded(s, (e) => fail("runtime error", e)), { onTapeClick: (id) => latest.current.onTapeClick(id), onKnob: (n) => latest.current.onKnob(n) }));
       if (process.env.NODE_ENV !== "production") {
         const w = window as unknown as {
           __deskProject?: (id: ProjectId) => DOMRect | null;
@@ -197,7 +223,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       setReady(true);
       if (wiggleWaiting.current) {
         wiggleWaiting.current = false;
-        s.wiggle();
+        safely((sc) => sc.wiggle(), undefined);
       }
       undo.push(() => {
         setReady(false);
@@ -206,25 +232,29 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
         delete el.dataset.screen;
         delete el.dataset.screenHead;
       });
-    })().catch((e) => {
-      console.warn("[3D] the desk fell back:", e);
-      fail();
-    });
-    return stop;
+    })().catch((e) => fail("load error", e));
+    return () => {
+      stop();
+      if (failRef.current === fail) failRef.current = () => {};
+    };
   }, [built, gone]);
-  useEffect(() => scene.current?.setStill(tier === "none"), [tier]);
+  // `safely` reads only refs, so the effects below follow their props alone.
+  useEffect(() => safely((s) => s.setStill(tier === "none"), undefined), [tier]);
 
   // The route drives the 3D, so Back and Forward animate as a click does. The section's lines
   // go on after it: a new tape clears the last one's, never the new section's own.
-  useEffect(() => {
-    const s = scene.current;
-    if (!s) return;
-    s.sync(props.state, props.current);
-    if (props.screen) s.screen(props.screen.lines, props.screen.progress);
-  }, [props.state, props.current, props.screen]);
-  useEffect(() => scene.current?.setNight(props.night), [props.night]);
+  useEffect(
+    () =>
+      safely((s) => {
+        s.sync(props.state, props.current);
+        if (props.screen) s.screen(props.screen.lines, props.screen.progress);
+      }, undefined),
+    [props.state, props.current, props.screen],
+  );
+  useEffect(() => safely((s) => s.setNight(props.night), undefined), [props.night]);
 
-  // A first visit's desk left alone for two seconds: the first tape (01 about) nudges, once.
+  // A fresh load's desk, until a tape goes in, left alone for two seconds: the first visible
+  // tape nudges, once.
   // Any input starts the wait again, and settles a nudge under way; leaving the desk, or
   // reduced motion (live: the tier), calls it off.
   const nudged = useRef(false);
@@ -240,13 +270,13 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         // Not now (the tape lifted or in a hand, a tape held up): wait for the next quiet spell.
-        if (!scene.current?.nudge(first)) return wait();
+        if (!safely((s) => s.nudge(first), false)) return wait();
         nudged.current = true;
         // Input may still settle it while it hops; then nothing is left to listen for.
         timer = window.setTimeout(stop, NUDGE_LENGTH);
       }, NUDGE_IDLE);
     };
-    const onInput = () => (nudged.current ? scene.current?.calm() : wait());
+    const onInput = () => (nudged.current ? safely((s) => s.calm(), undefined) : wait());
     INPUT.forEach((type) => window.addEventListener(type, onInput, { capture: true, passive: true }));
     wait();
     return stop;
@@ -259,7 +289,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
       before.current = document.activeElement;
       putBack.current?.focus({ preventScroll: true });
       return pushBack(() => {
-        scene.current?.putBack();
+        safely((s) => s.putBack(), undefined);
         return true;
       });
     }
@@ -283,7 +313,7 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
           <button type="button" className={styles.button} onClick={() => props.onTapeClick(heldTrack.id)}>
             ▶ play it
           </button>
-          <button type="button" ref={putBack} className={styles.button} onClick={() => scene.current?.putBack()}>
+          <button type="button" ref={putBack} className={styles.button} onClick={() => safely((s) => s.putBack(), undefined)}>
             put it back
           </button>
         </div>
@@ -291,3 +321,24 @@ export const Desk3D = forwardRef<Desk3DHandle, Props>(function Desk3D(props, ref
     </>
   );
 });
+
+/**
+ * The scene as the pointer drives it, every call guarded: a throw from a press, a drag or the
+ * wheel falls back to the flat desk (`fail`) instead of leaving the pointer silently dead.
+ */
+function guarded(s: DeskScene, fail: (e: unknown) => void): DeskScene {
+  return new Proxy(s, {
+    get(target, key) {
+      const v = Reflect.get(target, key);
+      if (typeof v !== "function") return v;
+      return (...args: unknown[]) => {
+        try {
+          return v.apply(target, args);
+        } catch (e) {
+          fail(e);
+          return undefined;
+        }
+      };
+    },
+  });
+}

@@ -157,3 +157,23 @@ test("losing the GPU hands the desk to the sprite player, its tape links still t
   await expect(page.locator("[data-desk-view]")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "01 about, tape" })).toBeVisible();
 });
+
+// A failed model load (here, device.glb aborted) falls back the same way, says why in the
+// console, and the J-card of a direct load doesn't wait for a tape that will never seat.
+for (const path of ["/", "/events"]) {
+  test(`a model that fails to load hands ${path} to the sprite player and says why`, async ({ page, allowConsole }) => {
+    allowConsole(/Failed to load resource: net::ERR_FAILED/);
+    const said: string[] = [];
+    page.on("console", (m) => m.type() === "info" && said.push(m.text()));
+    await page.route("**/device/device.glb", (r) => r.abort());
+    await gotoReady(page, path);
+    await expect(page.locator("[data-sprite-desk]")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("[data-desk-view]")).toHaveCount(0);
+    await expect.poll(() => said.find((t) => t.includes("[3D] the desk fell back"))).toContain("(load error)");
+    if (path === "/") await expect(page.getByRole("link", { name: "01 about, tape" })).toBeVisible();
+    else {
+      await expect(page.locator("main > h2")).toHaveText("events");
+      await expect(page.getByRole("listbox")).toBeVisible();
+    }
+  });
+}
