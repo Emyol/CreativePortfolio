@@ -23,13 +23,20 @@ type Input = { velocity: number; playing: boolean; tier: MotionTier };
  * they are.
  */
 export function stepReel(s: ReelState, dt: number, { velocity, playing, tier }: Input): ReelState {
+  // Keep the current angle rather than resetting it, so switching reduced motion on mid-spin
+  // leaves the reels exactly where they were instead of snapping.
   if (tier === "none") return { angle: s.angle, omega: 0 };
   const step = Math.min(Math.max(dt, 0), MAX_DT);
+  // On phones (lite) scrolling does not drive the reels; only playback turns them.
   const target = playing ? PLAY_RPS * 360 : tier === "full" ? velocity * SCROLL_GAIN : 0;
   const tau = Math.abs(target) > Math.abs(s.omega) ? SPIN_UP : RUN_DOWN;
+  // Exponential approach to the target: frame-rate independent, so the feel is the same at 60 Hz
+  // and 120 Hz.
   let omega = target + (s.omega - target) * Math.exp(-step / tau);
   omega = Math.max(-MAX_OMEGA, Math.min(MAX_OMEGA, omega));
+  // The exponential never quite reaches zero; snap the last crawl to a stop so the reels rest.
   if (!playing && target === 0 && Math.abs(omega) < 0.5) omega = 0;
+  // Double modulo keeps the angle in [0, 360) even when the reels spin backwards (negative omega).
   const angle = (((s.angle + omega * step) % 360) + 360) % 360;
   return { angle, omega };
 }
